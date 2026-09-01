@@ -192,10 +192,13 @@ jobs:
           assert data["walk"]["distanceMeters"] > 0, data
           assert 1 <= data["walk"]["walkMinutes"] <= 30, data
           assert data["access"]["stationBufferMinutes"] == 3, data
+          assert data["access"]["minimumBoardingLeadMinutes"] == 1, data
 
           scenarios = data["scenarios"]
           assert len(scenarios) == 4, scenarios
           assert scenarios[0]["canReachDestination"] is True, scenarios
+          assert scenarios[1]["localStationReadyTime"] == "23:42", scenarios
+          assert scenarios[1]["nextTrain"] == "23:52", scenarios
           assert scenarios[-1]["canReachDestination"] is False, scenarios
           assert all(item["lastTrain"] == "00:02" for item in scenarios), scenarios
 

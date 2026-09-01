@@ -255,13 +255,17 @@ async function decisionFromCurrentLocation(env, input) {
 
   const walkMinutes = Math.ceil(walkResult.durationSeconds / 60);
   const stationBufferMinutes = Number(input.stationBufferMinutes ?? 3);
+  const minimumBoardingLeadMinutes = Number(
+    input.minimumBoardingLeadMinutes ?? 1
+  );
 
   const decision = evaluateSakaeToFujigaokaWithAccess({
     departureTime: input.departureTime,
     dayType: input.dayType,
     offsetMinutes: input.offsetMinutes,
     walkMinutes,
-    stationBufferMinutes
+    stationBufferMinutes,
+    minimumBoardingLeadMinutes
   });
 
   return {
