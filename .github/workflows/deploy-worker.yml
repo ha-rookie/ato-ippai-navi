@@ -174,13 +174,50 @@ jobs:
           }
           JSON
 
-          curl -fsS \
-            -H "content-type: application/json" \
-            --data @/tmp/walk-decision-request.json \
-            "$BASE_URL/api/decision-from-current-location" \
-            -o /tmp/walk-decision.json
+          capability_ready=0
 
-          cat /tmp/walk-decision.json
+          for attempt in $(seq 1 15); do
+            echo "Capability smoke test attempt $attempt/15"
+
+            if curl -fsS \
+              -H "content-type: application/json" \
+              --data @/tmp/walk-decision-request.json \
+              "$BASE_URL/api/decision-from-current-location" \
+              -o /tmp/walk-decision.json
+            then
+              cat /tmp/walk-decision.json
+
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open("/tmp/walk-decision.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          ready = (
+              data.get("routeFound") is True
+              and data.get("access", {}).get("minimumBoardingLeadMinutes") == 1
+          )
+
+          if not ready:
+              print("Expected Worker capability is not visible yet.")
+              sys.exit(1)
+
+          print("Expected Worker capability is visible.")
+          PY
+              then
+                capability_ready=1
+                break
+              fi
+            fi
+
+            sleep 2
+          done
+
+          if [ "$capability_ready" -ne 1 ]; then
+            echo "New Worker capability was not visible within 30 seconds."
+            exit 1
+          fi
 
           python3 - <<'PY'
           import json
