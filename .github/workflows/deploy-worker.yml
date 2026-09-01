@@ -40,11 +40,12 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: latest
-          command: deploy
+          command: deploy --var BUILD_SHA:${{ github.sha }}
 
       - name: Smoke test
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -52,14 +53,17 @@ jobs:
           ready=0
 
           for attempt in $(seq 1 15); do
-            echo "Health smoke test attempt $attempt/15"
+            echo "Build SHA readiness attempt $attempt/15"
 
             if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
               cat /tmp/health.json
 
-              if python3 - <<'PY'
+              if EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
           import json
+          import os
           import sys
+
+          expected = os.environ["EXPECTED_BUILD_SHA"]
 
           with open("/tmp/health.json", encoding="utf-8") as f:
               data = json.load(f)
@@ -68,13 +72,17 @@ jobs:
               data.get("ok") is True
               and data.get("service") == "ato-ippai-api-poc"
               and data.get("googleApiKeyConfigured") is True
+              and data.get("buildSha") == expected
           )
 
           if not valid:
-              print(f"Not ready yet: {data}")
+              print(
+                  "Deployed commit is not visible yet: "
+                  f"expected={expected}, actual={data.get('buildSha')}"
+              )
               sys.exit(1)
 
-          print("Worker health smoke test: OK")
+          print(f"Worker build SHA smoke test: OK ({expected})")
           PY
               then
                 ready=1
@@ -86,7 +94,7 @@ jobs:
           done
 
           if [ "$ready" -ne 1 ]; then
-            echo "Worker did not expose the expected health response within 30 seconds."
+            echo "Expected Worker build SHA was not visible within 30 seconds."
             exit 1
           fi
 
