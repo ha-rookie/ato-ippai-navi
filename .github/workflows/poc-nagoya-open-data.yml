@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/poc-nagoya-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
 
 permissions:
   contents: read
@@ -16,123 +17,51 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Inspect Sakae weekday and weekend late-night blocks
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Generate normalized Sakae timetable
         shell: bash
         run: |
           set -euo pipefail
 
-          URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/46beb3f0-6707-46ee-9d9d-2b3bb2567965/download/20250329_subway-timetable-higashiyamaline_.zip'
-          curl -fsSL "$URL" -o /tmp/higashiyama.zip
+          SOURCE_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/46beb3f0-6707-46ee-9d9d-2b3bb2567965/download/20250329_subway-timetable-higashiyamaline_.zip'
+
+          curl -fsSL "$SOURCE_URL" -o /tmp/higashiyama.zip
+
+          python3 scripts/extract-nagoya-subway.py             --zip /tmp/higashiyama.zip             --output /tmp/sakae-higashiyama.json             --station-code H10             --station-name 栄             --direction-sheet 下り             --default-terminal 藤が丘             --revision 2025-03-29             --source-url "$SOURCE_URL"
+
+          echo
+          echo "=== Normalized JSON (late-night excerpt) ==="
 
           python3 - <<'PY'
-          import io
-          import re
-          import zipfile
-          import xml.etree.ElementTree as ET
+          import json
 
-          NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+          with open("/tmp/sakae-higashiyama.json", encoding="utf-8") as f:
+              data = json.load(f)
 
-          def recover_name(name):
-              try:
-                  return name.encode("cp437").decode("cp932")
-              except (UnicodeEncodeError, UnicodeDecodeError):
-                  return name
+          result = {
+              "source": data["source"],
+              "station": data["station"],
+              "directionSheet": data["directionSheet"],
+              "defaultTerminal": data["defaultTerminal"],
+              "markerDestinations": data["markerDestinations"],
+              "lateNight": {},
+          }
 
-          def col_to_num(ref):
-              m = re.match(r"([A-Z]+)", ref)
-              if not m:
-                  return 0
-              n = 0
-              for ch in m.group(1):
-                  n = n * 26 + ord(ch) - 64
-              return n
+          for day_type, departures in data["schedules"].items():
+              result["lateNight"][day_type] = [
+                  item for item in departures
+                  if item["serviceMinutes"] >= 23 * 60
+              ]
 
-          def shared_strings(book):
-              path = "xl/sharedStrings.xml"
-              if path not in book.namelist():
-                  return []
-              root = ET.fromstring(book.read(path))
-              out = []
-              for si in root.findall("m:si", NS):
-                  out.append("".join(t.text or "" for t in si.findall(".//m:t", NS)))
-              return out
-
-          def value_of(cell, strings):
-              t = cell.attrib.get("t")
-              if t == "inlineStr":
-                  return "".join(x.text or "" for x in cell.findall(".//m:t", NS))
-
-              v = cell.find("m:v", NS)
-              if v is None or v.text is None:
-                  return ""
-
-              raw = v.text
-              if t == "s":
-                  try:
-                      return strings[int(raw)]
-                  except (ValueError, IndexError):
-                      return raw
-              return raw
-
-          with zipfile.ZipFile("/tmp/higashiyama.zip") as outer:
-              sakae = None
-              for info in outer.infolist():
-                  if info.is_dir() or not info.filename.lower().endswith(".xlsx"):
-                      continue
-                  name = recover_name(info.filename)
-                  if "Ｈ１０栄.xlsx" in name:
-                      sakae = (info, name)
-                      break
-
-              if not sakae:
-                  raise SystemExit("H10 栄 workbook not found")
-
-              info, name = sakae
-              print("WORKBOOK:", name)
-
-              with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
-                  strings = shared_strings(book)
-                  workbook_root = ET.fromstring(book.read("xl/workbook.xml"))
-                  sheet_names = [
-                      s.attrib.get("name")
-                      for s in workbook_root.findall(".//m:sheets/m:sheet", NS)
-                  ]
-
-                  print("sheets:", sheet_names)
-
-                  for index, sheet_path in enumerate(
-                      sorted(
-                          p for p in book.namelist()
-                          if p.startswith("xl/worksheets/sheet") and p.endswith(".xml")
-                      ),
-                      start=1,
-                  ):
-                      root = ET.fromstring(book.read(sheet_path))
-                      dimension = root.find("m:dimension", NS)
-                      print()
-                      print(f"=== sheet{index} / {sheet_names[index-1]} ===")
-                      print("dimension:", dimension.attrib.get("ref") if dimension is not None else None)
-
-                      cells = {}
-                      for cell in root.findall(".//m:sheetData/m:row/m:c", NS):
-                          ref = cell.attrib.get("r", "")
-                          val = value_of(cell, strings)
-                          if val not in ("", None):
-                              cells[ref] = val
-
-                      print("keywords:")
-                      for ref, val in sorted(cells.items(), key=lambda x: (int(re.search(r"\d+", x[0]).group()), col_to_num(x[0]))):
-                          if any(k in str(val) for k in ["平日", "土休日", "備考", "藤が丘方面", "東山公園"]):
-                              print(f"  {ref}={val}")
-
-                      print("late-night rows 27-36 across ALL columns:")
-                      for row_no in range(27, 37):
-                          row_cells = [
-                              (ref, val)
-                              for ref, val in cells.items()
-                              if re.search(r"\d+", ref) and int(re.search(r"\d+", ref).group()) == row_no
-                          ]
-                          row_cells.sort(key=lambda x: col_to_num(x[0]))
-                          if row_cells:
-                              print(" | ".join(f"{ref}={val}" for ref, val in row_cells))
+          print(json.dumps(result, ensure_ascii=False, indent=2))
           PY
+
+      - name: Upload normalized timetable
+        uses: actions/upload-artifact@v4
+        with:
+          name: sakae-higashiyama-normalized
+          path: /tmp/sakae-higashiyama.json
+          if-no-files-found: error
+          retention-days: 7
