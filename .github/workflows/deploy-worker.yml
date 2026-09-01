@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'test/**'
       - 'wrangler.jsonc'
       - 'package.json'
       - 'package-lock.json'
@@ -30,6 +31,9 @@ jobs:
       - name: Validate Worker syntax
         run: node --check src/index.js
 
+      - name: Run unit tests
+        run: npm test
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v4
         with:
@@ -45,8 +49,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          ready=0
+
           for attempt in $(seq 1 15); do
-            echo "Smoke test attempt $attempt/15"
+            echo "Health smoke test attempt $attempt/15"
 
             if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
               cat /tmp/health.json
@@ -71,12 +77,48 @@ jobs:
           print("Worker health smoke test: OK")
           PY
               then
-                exit 0
+                ready=1
+                break
               fi
             fi
 
             sleep 2
           done
 
-          echo "Worker did not expose the expected health response within 30 seconds."
-          exit 1
+          if [ "$ready" -ne 1 ]; then
+            echo "Worker did not expose the expected health response within 30 seconds."
+            exit 1
+          fi
+
+          cat > /tmp/decision-request.json <<'JSON'
+          {
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "offsetMinutes": [0, 15, 30, 60]
+          }
+          JSON
+
+          curl -fsS             -H "content-type: application/json"             --data @/tmp/decision-request.json             "$BASE_URL/api/decision-poc"             -o /tmp/decision.json
+
+          cat /tmp/decision.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/decision.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data["scenarios"]
+
+          assert [item["canReachDestination"] for item in scenarios] == [
+              True, True, True, False
+          ], scenarios
+
+          assert [item["nextTrain"] for item in scenarios] == [
+              "23:22", "23:42", "23:52", None
+          ], scenarios
+
+          assert all(item["lastTrain"] == "00:02" for item in scenarios), scenarios
+
+          print("Decision API smoke test: OK")
+          PY

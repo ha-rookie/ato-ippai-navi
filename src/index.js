@@ -1,4 +1,4 @@
-const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
+import { evaluateSakaeToFujigaoka } from "./decision.js";\n\nconst ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data, null, 2), {
@@ -269,6 +269,10 @@ export default {
 
       if (url.pathname === "/api/evaluate") {
         return json(await evaluate(env, input));
+      }
+
+      if (url.pathname === "/api/decision-poc") {
+        return json(evaluateSakaeToFujigaoka(input));
       }
 
       return json({ error: "Not found" }, 404);
