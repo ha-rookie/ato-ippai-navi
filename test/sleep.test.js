@@ -4,12 +4,12 @@ import {
   calculateSleepEstimate,
   enrichTonightDecisionWithSleep,
   normalizeSleepSettings
-} from "../client/sleep.js";
+} from "../public/js/sleep.js";
 import {
   clearSleepSettings,
   loadSleepSettings,
   saveSleepSettings
-} from "../client/settings.js";
+} from "../public/js/settings.js";
 
 test("23:53 station arrival calculates home, bedtime and next wake", () => {
   const result = calculateSleepEstimate(
