@@ -71,15 +71,19 @@ function scheduleContext(dayType) {
   };
 }
 
-function nextTrainAt(destinationTrains, date) {
+function nextTrainAt(destinationTrains, date, minimumBoardingLeadMinutes = 0) {
   const currentServiceMinutes = serviceMinutesAt(date);
+  const requiredServiceMinutes =
+    currentServiceMinutes + Number(minimumBoardingLeadMinutes);
+
   const nextTrain =
     destinationTrains.find(
-      (train) => train.serviceMinutes >= currentServiceMinutes
+      (train) => train.serviceMinutes >= requiredServiceMinutes
     ) ?? null;
 
   return {
     currentServiceMinutes,
+    requiredServiceMinutes,
     nextTrain
   };
 }
@@ -131,6 +135,9 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
 
   const walkMinutes = Number(input.walkMinutes);
   const stationBufferMinutes = Number(input.stationBufferMinutes ?? 3);
+  const minimumBoardingLeadMinutes = Number(
+    input.minimumBoardingLeadMinutes ?? 1
+  );
 
   if (!Number.isFinite(walkMinutes) || walkMinutes < 0) {
     throw new Error("walkMinutes must be a non-negative number");
@@ -138,6 +145,15 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
 
   if (!Number.isFinite(stationBufferMinutes) || stationBufferMinutes < 0) {
     throw new Error("stationBufferMinutes must be a non-negative number");
+  }
+
+  if (
+    !Number.isFinite(minimumBoardingLeadMinutes) ||
+    minimumBoardingLeadMinutes < 0
+  ) {
+    throw new Error(
+      "minimumBoardingLeadMinutes must be a non-negative number"
+    );
   }
 
   const { destinationTrains, lastTrain } = scheduleContext(input.dayType);
@@ -152,7 +168,8 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
 
     const { currentServiceMinutes, nextTrain } = nextTrainAt(
       destinationTrains,
-      stationReadyDate
+      stationReadyDate,
+      minimumBoardingLeadMinutes
     );
 
     return {
@@ -161,6 +178,7 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
       localLeaveTime: localClock(leaveDate),
       walkMinutes,
       stationBufferMinutes,
+      minimumBoardingLeadMinutes,
       stationReadyTime: stationReadyDate.toISOString(),
       localStationReadyTime: localClock(stationReadyDate),
       canReachDestination: nextTrain != null,
@@ -182,6 +200,7 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
     access: {
       walkMinutes,
       stationBufferMinutes,
+      minimumBoardingLeadMinutes,
       totalAccessMinutes: accessMinutes
     },
     scenarios
