@@ -17,8 +17,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate Worker syntax
-        run: node --check src/index.js
+      - name: Validate JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check public/app.js
+          node --check public/js/sleep.js
+          node --check public/js/settings.js
 
       - name: Run unit tests
         run: npm test

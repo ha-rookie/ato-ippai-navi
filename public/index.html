@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10192b">
+  <meta name="description" content="栄・錦三丁目で、あと何分飲めるか。終電・タクシー概算・睡眠時間をまとめて判断するPoC。">
+  <title>あと一杯ナビ</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="eyebrow">NAGOYA NIGHT DECISION</div>
+      <h1>あと一杯ナビ</h1>
+      <p class="lead">もう少し飲むか、帰るか。<br>終電・タクシー・睡眠を一画面で。</p>
+      <div class="route-badge">PoC：栄 → 藤が丘</div>
+    </header>
+
+    <section class="panel" aria-labelledby="decision-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">TONIGHT</p>
+          <h2 id="decision-title">今夜の帰り方を確認</h2>
+        </div>
+        <span id="clock" class="clock">--:--</span>
+      </div>
+
+      <label class="field">
+        <span>ダイヤ区分</span>
+        <select id="dayType">
+          <option value="weekday">平日</option>
+          <option value="saturday_holiday">土休日</option>
+        </select>
+      </label>
+      <p class="hint">土日・祝日は「土休日」を選択してください。祝日の自動判定はまだ行いません。</p>
+
+      <button id="checkButton" class="primary" type="button">
+        現在地から判定する
+      </button>
+      <p class="privacy-mini">位置情報は判定時だけ使用します。自宅住所は登録しません。</p>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="resultsSection" class="results hidden" aria-labelledby="results-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">OPTIONS</p>
+          <h2 id="results-title">あと何分いける？</h2>
+        </div>
+      </div>
+      <div id="results" class="card-grid"></div>
+      <p id="taxiNote" class="fineprint"></p>
+    </section>
+
+    <section class="panel settings-panel" aria-labelledby="sleep-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">SLEEP</p>
+          <h2 id="sleep-title">今日、何時間寝れる？</h2>
+        </div>
+      </div>
+      <p class="hint">この3項目はこの端末だけに保存します。サーバーには送信しません。</p>
+
+      <div class="settings-grid">
+        <label class="field">
+          <span>藤が丘駅 → 自宅</span>
+          <div class="input-unit">
+            <input id="stationToHomeMinutes" type="number" min="0" max="180" inputmode="numeric" placeholder="例 10">
+            <span>分</span>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>帰宅 → 就寝準備</span>
+          <div class="input-unit">
+            <input id="bedtimePrepMinutes" type="number" min="0" max="180" inputmode="numeric" placeholder="例 30">
+            <span>分</span>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>起床時刻</span>
+          <input id="wakeTime" type="time">
+        </label>
+      </div>
+
+      <div class="button-row">
+        <button id="saveSettingsButton" class="secondary" type="button">端末に保存</button>
+        <button id="clearSettingsButton" class="text-button" type="button">設定を消す</button>
+      </div>
+      <p id="settingsStatus" class="hint" aria-live="polite"></p>
+    </section>
+
+    <section class="panel info-panel">
+      <h2>このPoCで見ているもの</h2>
+      <ul>
+        <li>現在地から栄駅までの徒歩時間</li>
+        <li>駅構内3分＋乗車前1分の安全マージン</li>
+        <li>名古屋市交通局の公式時刻表</li>
+        <li>終電後のタクシー距離制参考概算</li>
+      </ul>
+      <p class="fineprint">タクシー料金は距離制のみの参考値です。待料金、低速走行、道路状況、事業者差などにより実額は変わります。</p>
+    </section>
+
+    <footer>
+      <p>あと一杯ナビ — Nagoya PoC</p>
+    </footer>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

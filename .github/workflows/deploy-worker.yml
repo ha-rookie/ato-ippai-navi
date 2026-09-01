@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'public/**'
       - 'test/**'
       - 'wrangler.jsonc'
       - 'package.json'
@@ -28,8 +29,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate Worker syntax
-        run: node --check src/index.js
+      - name: Validate JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check public/app.js
+          node --check public/js/sleep.js
+          node --check public/js/settings.js
 
       - name: Run unit tests
         run: npm test
@@ -97,6 +102,11 @@ jobs:
             echo "Expected Worker build SHA was not visible within 30 seconds."
             exit 1
           fi
+
+          curl -fsS "$BASE_URL/" -o /tmp/index.html
+          grep -q "<title>あと一杯ナビ</title>" /tmp/index.html
+          grep -q "現在地から判定する" /tmp/index.html
+          echo "Web MVP smoke test: OK"
 
           cat > /tmp/decision-request.json <<'JSON'
           {
