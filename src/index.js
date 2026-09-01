@@ -377,6 +377,7 @@ export default {
       return json({
         ok: true,
         service: "ato-ippai-api-poc",
+        buildSha: env.BUILD_SHA || null,
         googleApiKeyConfigured: Boolean(env.GOOGLE_MAPS_API_KEY)
       });
     }
