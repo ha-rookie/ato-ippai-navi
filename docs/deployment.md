@@ -80,6 +80,21 @@ Workerコードは `env.GOOGLE_MAPS_API_KEY` から参照する。
 
 既存Workerへの通常の `wrangler deploy` では、Dashboardで登録済みのSecretをそのまま利用する前提とする。初回デプロイ後は `/health` の `googleApiKeyConfigured: true` で存在確認する。
 
+## Compatibility date の注意
+
+Cloudflareは `compatibility_date` に未来日を指定できない。
+
+GitHub ActionsのrunnerはUTCで実行されるため、日本時間では日付が変わっていても、UTCでは前日の場合がある。CI/CDで当日の日付を使う場合はこのズレに注意する。
+
+今回の初回失敗:
+
+- 日本時間: 2026-09-02
+- GitHub Actions実行時刻: 2026-09-01 UTC
+- 指定値: `2026-09-02`
+- 結果: `Can't set compatibility date in the future`
+
+対策として `2026-09-01` を採用する。
+
 ## 完了判定
 
 - GitHub Actionsのdeploy job成功
