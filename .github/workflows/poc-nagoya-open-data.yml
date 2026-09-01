@@ -1,0 +1,47 @@
+name: PoC Nagoya Subway Open Data
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-nagoya-open-data.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download and inspect Higashiyama timetable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/46beb3f0-6707-46ee-9d9d-2b3bb2567965/download/20250329_subway-timetable-higashiyamaline_.zip'
+
+          curl -fL "$URL" -o /tmp/higashiyama.zip
+
+          echo "=== ZIP info ==="
+          ls -lh /tmp/higashiyama.zip
+          unzip -l /tmp/higashiyama.zip | sed -n '1,120p'
+
+          mkdir -p /tmp/higashiyama
+          unzip -q /tmp/higashiyama.zip -d /tmp/higashiyama
+
+          echo
+          echo "=== Extracted files ==="
+          find /tmp/higashiyama -type f -maxdepth 3 -print | sort | sed -n '1,160p'
+
+          echo
+          echo "=== File types ==="
+          find /tmp/higashiyama -type f -maxdepth 3 -print0 |
+            xargs -0 file |
+            sed -n '1,160p'
+
+          echo
+          echo "=== Machine-readable candidates ==="
+          find /tmp/higashiyama -type f \(             -iname '*.csv' -o             -iname '*.json' -o             -iname '*.xml' -o             -iname '*.txt' -o             -iname '*.xlsx' -o             -iname '*.xls'           \) -print | sed -n '1,160p'
