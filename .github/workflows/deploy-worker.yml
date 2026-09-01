@@ -1,0 +1,59 @@
+name: Deploy Worker to Cloudflare
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-worker.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate Worker syntax
+        run: node --check src/index.js
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: latest
+          command: deploy
+
+      - name: Smoke test
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "$BASE_URL/health" -o /tmp/health.json
+          cat /tmp/health.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/health.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data.get("ok") is True, data
+          assert data.get("googleApiKeyConfigured") is True, data
+          print("Worker health smoke test: OK")
+          PY
