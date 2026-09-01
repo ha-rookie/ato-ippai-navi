@@ -122,3 +122,41 @@ jobs:
 
           print("Decision API smoke test: OK")
           PY
+
+          cat > /tmp/taxi-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "destination": {
+              "latitude": 35.1822,
+              "longitude": 137.0216
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "includeDispatchFee": true
+          }
+          JSON
+
+          curl -fsS \
+            -H "content-type: application/json" \
+            --data @/tmp/taxi-request.json \
+            "$BASE_URL/api/taxi-estimate" \
+            -o /tmp/taxi.json
+
+          cat /tmp/taxi.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/taxi.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["routeFound"] is True, data
+          assert data["distanceMeters"] > 10000, data
+          assert data["nightSurcharge"] is True, data
+          assert data["estimatedTotalYen"] > 5000, data
+          assert data["method"] == "distance_only_approximation", data
+
+          print("Taxi estimate API smoke test: OK")
+          PY
