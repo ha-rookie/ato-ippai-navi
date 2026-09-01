@@ -5,10 +5,5 @@
   "compatibility_date": "2026-09-02",
   "vars": {
     "MAX_LATE_TRANSIT_WAIT_MINUTES": "90"
-  },
-  "secrets": {
-    "required": [
-      "GOOGLE_MAPS_API_KEY"
-    ]
   }
 }
