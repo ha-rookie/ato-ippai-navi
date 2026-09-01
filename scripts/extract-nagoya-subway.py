@@ -130,7 +130,7 @@ def marker_destinations(cells: dict[tuple[int, int], str]) -> dict[str, str]:
 
     for value in cells.values():
         text = normalize_text(value)
-        for marker, destination in re.findall(r"([^\s…、]+)…([^\s、]+?)行", text):
+        for marker, destination in re.findall(r"([^\\s.、]+?)(?:…|\\.\\.\\.)([^\\s、]+?)行", text):
             result[marker] = destination
 
     return result
