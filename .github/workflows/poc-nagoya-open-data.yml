@@ -49,11 +49,22 @@ jobs:
               "lateNight": {},
           }
 
+          assert data["markerDestinations"].get("星") == "星ヶ丘", data["markerDestinations"]
+
           for day_type, departures in data["schedules"].items():
               result["lateNight"][day_type] = [
                   item for item in departures
                   if item["serviceMinutes"] >= 23 * 60
               ]
+
+              to_fujigaoka = [
+                  item for item in departures
+                  if item["destination"] == "藤が丘"
+              ]
+              assert to_fujigaoka[-1]["time"] == "00:02", {
+                  "dayType": day_type,
+                  "lastToFujigaoka": to_fujigaoka[-1],
+              }
 
           print(json.dumps(result, ensure_ascii=False, indent=2))
           PY
