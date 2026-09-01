@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Inspect Higashiyama XLSX structure
+      - name: Inspect Sakae weekday and weekend late-night blocks
         shell: bash
         run: |
           set -euo pipefail
@@ -54,100 +54,85 @@ jobs:
               root = ET.fromstring(book.read(path))
               out = []
               for si in root.findall("m:si", NS):
-                  parts = [t.text or "" for t in si.findall(".//m:t", NS)]
-                  out.append("".join(parts))
+                  out.append("".join(t.text or "" for t in si.findall(".//m:t", NS)))
               return out
 
-          def cell_value(cell, strings):
-              cell_type = cell.attrib.get("t")
-              if cell_type == "inlineStr":
-                  return "".join(t.text or "" for t in cell.findall(".//m:t", NS))
+          def value_of(cell, strings):
+              t = cell.attrib.get("t")
+              if t == "inlineStr":
+                  return "".join(x.text or "" for x in cell.findall(".//m:t", NS))
 
               v = cell.find("m:v", NS)
               if v is None or v.text is None:
-                  f = cell.find("m:f", NS)
-                  return f"FORMULA:{f.text}" if f is not None else ""
+                  return ""
 
               raw = v.text
-              if cell_type == "s":
+              if t == "s":
                   try:
                       return strings[int(raw)]
                   except (ValueError, IndexError):
                       return raw
-              if cell_type == "b":
-                  return raw == "1"
               return raw
 
           with zipfile.ZipFile("/tmp/higashiyama.zip") as outer:
-              xlsx_entries = [
-                  info for info in outer.infolist()
-                  if not info.is_dir() and info.filename.lower().endswith(".xlsx")
-              ]
+              sakae = None
+              for info in outer.infolist():
+                  if info.is_dir() or not info.filename.lower().endswith(".xlsx"):
+                      continue
+                  name = recover_name(info.filename)
+                  if "Ｈ１０栄.xlsx" in name:
+                      sakae = (info, name)
+                      break
 
-              recovered = [(info, recover_name(info.filename)) for info in xlsx_entries]
+              if not sakae:
+                  raise SystemExit("H10 栄 workbook not found")
 
-              print("=== Recovered filenames ===")
-              for _, name in recovered:
-                  print(name)
+              info, name = sakae
+              print("WORKBOOK:", name)
 
-              targets = []
-              for info, name in recovered:
-                  if "栄" in name or "藤が丘" in name:
-                      targets.append((info, name))
+              with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
+                  strings = shared_strings(book)
+                  workbook_root = ET.fromstring(book.read("xl/workbook.xml"))
+                  sheet_names = [
+                      s.attrib.get("name")
+                      for s in workbook_root.findall(".//m:sheets/m:sheet", NS)
+                  ]
 
-              print()
-              print("=== Target files ===")
-              for _, name in targets:
-                  print(name)
+                  print("sheets:", sheet_names)
 
-              if len(targets) < 2:
-                  raise SystemExit("Could not identify both 栄 and 藤が丘 workbook files")
-
-              for info, name in targets:
-                  print()
-                  print("=" * 100)
-                  print(f"WORKBOOK: {name}")
-                  print("=" * 100)
-
-                  data = outer.read(info)
-                  with zipfile.ZipFile(io.BytesIO(data)) as book:
-                      strings = shared_strings(book)
-                      print(f"sharedStrings: {len(strings)}")
-
-                      workbook_root = ET.fromstring(book.read("xl/workbook.xml"))
-                      sheet_names = [
-                          s.attrib.get("name")
-                          for s in workbook_root.findall(".//m:sheets/m:sheet", NS)
-                      ]
-                      print("sheets:", sheet_names)
-
-                      sheet_paths = sorted(
+                  for index, sheet_path in enumerate(
+                      sorted(
                           p for p in book.namelist()
                           if p.startswith("xl/worksheets/sheet") and p.endswith(".xml")
-                      )
-                      print("worksheet xml:", sheet_paths)
+                      ),
+                      start=1,
+                  ):
+                      root = ET.fromstring(book.read(sheet_path))
+                      dimension = root.find("m:dimension", NS)
+                      print()
+                      print(f"=== sheet{index} / {sheet_names[index-1]} ===")
+                      print("dimension:", dimension.attrib.get("ref") if dimension is not None else None)
 
-                      for sheet_path in sheet_paths[:3]:
-                          print()
-                          print(f"--- {sheet_path} ---")
-                          root = ET.fromstring(book.read(sheet_path))
+                      cells = {}
+                      for cell in root.findall(".//m:sheetData/m:row/m:c", NS):
+                          ref = cell.attrib.get("r", "")
+                          val = value_of(cell, strings)
+                          if val not in ("", None):
+                              cells[ref] = val
 
-                          shown = 0
-                          for row in root.findall(".//m:sheetData/m:row", NS):
-                              cells = []
-                              for cell in row.findall("m:c", NS):
-                                  ref = cell.attrib.get("r", "")
-                                  if col_to_num(ref) > 26:
-                                      continue
-                                  value = cell_value(cell, strings)
-                                  if value not in ("", None):
-                                      cells.append(f"{ref}={value}")
+                      print("keywords:")
+                      for ref, val in sorted(cells.items(), key=lambda x: (int(re.search(r"\d+", x[0]).group()), col_to_num(x[0]))):
+                          if any(k in str(val) for k in ["平日", "土休日", "備考", "藤が丘方面", "東山公園"]):
+                              print(f"  {ref}={val}")
 
-                              if cells:
-                                  print(" | ".join(cells))
-                                  shown += 1
-
-                              if shown >= 80:
-                                  print("... truncated after 80 non-empty rows ...")
-                                  break
+                      print("late-night rows 27-36 across ALL columns:")
+                      for row_no in range(27, 37):
+                          row_cells = [
+                              (ref, val)
+                              for ref, val in cells.items()
+                              if re.search(r"\d+", ref) and int(re.search(r"\d+", ref).group()) == row_no
+                          ]
+                          row_cells.sort(key=lambda x: col_to_num(x[0]))
+                          if row_cells:
+                              print(" | ".join(f"{ref}={val}" for ref, val in row_cells))
           PY
