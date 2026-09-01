@@ -1,4 +1,5 @@
-import { evaluateSakaeToFujigaoka } from "./decision.js";\nimport { estimateNagoyaTaxiFare } from "./taxi.js";
+import { evaluateSakaeToFujigaoka } from "./decision.js";
+import { estimateNagoyaTaxiFare } from "./taxi.js";
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
