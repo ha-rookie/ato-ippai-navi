@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ato-ippai-api-poc",
+  "name": "ato-ippai-navi-api",
   "main": "src/index.js",
   "compatibility_date": "2026-09-02",
   "vars": {
