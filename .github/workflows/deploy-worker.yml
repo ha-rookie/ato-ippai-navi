@@ -241,3 +241,86 @@ jobs:
 
           print("Walk + decision API smoke test: OK")
           PY
+
+          cat > /tmp/tonight-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "offsetMinutes": [0, 15, 30, 60],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1,
+            "includeDispatchFee": true
+          }
+          JSON
+
+          tonight_ready=0
+
+          for attempt in $(seq 1 15); do
+            echo "Tonight API smoke test attempt $attempt/15"
+
+            if curl -fsS \
+              -H "content-type: application/json" \
+              --data @/tmp/tonight-request.json \
+              "$BASE_URL/api/tonight-decision" \
+              -o /tmp/tonight.json
+            then
+              cat /tmp/tonight.json
+
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open("/tmp/tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data.get("scenarios", [])
+          ready = (
+              data.get("destinationScope") == "station_only"
+              and len(scenarios) == 4
+              and scenarios[0].get("recommendedMode") == "train"
+              and scenarios[-1].get("recommendedMode") == "taxi"
+              and data.get("taxi", {}).get("estimatedTotalYen", 0) > 5000
+          )
+
+          if not ready:
+              print("Tonight decision capability is not visible yet.")
+              sys.exit(1)
+
+          print("Tonight decision capability is visible.")
+          PY
+              then
+                tonight_ready=1
+                break
+              fi
+            fi
+
+            sleep 2
+          done
+
+          if [ "$tonight_ready" -ne 1 ]; then
+            echo "Tonight decision API was not ready within 30 seconds."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data["scenarios"]
+
+          assert data["destinationScope"] == "station_only", data
+          assert data["taxiDestination"] == "藤が丘駅 愛知県名古屋市", data
+          assert scenarios[0]["recommendedMode"] == "train", scenarios
+          assert scenarios[1]["nextTrain"] == "23:52", scenarios
+          assert scenarios[2]["nextTrain"] == "00:02", scenarios
+          assert scenarios[3]["recommendedMode"] == "taxi", scenarios
+          assert scenarios[3]["taxiEstimatedTotalYen"] > 5000, scenarios
+
+          print("Tonight decision API smoke test: OK")
+          PY
