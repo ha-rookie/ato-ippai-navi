@@ -1,4 +1,4 @@
-name: PoC Routes Evaluate
+name: PoC Routes Transit Isolation
 
 on:
   workflow_dispatch:
@@ -16,58 +16,56 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Call /api/evaluate
+      - name: Test transit with fixed station coordinates
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
         shell: bash
         run: |
           set -euo pipefail
 
-          cat > /tmp/request.json <<'JSON'
+          ORIGIN='{"latitude":35.1707,"longitude":136.9087}'
+          DEST='{"latitude":35.1822,"longitude":137.0216}'
+
+          test_transit () {
+            label="$1"
+            departure="$2"
+
+            cat > /tmp/request.json <<JSON
           {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "transitDestination": "藤が丘駅 愛知県名古屋市",
-            "driveDestination": "藤が丘駅 愛知県名古屋市",
-            "departureTime": "2026-09-04T14:20:00Z",
-            "offsetMinutes": [0, 15, 30, 60]
+            "origin": $ORIGIN,
+            "destination": $DEST,
+            "departureTime": "$departure"
           }
           JSON
 
-          echo "Request:"
-          cat /tmp/request.json
+            echo
+            echo "===== $label / $departure ====="
 
-          curl -fsS             -H "content-type: application/json"             --data @/tmp/request.json             "$BASE_URL/api/evaluate"             -o /tmp/evaluate.json
+            curl -fsS               -H "content-type: application/json"               --data @/tmp/request.json               "$BASE_URL/api/transit"               -o "/tmp/$label.json"
 
-          echo
-          echo "Response:"
-          cat /tmp/evaluate.json
-          echo
+            cat "/tmp/$label.json"
+            echo
+          }
+
+          # 2026-09-02 JST
+          test_transit "daytime" "2026-09-02T03:00:00Z"
+          test_transit "night2200" "2026-09-02T13:00:00Z"
+          test_transit "night2300" "2026-09-02T14:00:00Z"
 
           python3 - <<'PY'
           import json
 
-          with open("/tmp/evaluate.json", encoding="utf-8") as f:
-              data = json.load(f)
+          print("=== Isolation summary ===")
+          for label in ["daytime", "night2200", "night2300"]:
+              with open(f"/tmp/{label}.json", encoding="utf-8") as f:
+                  data = json.load(f)
 
-          assert data.get("baseDepartureTime") == "2026-09-04T14:20:00Z", data
-          transit = data.get("transit")
-          assert isinstance(transit, list) and len(transit) == 4, data
-
-          print()
-          print("=== Summary ===")
-          for item in transit:
-              print({
-                  "offsetMinutes": item.get("offsetMinutes"),
-                  "routeFound": item.get("routeFound"),
-                  "firstTransitDeparture": item.get("firstTransitDeparture"),
-                  "lastTransitArrival": item.get("lastTransitArrival"),
-                  "waitMinutes": item.get("waitMinutes"),
-                  "lateNightReturnPossible": item.get("lateNightReturnPossible"),
-                  "fare": item.get("fare"),
+              print(label, {
+                  "routeFound": data.get("routeFound"),
+                  "rawRouteCount": data.get("rawRouteCount"),
+                  "firstTransitDeparture": data.get("firstTransitDeparture"),
+                  "lastTransitArrival": data.get("lastTransitArrival"),
+                  "waitMinutes": data.get("waitMinutes"),
+                  "fare": data.get("fare"),
               })
-
-          print("drive:", data.get("drive"))
           PY
