@@ -3,6 +3,7 @@ import {
   evaluateSakaeToFujigaokaWithAccess
 } from "./decision.js";
 import { estimateNagoyaTaxiFare } from "./taxi.js";
+import { composeTonightDecision } from "./tonight.js";
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
@@ -282,6 +283,28 @@ async function decisionFromCurrentLocation(env, input) {
   };
 }
 
+async function tonightDecision(env, input) {
+  if (!input.origin) throw new Error("origin is required");
+  if (!input.departureTime) throw new Error("departureTime is required");
+
+  const trainDecision = await decisionFromCurrentLocation(env, input);
+
+  const taxiDestination =
+    input.taxiDestination || "藤が丘駅 愛知県名古屋市";
+
+  const taxiResult = await taxiEstimate(env, {
+    origin: input.origin,
+    destination: taxiDestination,
+    departureTime: input.departureTime,
+    includeDispatchFee: input.includeDispatchFee !== false
+  });
+
+  return {
+    taxiDestination,
+    ...composeTonightDecision(trainDecision, taxiResult)
+  };
+}
+
 async function taxiEstimate(env, input) {
   if (!input.origin) throw new Error("origin is required");
   if (!input.destination) throw new Error("destination is required");
@@ -391,6 +414,10 @@ export default {
 
       if (url.pathname === "/api/taxi-estimate") {
         return json(await taxiEstimate(env, input));
+      }
+
+      if (url.pathname === "/api/tonight-decision") {
+        return json(await tonightDecision(env, input));
       }
 
       return json({ error: "Not found" }, 404);
