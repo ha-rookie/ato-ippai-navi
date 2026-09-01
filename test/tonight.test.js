@@ -10,10 +10,14 @@ test("train is recommended while reachable, taxi after last train", () => {
           offsetMinutes: 0,
           canReachDestination: true,
           nextTrain: "23:32",
-          lastTrain: "00:02"
+          lastTrain: "00:02",
+          estimatedDestinationStationArrivalTime:
+            "2026-09-04T14:53:00.000Z",
+          localDestinationStationArrivalTime: "23:53"
         },
         {
           offsetMinutes: 60,
+          leaveTime: "2026-09-04T15:20:00.000Z",
           canReachDestination: false,
           nextTrain: null,
           lastTrain: "00:02"
@@ -22,6 +26,7 @@ test("train is recommended while reachable, taxi after last train", () => {
     },
     {
       routeFound: true,
+      durationSeconds: 1227,
       estimatedTotalYen: 8080
     }
   );
@@ -30,10 +35,19 @@ test("train is recommended while reachable, taxi after last train", () => {
   assert.equal(result.scenarios[0].recommendedMode, "train");
   assert.equal(result.scenarios[0].status, "train_available");
   assert.equal(result.scenarios[0].taxiEstimatedTotalYen, 8080);
+  assert.equal(
+    result.scenarios[0].localDestinationStationArrivalTime,
+    "23:53"
+  );
 
   assert.equal(result.scenarios[1].recommendedMode, "taxi");
   assert.equal(result.scenarios[1].status, "taxi_fallback");
   assert.equal(result.scenarios[1].taxiEstimatedTotalYen, 8080);
+  assert.equal(result.scenarios[1].taxiTravelMinutes, 21);
+  assert.equal(
+    result.scenarios[1].localDestinationStationArrivalTime,
+    "00:41"
+  );
 });
 
 test("unknown is returned when neither train nor taxi is available", () => {

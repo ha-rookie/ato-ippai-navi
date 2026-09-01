@@ -88,11 +88,41 @@ function nextTrainAt(destinationTrains, date, minimumBoardingLeadMinutes = 0) {
   };
 }
 
+function trainTimes(referenceDate, currentServiceMinutes, nextTrain) {
+  if (!nextTrain) {
+    return {
+      trainDepartureDate: null,
+      destinationArrivalDate: null
+    };
+  }
+
+  const minuteAlignedReference = new Date(referenceDate);
+  minuteAlignedReference.setUTCSeconds(0, 0);
+
+  const minutesUntilDeparture =
+    nextTrain.serviceMinutes - currentServiceMinutes;
+
+  const trainDepartureDate = new Date(
+    minuteAlignedReference.getTime() + minutesUntilDeparture * 60000
+  );
+
+  const destinationArrivalDate = new Date(
+    trainDepartureDate.getTime() +
+      SAKAE_HIGASHIYAMA_LATE.trainRideMinutes * 60000
+  );
+
+  return {
+    trainDepartureDate,
+    destinationArrivalDate
+  };
+}
+
 function routeMetadata() {
   return {
     line: SAKAE_HIGASHIYAMA_LATE.source.line,
     origin: SAKAE_HIGASHIYAMA_LATE.origin,
-    destination: SAKAE_HIGASHIYAMA_LATE.destination
+    destination: SAKAE_HIGASHIYAMA_LATE.destination,
+    trainRideMinutes: SAKAE_HIGASHIYAMA_LATE.trainRideMinutes
   };
 }
 
@@ -109,12 +139,27 @@ export function evaluateSakaeToFujigaoka(input) {
       queryDate
     );
 
+    const { trainDepartureDate, destinationArrivalDate } = trainTimes(
+      queryDate,
+      currentServiceMinutes,
+      nextTrain
+    );
+
     return {
       offsetMinutes,
       queryTime: queryDate.toISOString(),
       localTime: localClock(queryDate),
       canReachDestination: nextTrain != null,
       nextTrain: nextTrain?.time ?? null,
+      trainRideMinutes: SAKAE_HIGASHIYAMA_LATE.trainRideMinutes,
+      estimatedTrainDepartureTime:
+        trainDepartureDate?.toISOString() ?? null,
+      estimatedDestinationStationArrivalTime:
+        destinationArrivalDate?.toISOString() ?? null,
+      localDestinationStationArrivalTime:
+        destinationArrivalDate == null
+          ? null
+          : localClock(destinationArrivalDate),
       lastTrain: lastTrain.time,
       minutesUntilLastTrain: lastTrain.serviceMinutes - currentServiceMinutes
     };
@@ -172,6 +217,12 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
       minimumBoardingLeadMinutes
     );
 
+    const { trainDepartureDate, destinationArrivalDate } = trainTimes(
+      stationReadyDate,
+      currentServiceMinutes,
+      nextTrain
+    );
+
     return {
       offsetMinutes,
       leaveTime: leaveDate.toISOString(),
@@ -183,6 +234,15 @@ export function evaluateSakaeToFujigaokaWithAccess(input) {
       localStationReadyTime: localClock(stationReadyDate),
       canReachDestination: nextTrain != null,
       nextTrain: nextTrain?.time ?? null,
+      trainRideMinutes: SAKAE_HIGASHIYAMA_LATE.trainRideMinutes,
+      estimatedTrainDepartureTime:
+        trainDepartureDate?.toISOString() ?? null,
+      estimatedDestinationStationArrivalTime:
+        destinationArrivalDate?.toISOString() ?? null,
+      localDestinationStationArrivalTime:
+        destinationArrivalDate == null
+          ? null
+          : localClock(destinationArrivalDate),
       minutesUntilNextTrain:
         nextTrain == null
           ? null

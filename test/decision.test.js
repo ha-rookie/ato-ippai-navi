@@ -158,3 +158,29 @@ test("same-minute platform arrival does not count as boardable by default", () =
   assert.equal(scenario.nextTrain, "23:52");
   assert.equal(scenario.minutesUntilNextTrain, 10);
 });
+
+
+test("train scenarios include official 21-minute Fujigaoka arrival estimate", () => {
+  const result = evaluateSakaeToFujigaokaWithAccess({
+    departureTime: "2026-09-04T23:20:00+09:00",
+    dayType: "weekday",
+    offsetMinutes: [0, 30],
+    walkMinutes: 4,
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1
+  });
+
+  assert.equal(result.route.trainRideMinutes, 21);
+
+  assert.equal(result.scenarios[0].nextTrain, "23:32");
+  assert.equal(
+    result.scenarios[0].localDestinationStationArrivalTime,
+    "23:53"
+  );
+
+  assert.equal(result.scenarios[1].nextTrain, "00:02");
+  assert.equal(
+    result.scenarios[1].localDestinationStationArrivalTime,
+    "00:23"
+  );
+});
