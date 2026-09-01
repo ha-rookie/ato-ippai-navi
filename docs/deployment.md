@@ -75,9 +75,10 @@ Google Routes APIキーはGitHub Actions Secretへ移動しない。
 GOOGLE_MAPS_API_KEY
 ```
 
-`wrangler.jsonc` では必要なSecret名だけを宣言し、値は記載しない。
+Secretの値は `wrangler.jsonc` に記載しない。
+Workerコードは `env.GOOGLE_MAPS_API_KEY` から参照する。
 
-Wranglerの通常デプロイでは既存Secretは削除されない。
+既存Workerへの通常の `wrangler deploy` では、Dashboardで登録済みのSecretをそのまま利用する前提とする。初回デプロイ後は `/health` の `googleApiKeyConfigured: true` で存在確認する。
 
 ## 完了判定
 
