@@ -4,7 +4,9 @@ export const SAKAE_HIGASHIYAMA_LATE = {
     license: "CC BY 4.0",
     revision: "2025-03-29",
     dataset: "地下鉄駅別ポケット時刻表",
-    line: "東山線"
+    line: "東山線",
+    travelTimeSource:
+      "https://bus-sekkin.kotsu.city.nagoya.jp/rp/subway/TRP0000188.htm"
   },
   origin: {
     code: "H10",
@@ -14,6 +16,7 @@ export const SAKAE_HIGASHIYAMA_LATE = {
     code: "H22",
     name: "藤が丘"
   },
+  trainRideMinutes: 21,
   schedules: {
     weekday: [
       { time: "23:04", serviceMinutes: 1384, destination: "藤が丘" },
