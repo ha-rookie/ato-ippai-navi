@@ -160,3 +160,44 @@ jobs:
 
           print("Taxi estimate API smoke test: OK")
           PY
+
+          cat > /tmp/walk-decision-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "offsetMinutes": [0, 15, 30, 60],
+            "stationBufferMinutes": 3
+          }
+          JSON
+
+          curl -fsS \
+            -H "content-type: application/json" \
+            --data @/tmp/walk-decision-request.json \
+            "$BASE_URL/api/decision-from-current-location" \
+            -o /tmp/walk-decision.json
+
+          cat /tmp/walk-decision.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/walk-decision.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["routeFound"] is True, data
+          assert data["walk"]["distanceMeters"] > 0, data
+          assert 1 <= data["walk"]["walkMinutes"] <= 30, data
+          assert data["access"]["stationBufferMinutes"] == 3, data
+
+          scenarios = data["scenarios"]
+          assert len(scenarios) == 4, scenarios
+          assert scenarios[0]["canReachDestination"] is True, scenarios
+          assert scenarios[-1]["canReachDestination"] is False, scenarios
+          assert all(item["lastTrain"] == "00:02" for item in scenarios), scenarios
+
+          print("Walk + decision API smoke test: OK")
+          PY
