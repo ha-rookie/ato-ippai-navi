@@ -44,16 +44,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS "$BASE_URL/health" -o /tmp/health.json
-          cat /tmp/health.json
 
-          python3 - <<'PY'
+          for attempt in $(seq 1 15); do
+            echo "Smoke test attempt $attempt/15"
+
+            if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
+              cat /tmp/health.json
+
+              if python3 - <<'PY'
           import json
+          import sys
 
           with open("/tmp/health.json", encoding="utf-8") as f:
               data = json.load(f)
 
-          assert data.get("ok") is True, data
-          assert data.get("googleApiKeyConfigured") is True, data
+          valid = (
+              data.get("ok") is True
+              and data.get("service") == "ato-ippai-api-poc"
+              and data.get("googleApiKeyConfigured") is True
+          )
+
+          if not valid:
+              print(f"Not ready yet: {data}")
+              sys.exit(1)
+
           print("Worker health smoke test: OK")
           PY
+              then
+                exit 0
+              fi
+            fi
+
+            sleep 2
+          done
+
+          echo "Worker did not expose the expected health response within 30 seconds."
+          exit 1
