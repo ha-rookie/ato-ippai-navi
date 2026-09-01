@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluateSakaeToFujigaoka } from "../src/decision.js";
+import {
+  evaluateSakaeToFujigaoka,
+  evaluateSakaeToFujigaokaWithAccess
+} from "../src/decision.js";
 
 test("weekday 23:20 gives now/+15/+30 reachable and +60 missed", () => {
   const result = evaluateSakaeToFujigaoka({
@@ -75,4 +78,65 @@ test("Saturday/holiday schedule has last Fujigaoka train at 00:02", () => {
 
   assert.equal(result.scenarios[0].nextTrain, "23:52");
   assert.equal(result.scenarios[0].lastTrain, "00:02");
+});
+
+
+test("walk + station buffer shifts the effective boarding time", () => {
+  const result = evaluateSakaeToFujigaokaWithAccess({
+    departureTime: "2026-09-04T23:20:00+09:00",
+    dayType: "weekday",
+    offsetMinutes: [0, 15, 30, 60],
+    walkMinutes: 5,
+    stationBufferMinutes: 3
+  });
+
+  assert.deepEqual(
+    result.scenarios.map((item) => ({
+      offsetMinutes: item.offsetMinutes,
+      localLeaveTime: item.localLeaveTime,
+      localStationReadyTime: item.localStationReadyTime,
+      canReachDestination: item.canReachDestination,
+      nextTrain: item.nextTrain,
+      lastTrain: item.lastTrain,
+      minutesUntilLastTrain: item.minutesUntilLastTrain
+    })),
+    [
+      {
+        offsetMinutes: 0,
+        localLeaveTime: "23:20",
+        localStationReadyTime: "23:28",
+        canReachDestination: true,
+        nextTrain: "23:32",
+        lastTrain: "00:02",
+        minutesUntilLastTrain: 34
+      },
+      {
+        offsetMinutes: 15,
+        localLeaveTime: "23:35",
+        localStationReadyTime: "23:43",
+        canReachDestination: true,
+        nextTrain: "23:52",
+        lastTrain: "00:02",
+        minutesUntilLastTrain: 19
+      },
+      {
+        offsetMinutes: 30,
+        localLeaveTime: "23:50",
+        localStationReadyTime: "23:58",
+        canReachDestination: true,
+        nextTrain: "00:02",
+        lastTrain: "00:02",
+        minutesUntilLastTrain: 4
+      },
+      {
+        offsetMinutes: 60,
+        localLeaveTime: "00:20",
+        localStationReadyTime: "00:28",
+        canReachDestination: false,
+        nextTrain: null,
+        lastTrain: "00:02",
+        minutesUntilLastTrain: -26
+      }
+    ]
+  );
 });

@@ -1,4 +1,7 @@
-import { evaluateSakaeToFujigaoka } from "./decision.js";
+import {
+  evaluateSakaeToFujigaoka,
+  evaluateSakaeToFujigaokaWithAccess
+} from "./decision.js";
 import { estimateNagoyaTaxiFare } from "./taxi.js";
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -172,6 +175,31 @@ async function transit(env, input) {
   };
 }
 
+async function walk(env, input) {
+  const payload = await googleRoutes(
+    env,
+    {
+      origin: waypoint(input.origin),
+      destination: waypoint(input.destination),
+      travelMode: "WALK",
+      languageCode: "ja",
+      regionCode: "JP",
+      units: "METRIC"
+    },
+    "routes.distanceMeters,routes.duration"
+  );
+
+  const route = payload.routes?.[0];
+
+  return route
+    ? {
+        routeFound: true,
+        distanceMeters: route.distanceMeters ?? null,
+        durationSeconds: parseSeconds(route.duration)
+      }
+    : { routeFound: false };
+}
+
 async function drive(env, input) {
   const payload = await googleRoutes(
     env,
@@ -203,6 +231,51 @@ function addMinutes(iso, minutes) {
   return new Date(
     new Date(iso).getTime() + Number(minutes) * 60000
   ).toISOString();
+}
+
+async function decisionFromCurrentLocation(env, input) {
+  if (!input.origin) throw new Error("origin is required");
+  if (!input.departureTime) throw new Error("departureTime is required");
+
+  const stationDestination =
+    input.stationDestination || "栄駅 愛知県名古屋市";
+
+  const walkResult = await walk(env, {
+    origin: input.origin,
+    destination: stationDestination
+  });
+
+  if (!walkResult.routeFound || walkResult.durationSeconds == null) {
+    return {
+      routeFound: false,
+      reason: "walk_route_not_found",
+      stationDestination
+    };
+  }
+
+  const walkMinutes = Math.ceil(walkResult.durationSeconds / 60);
+  const stationBufferMinutes = Number(input.stationBufferMinutes ?? 3);
+
+  const decision = evaluateSakaeToFujigaokaWithAccess({
+    departureTime: input.departureTime,
+    dayType: input.dayType,
+    offsetMinutes: input.offsetMinutes,
+    walkMinutes,
+    stationBufferMinutes
+  });
+
+  return {
+    routeFound: true,
+    walk: {
+      destination: stationDestination,
+      distanceMeters: walkResult.distanceMeters,
+      durationSeconds: walkResult.durationSeconds,
+      walkMinutes,
+      note:
+        "徒歩経路はGoogle Routes APIの推定です。駅構内移動はstationBufferMinutesで別途加算します。"
+    },
+    ...decision
+  };
 }
 
 async function taxiEstimate(env, input) {
@@ -296,12 +369,20 @@ export default {
         return json(await drive(env, input));
       }
 
+      if (url.pathname === "/api/walk") {
+        return json(await walk(env, input));
+      }
+
       if (url.pathname === "/api/evaluate") {
         return json(await evaluate(env, input));
       }
 
       if (url.pathname === "/api/decision-poc") {
         return json(evaluateSakaeToFujigaoka(input));
+      }
+
+      if (url.pathname === "/api/decision-from-current-location") {
+        return json(await decisionFromCurrentLocation(env, input));
       }
 
       if (url.pathname === "/api/taxi-estimate") {
