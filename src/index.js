@@ -1,4 +1,4 @@
-import { evaluateSakaeToFujigaoka } from "./decision.js";
+import { evaluateSakaeToFujigaoka } from "./decision.js";\nimport { estimateNagoyaTaxiFare } from "./taxi.js";
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
@@ -204,6 +204,32 @@ function addMinutes(iso, minutes) {
   ).toISOString();
 }
 
+async function taxiEstimate(env, input) {
+  if (!input.origin) throw new Error("origin is required");
+  if (!input.destination) throw new Error("destination is required");
+
+  const departureTime = input.departureTime || new Date().toISOString();
+  const driveResult = await drive(env, {
+    origin: input.origin,
+    destination: input.destination,
+    departureTime
+  });
+
+  if (!driveResult.routeFound) {
+    return { routeFound: false };
+  }
+
+  return {
+    routeFound: true,
+    durationSeconds: driveResult.durationSeconds,
+    ...estimateNagoyaTaxiFare({
+      distanceMeters: driveResult.distanceMeters,
+      departureTime,
+      includeDispatchFee: input.includeDispatchFee !== false
+    })
+  };
+}
+
 async function evaluate(env, input) {
   const base = input.departureTime || new Date().toISOString();
   const offsets = input.offsetMinutes || [0, 15, 30, 60];
@@ -275,6 +301,10 @@ export default {
 
       if (url.pathname === "/api/decision-poc") {
         return json(evaluateSakaeToFujigaoka(input));
+      }
+
+      if (url.pathname === "/api/taxi-estimate") {
+        return json(await taxiEstimate(env, input));
       }
 
       return json({ error: "Not found" }, 404);
