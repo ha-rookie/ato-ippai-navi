@@ -34,9 +34,12 @@
 - APIキーをRoutes APIのみに制限
 - Cloudflare WorkerのSecretへAPIキー格納
 - Cloudflare Worker → Google Routes APIでHTTP 200を確認
+- GitHubをコード・設計の正本として初期化
+- GitHub Actions + Wranglerによるデプロイ構成を設計
 
 未確認:
 
+- GitHub Actionsから既存Workerへの初回デプロイ
 - 錦三丁目 → 藤が丘駅のTRANSITルート取得
 - 深夜帯の終電境界判定
 - transitFare取得可否
@@ -44,4 +47,9 @@
 - 実GPS
 - タクシー概算精度
 
-詳細は `docs/poc/google-routes-api.md` を参照してください。
+## ドキュメント
+
+- `docs/architecture.md`
+- `docs/deployment.md`
+- `docs/poc/google-routes-api.md`
+- `docs/poc/test-cases.md`
