@@ -1,4 +1,4 @@
-name: PoC Routes Transit Isolation
+name: PoC Routes Transit Controls
 
 on:
   workflow_dispatch:
@@ -16,24 +16,23 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Test transit with fixed station coordinates
+      - name: Compare Nagoya, Tokyo, New York transit
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
         shell: bash
         run: |
           set -euo pipefail
 
-          ORIGIN='{"latitude":35.1707,"longitude":136.9087}'
-          DEST='{"latitude":35.1822,"longitude":137.0216}'
-
           test_transit () {
             label="$1"
-            departure="$2"
+            origin="$2"
+            dest="$3"
+            departure="$4"
 
             cat > /tmp/request.json <<JSON
           {
-            "origin": $ORIGIN,
-            "destination": $DEST,
+            "origin": $origin,
+            "destination": $dest,
             "departureTime": "$departure"
           }
           JSON
@@ -47,16 +46,20 @@ jobs:
             echo
           }
 
-          # 2026-09-02 JST
-          test_transit "daytime" "2026-09-02T03:00:00Z"
-          test_transit "night2200" "2026-09-02T13:00:00Z"
-          test_transit "night2300" "2026-09-02T14:00:00Z"
+          # Nagoya: Sakae -> Fujigaoka, 12:00 JST
+          test_transit             "nagoya"             '{"latitude":35.1707,"longitude":136.9087}'             '{"latitude":35.1822,"longitude":137.0216}'             "2026-09-02T03:00:00Z"
+
+          # Tokyo Station -> Shinjuku Station, 12:00 JST
+          test_transit             "tokyo"             '{"latitude":35.681236,"longitude":139.767125}'             '{"latitude":35.690921,"longitude":139.700258}'             "2026-09-02T03:00:00Z"
+
+          # Times Square -> Grand Central, 08:00 EDT
+          test_transit             "newyork"             '{"latitude":40.7580,"longitude":-73.9855}'             '{"latitude":40.7527,"longitude":-73.9772}'             "2026-09-02T12:00:00Z"
 
           python3 - <<'PY'
           import json
 
-          print("=== Isolation summary ===")
-          for label in ["daytime", "night2200", "night2300"]:
+          print("=== Control summary ===")
+          for label in ["nagoya", "tokyo", "newyork"]:
               with open(f"/tmp/{label}.json", encoding="utf-8") as f:
                   data = json.load(f)
 
