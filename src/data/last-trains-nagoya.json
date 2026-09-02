@@ -6,9 +6,10 @@
     "purpose": "繁華街からの深夜帰宅・タクシーフォールバック判定"
   },
   "metadata": {
-    "effectiveFrom": "2025-03-29",
+    "effectiveFrom": null,
     "checkedAt": "2026-09-03",
-    "timezone": "Asia/Tokyo"
+    "timezone": "Asia/Tokyo",
+    "effectiveFromStrategy": "source-specific"
   },
   "sources": [
     {
@@ -22,6 +23,18 @@
       "id": "nagoya-subway-first-last",
       "publisher": "名古屋市交通局",
       "url": "https://bus-sekkin.kotsu.city.nagoya.jp/rp/subway/TRP0000188.htm"
+    },
+    {
+      "id": "nagoya-subway-pocket-timetable-tsurumai",
+      "publisher": "名古屋市交通局",
+      "license": "CC BY 4.0",
+      "revision": "2024-03-16",
+      "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/4b864d8c-4652-4133-b3d2-1445d0c12ca4/download/20240316_subway-timetable-tsurumailine.zip"
+    },
+    {
+      "id": "nagoya-subway-first-last-tsurumai",
+      "publisher": "名古屋市交通局",
+      "url": "https://www.kotsu.city.nagoya.jp/rp/subway/TRP0000190.htm"
     }
   ],
   "origins": {
@@ -1272,6 +1285,661 @@
             "sourceIds": [
               "nagoya-subway-pocket-timetable",
               "nagoya-subway-first-last"
+            ]
+          }
+        }
+      }
+    },
+    "T01": {
+      "name": "上小田井",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T01"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:13",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "上小田井",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:13",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "上小田井",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T02": {
+      "name": "庄内緑地公園",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T02"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:13",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "上小田井",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:13",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "上小田井",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T03": {
+      "name": "庄内通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T03"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:13",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "上小田井",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:13",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "上小田井",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T04": {
+      "name": "浄心",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T04"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "浄心",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "浄心",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T05": {
+      "name": "浅間町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T05"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "浄心",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "浄心",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T06": {
+      "name": "丸の内",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T06"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "浄心",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "浄心",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T07": {
+      "name": "伏見",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T07"
+      ],
+      "enabled": false,
+      "routes": {}
+    },
+    "T08": {
+      "name": "大須観音",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T08"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T09": {
+      "name": "上前津",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T09"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T10": {
+      "name": "鶴舞",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T10"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T11": {
+      "name": "荒畑",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T11"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T12": {
+      "name": "御器所",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T12"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T13": {
+      "name": "川名",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T13"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T14": {
+      "name": "いりなか",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T14"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T15": {
+      "name": "八事",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T15"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "八事",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T16": {
+      "name": "塩釜口",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T16"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T17": {
+      "name": "植田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T17"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T18": {
+      "name": "原",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T18"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T19": {
+      "name": "平針",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T19"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "T20": {
+      "name": "赤池",
+      "city": "名古屋市",
+      "stationCodes": [
+        "T20"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "鶴舞線 直通",
+            "trainTerminal": "赤池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-tsurumai"
             ]
           }
         }

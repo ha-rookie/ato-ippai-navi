@@ -94,7 +94,10 @@ test("same-minute arrival at the platform cannot board the last train", () => {
 
 
 test("generated Higashiyama boundaries cover west and east destinations", () => {
-  assert.equal(Object.keys(dataset.destinations).length, 22);
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => code.startsWith("H")).length,
+    22
+  );
 
   assert.equal(
     dataset.destinations.H01.routes.sakae.weekday.lastDeparture,
@@ -145,4 +148,30 @@ test("stations without last-arrival data still evaluate the boundary", () => {
   assert.equal(scenario.lastDeparture, "00:16");
   assert.equal(scenario.lastArrival, null);
   assert.equal(scenario.localLastTrainArrivalTime, null);
+});
+
+
+test("Tsurumai direct boundary uses Fushimi only", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:50:00+09:00",
+    dayType: "weekday",
+    destinationCode: "T15",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakae: { walkMinutes: 4 },
+      fushimi: { walkMinutes: 14 }
+    }
+  });
+
+  assert.equal(result.destination.name, "八事");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "fushimi");
+  assert.equal(result.scenarios[0].lastDeparture, "00:14");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+test("Tsurumai Fushimi hub itself is disabled until walk-only handling exists", () => {
+  assert.equal(dataset.destinations.T07.enabled, false);
 });

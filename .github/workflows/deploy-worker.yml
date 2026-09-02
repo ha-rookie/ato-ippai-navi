@@ -454,6 +454,79 @@ jobs:
           print("Selected destination H18 tonight smoke test: OK")
           PY
 
+          cat > /tmp/t15-tonight-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:50:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "T15",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1,
+            "includeDispatchFee": true
+          }
+          JSON
+
+          tsurumai_ready=0
+
+          for attempt in $(seq 1 15); do
+            echo "Tsurumai T15 tonight smoke test attempt $attempt/15"
+
+            if curl -fsS \
+              -H "content-type: application/json" \
+              --data @/tmp/t15-tonight-request.json \
+              "$BASE_URL/api/tonight-decision" \
+              -o /tmp/t15-tonight.json
+            then
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open("/tmp/t15-tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          ready = (
+              data.get("destinationCode") == "T15"
+              and data.get("destinationName") == "八事"
+              and data.get("taxiDestination") == "八事駅 愛知県名古屋市"
+          )
+          if not ready:
+              sys.exit(1)
+          PY
+              then
+                tsurumai_ready=1
+                break
+              fi
+            fi
+
+            sleep 2
+          done
+
+          if [ "$tsurumai_ready" -ne 1 ]; then
+            echo "Tsurumai T15 capability was not ready within 30 seconds."
+            cat /tmp/t15-tonight.json || true
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/t15-tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data["scenarios"]
+          assert data["train"]["destination"]["code"] == "T15", data
+          assert scenarios[0]["recommendedMode"] == "train", scenarios
+          assert scenarios[0]["recommendedOriginId"] == "fushimi", scenarios
+          assert scenarios[0]["lastDeparture"] == "00:14", scenarios
+          assert scenarios[1]["recommendedMode"] == "taxi", scenarios
+
+          print("Tsurumai T15 selected destination smoke test: OK")
+          PY
+
           cat > /tmp/tonight-request.json <<'JSON'
           {
             "origin": {

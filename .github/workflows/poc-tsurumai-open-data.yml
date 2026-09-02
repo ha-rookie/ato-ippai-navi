@@ -1,0 +1,178 @@
+name: PoC Nagoya Tsurumai Open Data
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-tsurumai-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-tsurumai-last-trains.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-tsurumai-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-tsurumai-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract Fushimi Tsurumai timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SOURCE_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/4b864d8c-4652-4133-b3d2-1445d0c12ca4/download/20240316_subway-timetable-tsurumailine.zip'
+
+          curl -fsSL "$SOURCE_URL" -o /tmp/tsurumai.zip
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/tsurumai.zip \
+            --output /tmp/fushimi-tsurumai-up.json \
+            --station-code T07 \
+            --station-name 伏見 \
+            --direction-sheet 上り \
+            --default-terminal 上小田井 \
+            --revision 2024-03-16 \
+            --source-url "$SOURCE_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/tsurumai.zip \
+            --output /tmp/fushimi-tsurumai-down.json \
+            --station-code T07 \
+            --station-name 伏見 \
+            --direction-sheet 下り \
+            --default-terminal 赤池 \
+            --revision 2024-03-16 \
+            --source-url "$SOURCE_URL"
+
+      - name: Inspect late departures and markers
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          for path in (
+              "/tmp/fushimi-tsurumai-up.json",
+              "/tmp/fushimi-tsurumai-down.json",
+          ):
+              with open(path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              print("===", path, "===")
+              print("sheet", data["directionSheet"])
+              print("default", data["defaultTerminal"])
+              print("markers", json.dumps(data["markerDestinations"], ensure_ascii=False))
+
+              for day_type, departures in data["schedules"].items():
+                  late = [d for d in departures if d["serviceMinutes"] >= 23 * 60]
+                  print(day_type, json.dumps(late[-20:], ensure_ascii=False, indent=2))
+          PY
+
+      - name: Generate Tsurumai last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-tsurumai-last-trains.py \
+            --up /tmp/fushimi-tsurumai-up.json \
+            --down /tmp/fushimi-tsurumai-down.json \
+            --output /tmp/tsurumai-last-trains.json \
+            --revision 2024-03-16
+
+      - name: Validate generated boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/tsurumai-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["line"]["code"] == "T", data["line"]
+          assert len(data["destinations"]) == 20, len(data["destinations"])
+
+          # 名古屋市交通局「鶴舞線始発・終発時刻」の伏見基準と突合。
+          # 北向き: 上小田井行 00:13 / 浄心行 00:24
+          assert data["destinations"]["T01"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:13"
+          assert data["destinations"]["T03"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:13"
+          assert data["destinations"]["T04"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:24"
+          assert data["destinations"]["T06"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:24"
+
+          # 南向き: 赤池行 00:04 / 八事行 00:14
+          assert data["destinations"]["T08"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:14"
+          assert data["destinations"]["T15"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:14"
+          assert data["destinations"]["T16"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:04"
+          assert data["destinations"]["T20"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:04"
+
+          for code, destination in data["destinations"].items():
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      assert route["status"] == "verified", (code, origin_id, day_type, route)
+                      assert route["lastDeparture"], (code, origin_id, day_type, route)
+                      assert route["transfers"] == 0, (code, origin_id, day_type, route)
+
+          print("Generated direct Tsurumai boundary validation: OK")
+          print(json.dumps({
+              "T01": data["destinations"]["T01"],
+              "T04": data["destinations"]["T04"],
+              "T15": data["destinations"]["T15"],
+              "T20": data["destinations"]["T20"],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/tsurumai-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert len([c for c in production["destinations"] if c.startswith("T")]) == 20
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"][code]
+              assert prod["name"] == destination["name"], code
+              if code == "T07":
+                  assert prod["enabled"] is False
+                  continue
+              assert prod["enabled"] is True
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      prod_route = prod["routes"][origin_id][day_type]
+                      assert prod_route["lastDeparture"] == route["lastDeparture"], (
+                          code, origin_id, day_type, prod_route, route
+                      )
+                      assert prod_route["trainTerminal"] == route["trainTerminal"], (
+                          code, origin_id, day_type, prod_route, route
+                      )
+
+          print("Committed production JSON matches generated Tsurumai boundaries: OK")
+          PY
+
+          echo "=== GENERATED_TSURUMAI_JSON_BEGIN ==="
+          cat /tmp/tsurumai-last-trains.json
+          echo "=== GENERATED_TSURUMAI_JSON_END ==="
+
+      - name: Upload Tsurumai generation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsurumai-fushimi-generation
+          path: |
+            /tmp/fushimi-tsurumai-up.json
+            /tmp/fushimi-tsurumai-down.json
+            /tmp/tsurumai-last-trains.json
+          if-no-files-found: error
+          retention-days: 7

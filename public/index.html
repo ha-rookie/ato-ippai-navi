@@ -29,6 +29,7 @@
       <label class="field">
         <span>帰宅先の最寄り駅</span>
         <select id="destinationCode">
+        <optgroup label="東山線">
           <option value="H01" data-name="高畑">H01 高畑</option>
           <option value="H02" data-name="八田">H02 八田</option>
           <option value="H03" data-name="岩塚">H03 岩塚</option>
@@ -51,9 +52,31 @@
           <option value="H20" data-name="上社">H20 上社</option>
           <option value="H21" data-name="本郷">H21 本郷</option>
           <option value="H22" data-name="藤が丘" selected>H22 藤が丘</option>
+        </optgroup>
+        <optgroup label="鶴舞線（伏見から直通）">
+          <option value="T01" data-name="上小田井">T01 上小田井</option>
+          <option value="T02" data-name="庄内緑地公園">T02 庄内緑地公園</option>
+          <option value="T03" data-name="庄内通">T03 庄内通</option>
+          <option value="T04" data-name="浄心">T04 浄心</option>
+          <option value="T05" data-name="浅間町">T05 浅間町</option>
+          <option value="T06" data-name="丸の内">T06 丸の内</option>
+          <option value="T08" data-name="大須観音">T08 大須観音</option>
+          <option value="T09" data-name="上前津">T09 上前津</option>
+          <option value="T10" data-name="鶴舞">T10 鶴舞</option>
+          <option value="T11" data-name="荒畑">T11 荒畑</option>
+          <option value="T12" data-name="御器所">T12 御器所</option>
+          <option value="T13" data-name="川名">T13 川名</option>
+          <option value="T14" data-name="いりなか">T14 いりなか</option>
+          <option value="T15" data-name="八事">T15 八事</option>
+          <option value="T16" data-name="塩釜口">T16 塩釜口</option>
+          <option value="T17" data-name="植田">T17 植田</option>
+          <option value="T18" data-name="原">T18 原</option>
+          <option value="T19" data-name="平針">T19 平針</option>
+          <option value="T20" data-name="赤池">T20 赤池</option>
+        </optgroup>
         </select>
       </label>
-      <p class="hint">最寄り駅はこの端末だけに保存します。自宅住所は登録しません。</p>
+      <p class="hint">最寄り駅はこの端末だけに保存します。東山線と、伏見から直通の鶴舞線に対応しています。自宅住所は登録しません。</p>
 
       <label class="field">
         <span>ダイヤ区分</span>
