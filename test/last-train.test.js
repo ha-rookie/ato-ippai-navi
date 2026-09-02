@@ -372,3 +372,48 @@ test("Marunouchi and Hisaya-odori codes are home walk hubs", () => {
   assert.ok(dataset.origins.hisayaodori.stationCodes.includes("M06"));
   assert.ok(dataset.origins.hisayaodori.stationCodes.includes("S05"));
 });
+
+
+test("Kamiida K01 uses the conservative Sakae 00:04 boundary", () => {
+  const route = dataset.destinations.K01.routes.sakae.weekday;
+
+  assert.equal(route.lastDeparture, "00:04");
+  assert.equal(route.lastArrival, "00:29");
+  assert.equal(route.transferAt, "平安通");
+  assert.deepEqual(route.transferStationCodes, ["M11", "K02"]);
+  assert.equal(route.transferReadyTime, "00:16");
+  assert.equal(route.connectionDeparture, "00:28");
+  assert.equal(route.minimumTransferLeadMinutes, 3);
+  assert.equal(route.transferMarginMinutes, 12);
+  assert.equal(route.transfers, 1);
+  assert.equal(route.status, "verified");
+});
+
+test("Kamiida K01 only needs the Sakae walk hub", () => {
+  assert.deepEqual(
+    eligibleOriginIds(dataset, "K01"),
+    ["sakae"]
+  );
+});
+
+test("Kamiida K01 boundary is reachable before midnight but not after", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:45:00+09:00",
+    dayType: "weekday",
+    destinationCode: "K01",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakae: { walkMinutes: 4 }
+    }
+  });
+
+  assert.equal(result.destination.name, "上飯田");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "sakae");
+  assert.equal(result.scenarios[0].lastDeparture, "00:04");
+  assert.equal(result.scenarios[0].routeSummary, "名城線 右回り → 平安通乗換 → 上飯田線");
+  assert.equal(result.scenarios[0].transfers, 1);
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
