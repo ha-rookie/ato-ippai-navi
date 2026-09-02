@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/poc-meitetsu-seto-sakaemachi.yml'
+      - 'scripts/generate-meitetsu-seto-last-trains.py'
 
 permissions:
   contents: read
@@ -90,6 +91,49 @@ jobs:
           print('Meitetsu Seto PDF extraction anchors: OK')
           PY
 
+      - name: Generate ST01-ST12 last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-meitetsu-seto-last-trains.py \
+            --weekday /tmp/seto-weekday.txt \
+            --holiday /tmp/seto-holiday.txt \
+            --output /tmp/meitetsu-seto-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated Nagoya-city Seto boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meitetsu-seto-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert len(data["destinations"]) == 12
+          assert data["destinations"]["ST01"]["routes"] == {}
+
+          for day_type in ("weekday", "saturday_holiday"):
+              for code in (
+                  "ST02", "ST03", "ST04", "ST05", "ST06",
+                  "ST07", "ST08", "ST09", "ST10", "ST11",
+              ):
+                  route = data["destinations"][code]["routes"]["sakaemachi"][day_type]
+                  assert route["lastDeparture"] == "00:00", (code, route)
+                  assert route["trainTerminal"] == "喜多山", (code, route)
+                  assert route["transfers"] == 0, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+              st12 = data["destinations"]["ST12"]["routes"]["sakaemachi"][day_type]
+              assert st12["lastDeparture"] == "23:45", st12
+              assert st12["trainTerminal"] == "尾張瀬戸", st12
+              assert st12["transfers"] == 0, st12
+              assert st12["status"] == "verified", st12
+
+          print("Generated Meitetsu Seto ST01-ST12 boundary validation: OK")
+          PY
+
       - name: Upload extracted text artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -97,5 +141,6 @@ jobs:
           path: |
             /tmp/seto-weekday.txt
             /tmp/seto-holiday.txt
+            /tmp/meitetsu-seto-last-trains.json
           if-no-files-found: error
           retention-days: 7
