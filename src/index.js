@@ -501,7 +501,7 @@ async function tonightDecision(env, input) {
     }
   );
 
-  const taxiResult = await taxiEstimate(env, {
+  const taxiResult = await safeTaxiEstimate(env, {
     origin: input.origin,
     destination: taxiDestination,
     departureTime: input.departureTime,
