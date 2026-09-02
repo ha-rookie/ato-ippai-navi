@@ -381,6 +381,43 @@ jobs:
           print("Expanded Higashiyama H18 smoke test: OK")
           PY
 
+          cat > /tmp/h18-tonight-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-05T00:05:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "H18",
+            "offsetMinutes": [0, 60],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1,
+            "includeDispatchFee": true
+          }
+          JSON
+
+          curl -fsS \
+            -H "content-type: application/json" \
+            --data @/tmp/h18-tonight-request.json \
+            "$BASE_URL/api/tonight-decision" \
+            -o /tmp/h18-tonight.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/h18-tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["destinationCode"] == "H18", data
+          assert data["destinationName"] == "星ヶ丘", data
+          assert data["taxiDestination"] == "星ヶ丘駅 愛知県名古屋市", data
+          assert data["train"]["destination"]["code"] == "H18", data
+          assert data["scenarios"][0]["recommendedMode"] == "train", data
+
+          print("Selected destination H18 tonight smoke test: OK")
+          PY
+
           cat > /tmp/tonight-request.json <<'JSON'
           {
             "origin": {
