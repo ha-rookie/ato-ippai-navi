@@ -45,6 +45,28 @@ export function clockToServiceMinutes(clock) {
   return (hour < 4 ? hour + 24 : hour) * 60 + minute;
 }
 
+
+export function eligibleOriginIds(dataset, destinationCode) {
+  const destination = dataset?.destinations?.[destinationCode];
+
+  if (!destination?.enabled) {
+    throw new Error(`destination is not enabled: ${destinationCode}`);
+  }
+
+  return Object.entries(dataset?.origins || {})
+    .filter(([originId, origin]) => {
+      if (!origin?.enabled) return false;
+
+      const dayRoutes = destination.routes?.[originId];
+      if (!dayRoutes) return false;
+
+      return Object.values(dayRoutes).some(
+        (route) => route?.status === "verified"
+      );
+    })
+    .map(([originId]) => originId);
+}
+
 function routeEntry(dataset, destinationCode, originId, dayType) {
   const destination = dataset?.destinations?.[destinationCode];
 
