@@ -32,6 +32,7 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check src/index.js
+          node --check src/last-train.js
           node --check public/app.js
           node --check public/js/sleep.js
           node --check public/js/settings.js
@@ -258,6 +259,85 @@ jobs:
           assert all(item["lastTrain"] == "00:02" for item in scenarios), scenarios
 
           print("Walk + decision API smoke test: OK")
+          PY
+
+          cat > /tmp/last-train-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "H22",
+            "offsetMinutes": [0, 15, 30, 60],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          boundary_ready=0
+
+          for attempt in $(seq 1 15); do
+            echo "Last-train boundary smoke test attempt $attempt/15"
+
+            if curl -fsS \
+              -H "content-type: application/json" \
+              --data @/tmp/last-train-boundary-request.json \
+              "$BASE_URL/api/last-train-boundary" \
+              -o /tmp/last-train-boundary.json
+            then
+              cat /tmp/last-train-boundary.json
+
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open("/tmp/last-train-boundary.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data.get("scenarios", [])
+          ready = (
+              data.get("routeFound") is True
+              and data.get("dataSource") == "internal_last_train_json"
+              and data.get("destination", {}).get("code") == "H22"
+              and len(scenarios) == 4
+          )
+
+          if not ready:
+              sys.exit(1)
+          PY
+              then
+                boundary_ready=1
+                break
+              fi
+            fi
+
+            sleep 2
+          done
+
+          if [ "$boundary_ready" -ne 1 ]; then
+            echo "Last-train boundary API was not ready within 30 seconds."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/last-train-boundary.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data["scenarios"]
+
+          assert data["walkOptions"]["sakae"]["routeFound"] is True, data
+          assert data["walkOptions"]["fushimi"]["routeFound"] is True, data
+          assert scenarios[0]["canReachDestination"] is True, scenarios
+          assert scenarios[0]["recommendedOriginId"] in {"sakae", "fushimi"}, scenarios
+          assert scenarios[0]["lastDeparture"] in {"00:02", "00:00"}, scenarios
+          assert scenarios[2]["canReachDestination"] is True, scenarios
+          assert scenarios[3]["canReachDestination"] is False, scenarios
+
+          print("Last-train boundary API smoke test: OK")
           PY
 
           cat > /tmp/tonight-request.json <<'JSON'
