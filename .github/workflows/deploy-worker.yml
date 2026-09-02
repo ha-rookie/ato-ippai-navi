@@ -527,6 +527,78 @@ jobs:
           print("Tsurumai T15 selected destination smoke test: OK")
           PY
 
+          cat > /tmp/h10-walk-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "H10",
+            "offsetMinutes": [0, 15],
+            "includeDispatchFee": true
+          }
+          JSON
+
+          walk_home_ready=0
+
+          for attempt in $(seq 1 15); do
+            echo "Hub walk-home H10 smoke test attempt $attempt/15"
+
+            if curl -fsS \
+              -H "content-type: application/json" \
+              --data @/tmp/h10-walk-request.json \
+              "$BASE_URL/api/tonight-decision" \
+              -o /tmp/h10-walk.json
+            then
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open("/tmp/h10-walk.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          ready = (
+              data.get("destinationCode") == "H10"
+              and data.get("destinationName") == "栄"
+              and data.get("journeyType") == "walk_to_home_station"
+          )
+          if not ready:
+              sys.exit(1)
+          PY
+              then
+                walk_home_ready=1
+                break
+              fi
+            fi
+
+            sleep 2
+          done
+
+          if [ "$walk_home_ready" -ne 1 ]; then
+            echo "Hub walk-home capability was not ready within 30 seconds."
+            cat /tmp/h10-walk.json || true
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/h10-walk.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["walk"]["routeFound"] is True, data
+          assert data["walk"]["destinationHubId"] == "sakae", data
+          assert data["train"] is None, data
+          assert all(
+              scenario["recommendedMode"] == "walk"
+              for scenario in data["scenarios"]
+          ), data
+
+          print("Hub walk-home H10 smoke test: OK")
+          PY
+
           cat > /tmp/tonight-request.json <<'JSON'
           {
             "origin": {

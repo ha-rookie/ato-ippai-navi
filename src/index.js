@@ -4,6 +4,7 @@ import {
 } from "./decision.js";
 import { estimateNagoyaTaxiFare } from "./taxi.js";
 import { composeTonightDecision } from "./tonight.js";
+import { composeWalkHomeDecision } from "./walk-home.js";
 import { evaluateLastTrainBoundary } from "./last-train.js";
 import LAST_TRAINS_NAGOYA from "./data/last-trains-nagoya.json" with { type: "json" };
 
@@ -445,6 +446,49 @@ async function tonightDecision(env, input) {
     throw new Error(`destination is not enabled: ${destinationCode}`);
   }
 
+  const taxiDestination =
+    input.taxiDestination ||
+    `${destination.name}駅 愛知県名古屋市`;
+
+  const homeHubEntry = Object.entries(LAST_TRAINS_NAGOYA.origins)
+    .find(([, hub]) =>
+      hub.enabled &&
+      hub.stationCodes?.includes(destinationCode)
+    );
+
+  if (homeHubEntry) {
+    const [hubId, hub] = homeHubEntry;
+
+    const walkResult = await walk(env, {
+      origin: input.origin,
+      destination: hub.walkDestination
+    }).catch((error) => ({
+      routeFound: false,
+      error: String(error?.message || error)
+    }));
+
+    const taxiResult = await taxiEstimate(env, {
+      origin: input.origin,
+      destination: taxiDestination,
+      departureTime: input.departureTime,
+      includeDispatchFee: input.includeDispatchFee !== false
+    });
+
+    return {
+      taxiDestination,
+      ...composeWalkHomeDecision({
+        departureTime: input.departureTime,
+        offsetMinutes: input.offsetMinutes,
+        destinationCode,
+        destinationName: destination.name,
+        hubId,
+        hubName: hub.name,
+        walkResult,
+        taxiEstimate: taxiResult
+      })
+    };
+  }
+
   const trainDecision = await lastTrainBoundaryFromCurrentLocation(
     env,
     {
@@ -452,10 +496,6 @@ async function tonightDecision(env, input) {
       destinationCode
     }
   );
-
-  const taxiDestination =
-    input.taxiDestination ||
-    `${destination.name}駅 愛知県名古屋市`;
 
   const taxiResult = await taxiEstimate(env, {
     origin: input.origin,

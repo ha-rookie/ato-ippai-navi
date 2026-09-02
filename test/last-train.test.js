@@ -172,6 +172,6 @@ test("Tsurumai direct boundary uses Fushimi only", () => {
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
 
-test("Tsurumai Fushimi hub itself is disabled until walk-only handling exists", () => {
-  assert.equal(dataset.destinations.T07.enabled, false);
+test("Tsurumai Fushimi hub is enabled now that walk-only handling exists", () => {
+  assert.equal(dataset.destinations.T07.enabled, true);
 });

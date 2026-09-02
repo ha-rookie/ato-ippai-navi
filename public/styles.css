@@ -235,6 +235,7 @@ input:focus, select:focus {
 }
 
 .mode.train { color: var(--safe); background: rgba(135,217,174,.11); }
+.mode.walk { color: var(--safe); background: rgba(135,217,174,.11); }
 .mode.taxi { color: var(--danger); background: rgba(255,157,145,.11); }
 
 .main-result {
