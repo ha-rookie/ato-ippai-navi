@@ -236,6 +236,13 @@ function renderScenario(scenario, destinationName, dataJourneyWalkOnly) {
     if (Number.isFinite(Number(scenario.usableMarginMinutes))) {
       sub += `<br>終電までの余裕 約${Math.max(0, scenario.usableMarginMinutes)}分`;
     }
+
+    if (
+      Number(scenario.transfers) > 0 &&
+      scenario.routeSummary
+    ) {
+      sub += `<br>${scenario.routeSummary}`;
+    }
   } else if (isWalk) {
     modeLabel = "徒歩";
     modeClass = "walk";

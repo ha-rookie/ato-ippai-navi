@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/workflows/poc-kamiida-heiandori-transfer.yml'
       - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-kamiida-transfer-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -315,6 +317,60 @@ jobs:
               }, ensure_ascii=False, indent=2))
 
           print("Kamiida transfer safety-margin comparison: OK")
+          PY
+
+      - name: Generate safe Kamiida production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-kamiida-transfer-last-trains.py \
+            --sakae-right /tmp/sakae-right.json \
+            --heiandori-right /tmp/heiandori-right.json \
+            --heiandori-kamiida /tmp/heiandori-kamiida.json \
+            --output /tmp/kamiida-last-trains.json \
+            --minimum-transfer-lead-minutes 3 \
+            --revision-meijo 2025-09-29 \
+            --revision-kamiida 2024-03-16 \
+            --last-arrival 00:29
+
+      - name: Compare generated K01 boundary with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/kamiida-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          generated_k01 = generated["destinations"]["K01"]
+          production_k01 = production["destinations"]["K01"]
+
+          assert production_k01["enabled"] is True
+          assert production_k01["name"] == "上飯田"
+          assert production_k01["stationCodes"] == ["K01"]
+          assert production_k01["routes"] == generated_k01["routes"]
+
+          for day_type in ("weekday", "saturday_holiday"):
+              route = production_k01["routes"]["sakae"][day_type]
+              assert route["lastDeparture"] == "00:04", route
+              assert route["lastArrival"] == "00:29", route
+              assert route["transferAt"] == "平安通", route
+              assert route["transferStationCodes"] == ["M11", "K02"], route
+              assert route["transferReadyTime"] == "00:16", route
+              assert route["connectionDeparture"] == "00:28", route
+              assert route["minimumTransferLeadMinutes"] == 3, route
+              assert route["transferMarginMinutes"] == 12, route
+              assert route["transfers"] == 1, route
+              assert route["status"] == "verified", route
+
+          source_ids = {source["id"] for source in production["sources"]}
+          assert "nagoya-subway-pocket-timetable-kamiida" in source_ids
+          assert "nagoya-subway-first-last-kamiida" in source_ids
+
+          print("Production K01 boundary comparison: OK")
           PY
 
       - name: Validate current official end-of-service anchors

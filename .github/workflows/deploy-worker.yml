@@ -682,6 +682,73 @@ jobs:
           print("Sakuradori S21 Tokushige tonight smoke test: OK")
           PY
 
+          cat > /tmp/k01-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:45:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "K01",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          k01_ready=0
+
+          for attempt in $(seq 1 5); do
+            echo "Kamiida K01 boundary smoke test attempt $attempt/5"
+
+            status=$(curl -sS \
+              -o /tmp/k01-boundary.json \
+              -w '%{http_code}' \
+              -H "content-type: application/json" \
+              --data @/tmp/k01-boundary-request.json \
+              "$BASE_URL/api/last-train-boundary")
+
+            echo "HTTP status: $status"
+            cat /tmp/k01-boundary.json
+
+            if [ "$status" = "200" ]; then
+              k01_ready=1
+              break
+            fi
+
+            sleep 2
+          done
+
+          if [ "$k01_ready" -ne 1 ]; then
+            echo "Kamiida K01 boundary API did not return 200."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/k01-boundary.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data["scenarios"]
+          walk_options = data["walkOptions"]
+
+          assert data["destination"]["code"] == "K01", data
+          assert data["destination"]["name"] == "上飯田", data
+          assert set(walk_options) == {"sakae"}, walk_options
+
+          assert scenarios[0]["canReachDestination"] is True, scenarios
+          assert scenarios[0]["recommendedOriginId"] == "sakae", scenarios
+          assert scenarios[0]["lastDeparture"] == "00:04", scenarios
+          assert scenarios[0]["routeSummary"] == "名城線 右回り → 平安通乗換 → 上飯田線", scenarios
+          assert scenarios[0]["transfers"] == 1, scenarios
+
+          assert scenarios[1]["canReachDestination"] is False, scenarios
+
+          print("Kamiida K01 safe boundary smoke test: OK")
+          PY
+
           cat > /tmp/h10-walk-request.json <<'JSON'
           {
             "origin": {
