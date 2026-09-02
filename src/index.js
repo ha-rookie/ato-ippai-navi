@@ -131,19 +131,51 @@ async function googleRoutes(env, body, fieldMask) {
 }
 
 async function transit(env, input) {
-  if (!input.departureTime) throw new Error("departureTime is required");
+  if (!input.origin) throw new Error("origin is required");
+  if (!input.destination) throw new Error("destination is required");
+
+  const requestReferenceTime =
+    input.departureTime || new Date().toISOString();
+
+  const body = {
+    origin: waypoint(input.origin),
+    destination: waypoint(input.destination),
+    travelMode: "TRANSIT",
+    languageCode: input.languageCode || "ja",
+    units: "METRIC"
+  };
+
+  if (!input.omitRegionCode) {
+    body.regionCode = input.regionCode || "JP";
+  }
+
+  // Google公式仕様ではdepartureTimeを省略すると実行時刻(now)が使われる。
+  // PoCでは明示時刻と省略時刻の両方を切り分けられるようにする。
+  if (input.departureTime) {
+    body.departureTime = input.departureTime;
+  }
+
+  if (input.computeAlternativeRoutes === true) {
+    body.computeAlternativeRoutes = true;
+  }
+
+  const transitPreferences = {};
+
+  if (Array.isArray(input.allowedTravelModes)) {
+    transitPreferences.allowedTravelModes = input.allowedTravelModes;
+  }
+
+  if (input.routingPreference) {
+    transitPreferences.routingPreference = input.routingPreference;
+  }
+
+  if (Object.keys(transitPreferences).length > 0) {
+    body.transitPreferences = transitPreferences;
+  }
 
   const payload = await googleRoutes(
     env,
-    {
-      origin: waypoint(input.origin),
-      destination: waypoint(input.destination),
-      travelMode: "TRANSIT",
-      departureTime: input.departureTime,
-      languageCode: "ja",
-      regionCode: "JP",
-      units: "METRIC"
-    },
+    body,
     [
       "routes.distanceMeters",
       "routes.duration",
@@ -151,28 +183,56 @@ async function transit(env, input) {
       "routes.legs.steps.travelMode",
       "routes.legs.steps.transitDetails.stopDetails",
       "routes.legs.steps.transitDetails.transitLine.name",
+      "routes.legs.steps.transitDetails.transitLine.nameShort",
+      "routes.legs.steps.transitDetails.transitLine.vehicle.type",
+      "routes.legs.steps.transitDetails.transitLine.agencies.name",
       "routes.legs.steps.transitDetails.headsign"
     ].join(",")
   );
 
-  const route = payload.routes?.[0];
+  const routes = payload.routes || [];
 
-  if (!route) {
+  if (routes.length === 0) {
     return {
-      requestedDepartureTime: input.departureTime,
+      requestedDepartureTime: requestReferenceTime,
+      departureTimeMode: input.departureTime ? "explicit" : "google_now",
+      requestOptions: {
+        computeAlternativeRoutes: input.computeAlternativeRoutes === true,
+        allowedTravelModes: input.allowedTravelModes || null,
+        routingPreference: input.routingPreference || null,
+        regionCode: input.omitRegionCode
+          ? null
+          : input.regionCode || "JP"
+      },
       routeFound: false,
       lateNightReturnPossible: false,
-      rawRouteCount: payload.routes?.length ?? 0
+      rawRouteCount: 0,
+      routes: []
     };
   }
 
-  return {
-    routeFound: true,
-    ...normalizeTransit(
+  const normalizedRoutes = routes.map((route) =>
+    normalizeTransit(
       route,
-      input.departureTime,
+      requestReferenceTime,
       Number(env.MAX_LATE_TRANSIT_WAIT_MINUTES || "90")
     )
+  );
+
+  return {
+    routeFound: true,
+    departureTimeMode: input.departureTime ? "explicit" : "google_now",
+    requestOptions: {
+      computeAlternativeRoutes: input.computeAlternativeRoutes === true,
+      allowedTravelModes: input.allowedTravelModes || null,
+      routingPreference: input.routingPreference || null,
+      regionCode: input.omitRegionCode
+        ? null
+        : input.regionCode || "JP"
+    },
+    rawRouteCount: routes.length,
+    ...normalizedRoutes[0],
+    routes: normalizedRoutes
   };
 }
 
