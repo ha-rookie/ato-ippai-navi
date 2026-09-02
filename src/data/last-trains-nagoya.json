@@ -56,6 +56,18 @@
       "license": "CC BY 4.0",
       "revision": "2023-09-16",
       "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/874b00d8-ec39-4401-8cd2-0d1c535aa4c1/download/20230916_subway-timetable-sakuradoriline.zip"
+    },
+    {
+      "id": "nagoya-subway-pocket-timetable-kamiida",
+      "publisher": "名古屋市交通局",
+      "license": "CC BY 4.0",
+      "revision": "2024-03-16",
+      "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/b0a77882-daae-45ee-b07a-8ed7d51f1bde/download/20240316_subway-timetable-kamiidaline.zip"
+    },
+    {
+      "id": "nagoya-subway-first-last-kamiida",
+      "publisher": "名古屋市交通局",
+      "url": "https://www.kotsu.city.nagoya.jp/rp/subway/TRP0000192.htm"
     }
   ],
   "origins": {
@@ -4500,6 +4512,64 @@
             "status": "verified",
             "sourceIds": [
               "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "K01": {
+      "name": "上飯田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "K01"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:29",
+            "routeSummary": "名城線 右回り → 平安通乗換 → 上飯田線",
+            "trainTerminal": "ナゴヤドーム前矢田",
+            "transferAt": "平安通",
+            "transferStationCodes": [
+              "M11",
+              "K02"
+            ],
+            "transferReadyTime": "00:16",
+            "connectionDeparture": "00:28",
+            "connectionTerminal": "上飯田",
+            "minimumTransferLeadMinutes": 3,
+            "transferMarginMinutes": 12,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-kamiida",
+              "nagoya-subway-first-last-kamiida"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:29",
+            "routeSummary": "名城線 右回り → 平安通乗換 → 上飯田線",
+            "trainTerminal": "ナゴヤドーム前矢田",
+            "transferAt": "平安通",
+            "transferStationCodes": [
+              "M11",
+              "K02"
+            ],
+            "transferReadyTime": "00:16",
+            "connectionDeparture": "00:28",
+            "connectionTerminal": "上飯田",
+            "minimumTransferLeadMinutes": 3,
+            "transferMarginMinutes": 12,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-kamiida",
+              "nagoya-subway-first-last-kamiida"
             ]
           }
         }
