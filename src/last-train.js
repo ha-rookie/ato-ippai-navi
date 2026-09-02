@@ -106,8 +106,8 @@ function evaluateHub({
   const readyServiceMinutes = serviceMinutesAt(stationReadyDate);
   const lastDepartureServiceMinutes =
     clockToServiceMinutes(context.route.lastDeparture);
-  const arrivalServiceMinutes =
-    clockToServiceMinutes(context.route.arrival);
+  const lastArrivalServiceMinutes =
+    clockToServiceMinutes(context.route.lastArrival);
 
   const requiredServiceMinutes =
     readyServiceMinutes + minimumBoardingLeadMinutes;
@@ -120,9 +120,9 @@ function evaluateHub({
     lastDepartureServiceMinutes
   );
 
-  const arrivalDate = new Date(
+  const lastArrivalDate = new Date(
     lastDepartureDate.getTime() +
-      (arrivalServiceMinutes - lastDepartureServiceMinutes) * 60000
+      (lastArrivalServiceMinutes - lastDepartureServiceMinutes) * 60000
   );
 
   return {
@@ -138,9 +138,9 @@ function evaluateHub({
     lastDeparture: context.route.lastDeparture,
     estimatedLastDepartureTime: lastDepartureDate.toISOString(),
     localLastDepartureTime: localClock(lastDepartureDate),
-    arrival: context.route.arrival,
-    estimatedDestinationStationArrivalTime: arrivalDate.toISOString(),
-    localDestinationStationArrivalTime: localClock(arrivalDate),
+    lastArrival: context.route.lastArrival,
+    estimatedLastTrainArrivalTime: lastArrivalDate.toISOString(),
+    localLastTrainArrivalTime: localClock(lastArrivalDate),
     routeSummary: context.route.routeSummary,
     transfers: context.route.transfers,
     minutesUntilLastDeparture:
@@ -229,10 +229,14 @@ export function evaluateLastTrainBoundary(dataset, input) {
         recommended?.minutesUntilLastDeparture ?? null,
       usableMarginMinutes:
         recommended?.usableMarginMinutes ?? null,
-      estimatedDestinationStationArrivalTime:
-        recommended?.estimatedDestinationStationArrivalTime ?? null,
-      localDestinationStationArrivalTime:
-        recommended?.localDestinationStationArrivalTime ?? null,
+      lastArrival: recommended?.lastArrival ?? null,
+      estimatedLastTrainArrivalTime:
+        recommended?.estimatedLastTrainArrivalTime ?? null,
+      localLastTrainArrivalTime:
+        recommended?.localLastTrainArrivalTime ?? null,
+      estimatedDestinationStationArrivalTime: null,
+      localDestinationStationArrivalTime: null,
+      arrivalEstimateQuality: "last_train_boundary_only",
       routeSummary: recommended?.routeSummary ?? null,
       transfers: recommended?.transfers ?? null,
       options
