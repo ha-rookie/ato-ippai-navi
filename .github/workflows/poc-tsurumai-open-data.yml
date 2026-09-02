@@ -1,0 +1,90 @@
+name: PoC Nagoya Tsurumai Open Data
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-tsurumai-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-tsurumai-last-trains.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-tsurumai-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-tsurumai-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract Fushimi Tsurumai timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SOURCE_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/4b864d8c-4652-4133-b3d2-1445d0c12ca4/download/20240316_subway-timetable-tsurumailine.zip'
+
+          curl -fsSL "$SOURCE_URL" -o /tmp/tsurumai.zip
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/tsurumai.zip \
+            --output /tmp/fushimi-tsurumai-up.json \
+            --station-code T07 \
+            --station-name 伏見 \
+            --direction-sheet 上り \
+            --default-terminal 上小田井 \
+            --revision 2024-03-16 \
+            --source-url "$SOURCE_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/tsurumai.zip \
+            --output /tmp/fushimi-tsurumai-down.json \
+            --station-code T07 \
+            --station-name 伏見 \
+            --direction-sheet 下り \
+            --default-terminal 赤池 \
+            --revision 2024-03-16 \
+            --source-url "$SOURCE_URL"
+
+      - name: Inspect late departures and markers
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          for path in (
+              "/tmp/fushimi-tsurumai-up.json",
+              "/tmp/fushimi-tsurumai-down.json",
+          ):
+              with open(path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              print("===", path, "===")
+              print("sheet", data["directionSheet"])
+              print("default", data["defaultTerminal"])
+              print("markers", json.dumps(data["markerDestinations"], ensure_ascii=False))
+
+              for day_type, departures in data["schedules"].items():
+                  late = [d for d in departures if d["serviceMinutes"] >= 23 * 60]
+                  print(day_type, json.dumps(late[-20:], ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload Tsurumai inspection artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsurumai-fushimi-inspection
+          path: |
+            /tmp/fushimi-tsurumai-up.json
+            /tmp/fushimi-tsurumai-down.json
+          if-no-files-found: error
+          retention-days: 7
