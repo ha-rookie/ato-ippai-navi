@@ -48,18 +48,18 @@ export const DESTINATION_STATION_STORAGE_KEY =
 
 export function normalizeDestinationStation(value) {
   const code = String(value ?? "").trim().toUpperCase();
-  const match = /^([HTM])(\d{1,2})$/.exec(code);
+  const match = /^([HTME])(\d{1,2})$/.exec(code);
 
   if (!match) {
-    throw new Error("destination station must be H01-H22, T01-T20, or M01-M28");
+    throw new Error("destination station must be H01-H22, T01-T20, M01-M28, or E01-E07");
   }
 
   const line = match[1];
   const number = Number(match[2]);
-  const max = line === "H" ? 22 : line === "T" ? 20 : 28;
+  const max = { H: 22, T: 20, M: 28, E: 7 }[line];
 
   if (number < 1 || number > max) {
-    throw new Error("destination station must be H01-H22, T01-T20, or M01-M28");
+    throw new Error("destination station must be H01-H22, T01-T20, M01-M28, or E01-E07");
   }
 
   return `${line}${String(number).padStart(2, "0")}`;
