@@ -4,6 +4,8 @@ import {
 } from "./decision.js";
 import { estimateNagoyaTaxiFare } from "./taxi.js";
 import { composeTonightDecision } from "./tonight.js";
+import { evaluateLastTrainBoundary } from "./last-train.js";
+import LAST_TRAINS_NAGOYA from "./data/last-trains-nagoya.json" with { type: "json" };
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
@@ -294,6 +296,95 @@ function addMinutes(iso, minutes) {
   ).toISOString();
 }
 
+async function lastTrainBoundaryFromCurrentLocation(env, input) {
+  if (!input.origin) throw new Error("origin is required");
+  if (!input.departureTime) throw new Error("departureTime is required");
+
+  const destinationCode = input.destinationCode || "H22";
+  const stationBufferMinutes = Number(input.stationBufferMinutes ?? 3);
+  const minimumBoardingLeadMinutes = Number(
+    input.minimumBoardingLeadMinutes ?? 1
+  );
+
+  const hubEntries = Object.entries(LAST_TRAINS_NAGOYA.origins)
+    .filter(([, hub]) => hub.enabled);
+
+  const walkResults = await Promise.all(
+    hubEntries.map(async ([originId, hub]) => {
+      try {
+        const result = await walk(env, {
+          origin: input.origin,
+          destination: hub.walkDestination
+        });
+
+        return [originId, hub, result];
+      } catch (error) {
+        return [
+          originId,
+          hub,
+          {
+            routeFound: false,
+            error: String(error?.message || error)
+          }
+        ];
+      }
+    })
+  );
+
+  const walkOptions = {};
+  const hubAccess = {};
+
+  for (const [originId, hub, result] of walkResults) {
+    const walkMinutes =
+      result.routeFound && result.durationSeconds != null
+        ? Math.ceil(result.durationSeconds / 60)
+        : null;
+
+    walkOptions[originId] = {
+      originId,
+      originName: hub.name,
+      destination: hub.walkDestination,
+      routeFound: result.routeFound === true,
+      distanceMeters: result.distanceMeters ?? null,
+      durationSeconds: result.durationSeconds ?? null,
+      walkMinutes,
+      error: result.error ?? null
+    };
+
+    if (walkMinutes != null) {
+      hubAccess[originId] = { walkMinutes };
+    }
+  }
+
+  if (Object.keys(hubAccess).length === 0) {
+    return {
+      routeFound: false,
+      reason: "walk_routes_not_found",
+      walkOptions
+    };
+  }
+
+  const decision = evaluateLastTrainBoundary(
+    LAST_TRAINS_NAGOYA,
+    {
+      departureTime: input.departureTime,
+      dayType: input.dayType,
+      destinationCode,
+      offsetMinutes: input.offsetMinutes,
+      stationBufferMinutes,
+      minimumBoardingLeadMinutes,
+      hubAccess
+    }
+  );
+
+  return {
+    routeFound: true,
+    dataSource: "internal_last_train_json",
+    walkOptions,
+    ...decision
+  };
+}
+
 async function decisionFromCurrentLocation(env, input) {
   if (!input.origin) throw new Error("origin is required");
   if (!input.departureTime) throw new Error("departureTime is required");
@@ -467,6 +558,10 @@ export default {
 
       if (url.pathname === "/api/decision-poc") {
         return json(evaluateSakaeToFujigaoka(input));
+      }
+
+      if (url.pathname === "/api/last-train-boundary") {
+        return json(await lastTrainBoundaryFromCurrentLocation(env, input));
       }
 
       if (url.pathname === "/api/decision-from-current-location") {
