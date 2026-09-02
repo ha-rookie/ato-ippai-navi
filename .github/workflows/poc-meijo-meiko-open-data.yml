@@ -8,12 +8,14 @@ on:
       - '.github/workflows/poc-meijo-meiko-open-data.yml'
       - 'scripts/extract-nagoya-subway.py'
       - 'scripts/generate-meijo-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
   push:
     branches: [main]
     paths:
       - '.github/workflows/poc-meijo-meiko-open-data.yml'
       - 'scripts/extract-nagoya-subway.py'
       - 'scripts/generate-meijo-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -259,6 +261,36 @@ jobs:
                   assert route["status"] == "verified", (code, route)
 
           print("Generated Meijo direct boundary validation: OK")
+          PY
+
+      - name: Compare generated Meijo boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meijo-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          generated_destinations = generated["destinations"]
+
+          assert len([
+              code
+              for code in production["destinations"]
+              if code.startswith("M")
+          ]) == 28
+
+          for code, destination in generated_destinations.items():
+              prod = production["destinations"].get(code)
+              assert prod is not None, code
+              assert prod["enabled"] is True, code
+              assert prod["name"] == destination["name"], code
+              assert prod["stationCodes"] == destination["stationCodes"], code
+              assert prod["routes"] == destination["routes"], code
+
+          print("Production Meijo boundary comparison: OK")
           PY
 
       - name: Upload normalized PoC artifacts
