@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Generate normalized Sakae timetable
+      - name: Generate normalized Sakae and Fushimi timetables
         shell: bash
         run: |
           set -euo pipefail
@@ -29,7 +29,25 @@ jobs:
 
           curl -fsSL "$SOURCE_URL" -o /tmp/higashiyama.zip
 
-          python3 scripts/extract-nagoya-subway.py             --zip /tmp/higashiyama.zip             --output /tmp/sakae-higashiyama.json             --station-code H10             --station-name 栄             --direction-sheet 下り             --default-terminal 藤が丘             --revision 2025-03-29             --source-url "$SOURCE_URL"
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/higashiyama.zip \
+            --output /tmp/sakae-higashiyama.json \
+            --station-code H10 \
+            --station-name 栄 \
+            --direction-sheet 下り \
+            --default-terminal 藤が丘 \
+            --revision 2025-03-29 \
+            --source-url "$SOURCE_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/higashiyama.zip \
+            --output /tmp/fushimi-higashiyama.json \
+            --station-code H09 \
+            --station-name 伏見 \
+            --direction-sheet 下り \
+            --default-terminal 藤が丘 \
+            --revision 2025-03-29 \
+            --source-url "$SOURCE_URL"
 
           echo
           echo "=== Normalized JSON (late-night excerpt) ==="
@@ -37,42 +55,52 @@ jobs:
           python3 - <<'PY'
           import json
 
-          with open("/tmp/sakae-higashiyama.json", encoding="utf-8") as f:
-              data = json.load(f)
+          for path in [
+              "/tmp/sakae-higashiyama.json",
+              "/tmp/fushimi-higashiyama.json",
+          ]:
+              with open(path, encoding="utf-8") as f:
+                  data = json.load(f)
 
-          result = {
-              "source": data["source"],
-              "station": data["station"],
-              "directionSheet": data["directionSheet"],
-              "defaultTerminal": data["defaultTerminal"],
-              "markerDestinations": data["markerDestinations"],
-              "lateNight": {},
-          }
-
-          assert data["markerDestinations"].get("星") == "星ヶ丘", data["markerDestinations"]
-
-          for day_type, departures in data["schedules"].items():
-              result["lateNight"][day_type] = [
-                  item for item in departures
-                  if item["serviceMinutes"] >= 23 * 60
-              ]
-
-              to_fujigaoka = [
-                  item for item in departures
-                  if item["destination"] == "藤が丘"
-              ]
-              assert to_fujigaoka[-1]["time"] == "00:02", {
-                  "dayType": day_type,
-                  "lastToFujigaoka": to_fujigaoka[-1],
+              result = {
+                  "source": data["source"],
+                  "station": data["station"],
+                  "directionSheet": data["directionSheet"],
+                  "defaultTerminal": data["defaultTerminal"],
+                  "markerDestinations": data["markerDestinations"],
+                  "lateNight": {},
+                  "lastToFujigaoka": {},
               }
 
-          print(json.dumps(result, ensure_ascii=False, indent=2))
+              assert data["markerDestinations"].get("星") == "星ヶ丘", data["markerDestinations"]
+
+              for day_type, departures in data["schedules"].items():
+                  result["lateNight"][day_type] = [
+                      item for item in departures
+                      if item["serviceMinutes"] >= 23 * 60
+                  ]
+
+                  to_fujigaoka = [
+                      item for item in departures
+                      if item["destination"] == "藤が丘"
+                  ]
+                  result["lastToFujigaoka"][day_type] = to_fujigaoka[-1]
+
+                  if data["station"]["code"] == "H10":
+                      assert to_fujigaoka[-1]["time"] == "00:02", {
+                          "dayType": day_type,
+                          "lastToFujigaoka": to_fujigaoka[-1],
+                      }
+
+              print(json.dumps(result, ensure_ascii=False, indent=2))
           PY
 
-      - name: Upload normalized timetable
+      - name: Upload normalized timetables
         uses: actions/upload-artifact@v4
         with:
-          name: sakae-higashiyama-normalized
-          path: /tmp/sakae-higashiyama.json
+          name: sakae-fushimi-higashiyama-normalized
+          path: |
+            /tmp/sakae-higashiyama.json
+            /tmp/fushimi-higashiyama.json
           if-no-files-found: error
           retention-days: 7
