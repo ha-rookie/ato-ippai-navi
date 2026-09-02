@@ -96,58 +96,62 @@ jobs:
           inspect("/tmp/meiko.zip", "MEIKO")
           PY
 
-      - name: Extract Sakae M05 Meijo up/down
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
-
-          python3 scripts/extract-nagoya-subway.py \
-            --zip /tmp/meijo.zip \
-            --output /tmp/sakae-meijo-up.json \
-            --station-code M05 \
-            --station-name 栄 \
-            --direction-sheet 上り \
-            --default-terminal 名城線一周 \
-            --revision 2025-09-29 \
-            --source-url "$MEIJO_URL"
-
-          python3 scripts/extract-nagoya-subway.py \
-            --zip /tmp/meijo.zip \
-            --output /tmp/sakae-meijo-down.json \
-            --station-code M05 \
-            --station-name 栄 \
-            --direction-sheet 下り \
-            --default-terminal 名城線一周 \
-            --revision 2025-09-29 \
-            --source-url "$MEIJO_URL"
-
-      - name: Inspect Sakae M05 late departures
+      - name: Inspect Sakae M05 raw timetable layout
         shell: bash
         run: |
           python3 - <<'PY'
+          import importlib.util
+          import io
           import json
+          import zipfile
+          from pathlib import Path
 
-          for path in (
-              "/tmp/sakae-meijo-up.json",
-              "/tmp/sakae-meijo-down.json",
-          ):
-              with open(path, encoding="utf-8") as f:
-                  data = json.load(f)
+          spec = importlib.util.spec_from_file_location(
+              "extractor",
+              Path("scripts/extract-nagoya-subway.py"),
+          )
+          extractor = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(extractor)
 
-              print("===", path, "===")
-              print("heading", data["heading"])
-              print("sheet", data["directionSheet"])
-              print("default", data["defaultTerminal"])
-              print("markers", json.dumps(data["markerDestinations"], ensure_ascii=False))
+          def col_name(number):
+              result = ""
+              value = number
+              while value:
+                  value, rem = divmod(value - 1, 26)
+                  result = chr(65 + rem) + result
+              return result
 
-              for day_type, departures in data["schedules"].items():
-                  late = [d for d in departures if d["serviceMinutes"] >= 22 * 60 + 30]
-                  print(
-                      day_type,
-                      json.dumps(late[-30:], ensure_ascii=False, indent=2)
-                  )
+          with zipfile.ZipFile("/tmp/meijo.zip") as outer:
+              info, recovered = extractor.find_workbook(
+                  outer, "M05", "栄"
+              )
+              print("workbook", recovered)
+
+              with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
+                  names = extractor.sheet_names(book)
+
+                  for sheet_name in names:
+                      sheet_index = names.index(sheet_name) + 1
+                      path = f"xl/worksheets/sheet{sheet_index}.xml"
+                      cells = extractor.read_sheet_cells(book, path)
+
+                      print(f"=== SHEET {sheet_name} ===")
+                      print(
+                          "markers",
+                          json.dumps(
+                              extractor.marker_destinations(cells),
+                              ensure_ascii=False,
+                          )
+                      )
+
+                      for row in range(1, 45):
+                          values = [
+                              f"{col_name(col)}={extractor.normalize_text(value)}"
+                              for (col, cell_row), value in sorted(cells.items())
+                              if cell_row == row
+                          ]
+                          if values:
+                              print(f"ROW {row}: " + " | ".join(values))
           PY
 
       - name: Upload inspection ZIP metadata
@@ -157,7 +161,5 @@ jobs:
           path: |
             /tmp/meijo.zip
             /tmp/meiko.zip
-            /tmp/sakae-meijo-up.json
-            /tmp/sakae-meijo-down.json
           if-no-files-found: error
           retention-days: 1
