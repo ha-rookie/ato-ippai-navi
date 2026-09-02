@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/poc-sakuradori-walk-hubs.yml'
       - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-sakuradori-last-trains.py'
 
 permissions:
   contents: read
@@ -120,6 +121,92 @@ jobs:
                                   "dayType": day_type,
                                   "late": late[-16:],
                               }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Extract normalized S04 and S05 timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/874b00d8-ec39-4401-8cd2-0d1c535aa4c1/download/20230916_subway-timetable-sakuradoriline.zip'
+
+          for spec in \
+            'marunouchi:S04:丸の内' \
+            'hisayaodori:S05:久屋大通'
+          do
+            IFS=':' read -r id code name <<< "$spec"
+
+            python3 scripts/extract-nagoya-subway.py \
+              --zip /tmp/sakuradori.zip \
+              --output "/tmp/${id}-up.json" \
+              --station-code "$code" \
+              --station-name "$name" \
+              --direction-sheet 上り \
+              --default-terminal 太閤通 \
+              --revision 2023-09-16 \
+              --source-url "$URL"
+
+            python3 scripts/extract-nagoya-subway.py \
+              --zip /tmp/sakuradori.zip \
+              --output "/tmp/${id}-down.json" \
+              --station-code "$code" \
+              --station-name "$name" \
+              --direction-sheet 下り \
+              --default-terminal 徳重 \
+              --revision 2023-09-16 \
+              --source-url "$URL"
+          done
+
+      - name: Generate Sakuradori direct last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-sakuradori-last-trains.py \
+            --origin marunouchi:S04:/tmp/marunouchi-up.json:/tmp/marunouchi-down.json \
+            --origin hisayaodori:S05:/tmp/hisayaodori-up.json:/tmp/hisayaodori-down.json \
+            --output /tmp/sakuradori-last-trains.json \
+            --revision 2023-09-16
+
+      - name: Validate generated Sakuradori boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/sakuradori-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert len(data["destinations"]) == 21
+          assert set(data["origins"]) == {"marunouchi", "hisayaodori"}
+
+          expected = {
+              ("S01", "marunouchi"): ("00:25", "太閤通"),
+              ("S01", "hisayaodori"): ("00:23", "太閤通"),
+              ("S08", "marunouchi"): ("00:22", "今池"),
+              ("S08", "hisayaodori"): ("00:24", "今池"),
+              ("S09", "marunouchi"): ("00:06", "野並"),
+              ("S09", "hisayaodori"): ("00:08", "野並"),
+              ("S17", "marunouchi"): ("00:06", "野並"),
+              ("S17", "hisayaodori"): ("00:08", "野並"),
+              ("S18", "marunouchi"): ("23:55", "徳重"),
+              ("S18", "hisayaodori"): ("23:56", "徳重"),
+              ("S21", "marunouchi"): ("23:55", "徳重"),
+              ("S21", "hisayaodori"): ("23:56", "徳重"),
+          }
+
+          for day_type in ("weekday", "saturday_holiday"):
+              for (code, origin), (departure, terminal) in expected.items():
+                  route = data["destinations"][code]["routes"][origin][day_type]
+                  assert route["lastDeparture"] == departure, (code, origin, route)
+                  assert route["trainTerminal"] == terminal, (code, origin, route)
+                  assert route["transfers"] == 0, (code, origin, route)
+                  assert route["status"] == "verified", (code, origin, route)
+
+          assert data["destinations"]["S04"]["routes"].get("marunouchi") is None
+          assert data["destinations"]["S05"]["routes"].get("hisayaodori") is None
+
+          print("Generated Sakuradori boundary validation: OK")
           PY
 
       - name: Validate current official end-of-service anchors
