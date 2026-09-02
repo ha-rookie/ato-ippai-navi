@@ -1,0 +1,107 @@
+name: PoC Nagoya Meijo Meiko Open Data
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meijo-meiko-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meijo-meiko-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Meijo and Meiko timetable ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+          MEIKO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip'
+
+          curl -fsSL "$MEIJO_URL" -o /tmp/meijo.zip
+          curl -fsSL "$MEIKO_URL" -o /tmp/meiko.zip
+
+      - name: Inspect Sakae M05 workbook and sheet names
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import io
+          import json
+          import unicodedata
+          import zipfile
+          import xml.etree.ElementTree as ET
+
+          NS = {
+              "m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+          }
+
+          def recover(name):
+              try:
+                  return name.encode("cp437").decode("cp932")
+              except (UnicodeEncodeError, UnicodeDecodeError):
+                  return name
+
+          def inspect(path, label):
+              with zipfile.ZipFile(path) as outer:
+                  files = []
+                  for info in outer.infolist():
+                      if info.is_dir() or not info.filename.lower().endswith(".xlsx"):
+                          continue
+                      recovered = unicodedata.normalize("NFKC", recover(info.filename))
+                      files.append((info, recovered))
+
+                  print(f"=== {label} XLSX count={len(files)} ===")
+                  for _, name in files:
+                      print(name)
+
+                  candidates = [
+                      (info, name)
+                      for info, name in files
+                      if "M05" in name.upper() and "栄" in name
+                  ]
+
+                  print(
+                      f"=== {label} Sakae M05 candidates ===",
+                      json.dumps([name for _, name in candidates], ensure_ascii=False)
+                  )
+
+                  for info, name in candidates:
+                      with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
+                          root = ET.fromstring(book.read("xl/workbook.xml"))
+                          sheets = [
+                              sheet.attrib.get("name", "")
+                              for sheet in root.findall(".//m:sheets/m:sheet", NS)
+                          ]
+                          print(
+                              f"=== {label} workbook {name} sheets ===",
+                              json.dumps(sheets, ensure_ascii=False)
+                          )
+
+          inspect("/tmp/meijo.zip", "MEIJO")
+          inspect("/tmp/meiko.zip", "MEIKO")
+          PY
+
+      - name: Upload inspection ZIP metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: meijo-meiko-sakae-inspection
+          path: |
+            /tmp/meijo.zip
+            /tmp/meiko.zip
+          if-no-files-found: error
+          retention-days: 1
