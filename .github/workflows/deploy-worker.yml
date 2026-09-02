@@ -378,6 +378,8 @@ jobs:
           scenarios = data.get("scenarios", [])
           ready = (
               data.get("destinationScope") == "station_only"
+              and data.get("train", {}).get("dataSource")
+                  == "internal_last_train_json"
               and len(scenarios) == 4
               and scenarios[0].get("recommendedMode") == "train"
               and scenarios[-1].get("recommendedMode") == "taxi"
