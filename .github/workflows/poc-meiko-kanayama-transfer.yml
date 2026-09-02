@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/poc-meiko-kanayama-transfer.yml'
       - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-meiko-transfer-last-trains.py'
 
 permissions:
   contents: read
@@ -31,106 +32,106 @@ jobs:
           curl -fsSL "$MEIJO_URL" -o /tmp/meijo.zip
           curl -fsSL "$MEIKO_URL" -o /tmp/meiko.zip
 
-      - name: Inspect Kanayama M01 and E01 workbooks
+      - name: Extract normalized Sakae and Kanayama timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+          MEIKO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip'
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/sakae-meijo-left.json \
+            --station-code M05 \
+            --station-name 栄 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/kanayama-meijo-down.json \
+            --station-code M01 \
+            --station-name 金山 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meiko.zip \
+            --output /tmp/kanayama-meiko-down.json \
+            --station-code E01 \
+            --station-name 金山 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIKO_URL"
+
+      - name: Generate Sakae to Meiko last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-meiko-transfer-last-trains.py \
+            --sakae-left /tmp/sakae-meijo-left.json \
+            --kanayama-meijo-down /tmp/kanayama-meijo-down.json \
+            --kanayama-meiko-down /tmp/kanayama-meiko-down.json \
+            --output /tmp/meiko-transfer-last-trains.json \
+            --minimum-transfer-lead-minutes 1 \
+            --revision 2025-09-29
+
+      - name: Validate generated transfer boundaries
         shell: bash
         run: |
           python3 - <<'PY'
-          import importlib.util
-          import io
           import json
-          import zipfile
-          from pathlib import Path
 
-          spec = importlib.util.spec_from_file_location(
-              "extractor",
-              Path("scripts/extract-nagoya-subway.py"),
-          )
-          extractor = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(extractor)
+          with open("/tmp/meiko-transfer-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
 
-          for zip_path, code, name in (
-              ("/tmp/meijo.zip", "M01", "金山"),
-              ("/tmp/meiko.zip", "E01", "金山"),
-          ):
-              with zipfile.ZipFile(zip_path) as outer:
-                  info, recovered = extractor.find_workbook(outer, code, name)
-                  print(json.dumps({
-                      "zip": zip_path,
-                      "stationCode": code,
-                      "workbook": extractor.normalize_text(recovered),
-                  }, ensure_ascii=False))
+          assert data["transferPolicy"] == {
+              "station": "金山",
+              "stationCodes": ["M01", "E01"],
+              "minimumTransferLeadMinutes": 1,
+              "sameMinuteTransferAllowed": False,
+          }, data["transferPolicy"]
 
-                  with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
-                      names = extractor.sheet_names(book)
-                      print(json.dumps({
-                          "stationCode": code,
-                          "sheetNames": names,
-                      }, ensure_ascii=False))
+          destinations = data["destinations"]
+          assert list(destinations) == [
+              "E01", "E02", "E03", "E04", "E05", "E06", "E07"
+          ], list(destinations)
 
-                      for sheet_index, sheet_name in enumerate(names, start=1):
-                          cells = extractor.read_sheet_cells(
-                              book,
-                              f"xl/worksheets/sheet{sheet_index}.xml",
-                          )
-                          blocks = extractor.detect_timetable_blocks(cells)
-                          markers = extractor.marker_destinations(cells)
+          for day_type in ("weekday", "saturday_holiday"):
+              e01 = destinations["E01"]["routes"]["sakae"][day_type]
+              assert e01["lastDeparture"] == "00:10", e01
+              assert e01["lastArrival"] == "00:18", e01
+              assert e01["transfers"] == 0, e01
 
-                          block_ranges = [
-                              (blocks[0], blocks[1]),
-                              (blocks[1], 120),
-                          ]
+              for code in ("E02", "E03", "E04", "E05", "E06", "E07"):
+                  route = destinations[code]["routes"]["sakae"][day_type]
+                  assert route["lastDeparture"] == "00:02", (code, route)
+                  assert route["transferAt"] == "金山", (code, route)
+                  assert route["transferReadyTime"] == "00:10", (code, route)
+                  assert route["connectionDeparture"] == "00:18", (code, route)
+                  assert route["transferMarginMinutes"] == 8, (code, route)
+                  assert route["minimumTransferLeadMinutes"] == 1, (code, route)
+                  assert route["transfers"] == 1, (code, route)
+                  assert route["status"] == "verified", (code, route)
 
-                          schedules = {}
-                          for day_type, (hour_col, end_col) in zip(
-                              ("weekday", "saturday_holiday"),
-                              block_ranges,
-                          ):
-                              schedules[day_type] = extractor.parse_block(
-                                  cells,
-                                  hour_col,
-                                  end_col,
-                                  "__UNMARKED__",
-                                  markers,
-                              )
-
-                          late = {
-                              day_type: [
-                                  item
-                                  for item in departures
-                                  if item["serviceMinutes"] >= 23 * 60
-                              ][-12:]
-                              for day_type, departures in schedules.items()
-                          }
-
-                          print(json.dumps({
-                              "stationCode": code,
-                              "sheet": sheet_name,
-                              "markers": markers,
-                              "late": late,
-                          }, ensure_ascii=False, indent=2))
+          print("Sakae -> Kanayama -> Meiko boundary validation: OK")
           PY
 
-      - name: Validate official published end-of-service anchors
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          # These anchors are independently published by Nagoya City
-          # Transportation Bureau's first/last train page (2025-09-29).
-          # This PoC will next prove the same connection from station XLSX data.
-          anchors = {
-              "sakae_to_kanayama_candidate": {
-                  "sakaeDeparture": "00:02",
-                  "kanayamaTime": "00:10",
-                  "terminal": "瑞穂運動場東",
-              },
-              "meiko_last_from_kanayama": {
-                  "kanayamaDeparture": "00:18",
-                  "nagoyakoArrival": "00:30",
-              },
-          }
-
-          assert anchors["sakae_to_kanayama_candidate"]["kanayamaTime"] < \
-              anchors["meiko_last_from_kanayama"]["kanayamaDeparture"]
-
-          print("Published end-of-service anchors: OK")
-          PY
+      - name: Upload normalized PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: meiko-kanayama-transfer-poc
+          path: |
+            /tmp/sakae-meijo-left.json
+            /tmp/kanayama-meijo-down.json
+            /tmp/kanayama-meiko-down.json
+            /tmp/meiko-transfer-last-trains.json
+          if-no-files-found: error
+          retention-days: 7
