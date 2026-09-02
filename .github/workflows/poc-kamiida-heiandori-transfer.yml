@@ -137,6 +137,23 @@ jobs:
             --revision 2025-09-29 \
             --source-url "$MEIJO_URL"
 
+      - name: Extract K02 Heiandori Kamiida timetable
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          KAMIIDA_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/b0a77882-daae-45ee-b07a-8ed7d51f1bde/download/20240316_subway-timetable-kamiidaline.zip'
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/kamiida.zip \
+            --output /tmp/heiandori-kamiida.json \
+            --station-code K02 \
+            --station-name 平安通 \
+            --direction-sheet 上り \
+            --default-terminal 上飯田 \
+            --revision 2024-03-16 \
+            --source-url "$KAMIIDA_URL"
+
       - name: Match Sakae to Heiandori late trains
         shell: bash
         run: |
@@ -192,6 +209,112 @@ jobs:
               ), pairs[-8:]
 
           print("Sakae -> Heiandori late-train matching: OK")
+          PY
+
+      - name: Compare transfer safety margins
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/sakae-right.json", encoding="utf-8") as f:
+              sakae = json.load(f)
+          with open("/tmp/heiandori-right.json", encoding="utf-8") as f:
+              heiandori = json.load(f)
+          with open("/tmp/heiandori-kamiida.json", encoding="utf-8") as f:
+              kamiida = json.load(f)
+
+          expected = {
+              1: ("00:14", "00:26", "00:28", 2),
+              2: ("00:14", "00:26", "00:28", 2),
+              3: ("00:04", "00:16", "00:28", 12),
+          }
+
+          for day_type in ("weekday", "saturday_holiday"):
+              pairs = []
+
+              for departure in sakae["schedules"][day_type]:
+                  candidates = [
+                      item
+                      for item in heiandori["schedules"][day_type]
+                      if item["destination"] == departure["destination"]
+                      and item["serviceMinutes"] > departure["serviceMinutes"]
+                      and item["serviceMinutes"] <= departure["serviceMinutes"] + 20
+                  ]
+
+                  if not candidates:
+                      continue
+
+                  at_heiandori = min(
+                      candidates,
+                      key=lambda item: item["serviceMinutes"],
+                  )
+                  pairs.append((departure, at_heiandori))
+
+              kamiida_departures = kamiida["schedules"][day_type]
+              assert kamiida_departures[-1]["time"] == "00:28", kamiida_departures[-3:]
+              assert kamiida_departures[-1]["destination"] == "上飯田", kamiida_departures[-1]
+
+              results = {}
+
+              for minimum_lead in (1, 2, 3):
+                  feasible = []
+
+                  for departure, at_heiandori in pairs:
+                      connections = [
+                          item
+                          for item in kamiida_departures
+                          if item["serviceMinutes"]
+                          >= at_heiandori["serviceMinutes"] + minimum_lead
+                      ]
+
+                      if not connections:
+                          continue
+
+                      connection = max(
+                          connections,
+                          key=lambda item: item["serviceMinutes"],
+                      )
+
+                      feasible.append({
+                          "sakaeDeparture": departure["time"],
+                          "heiandoriArrival": at_heiandori["time"],
+                          "connectionDeparture": connection["time"],
+                          "transferMarginMinutes":
+                              connection["serviceMinutes"]
+                              - at_heiandori["serviceMinutes"],
+                          "terminal": departure["destination"],
+                      })
+
+                  selected = max(
+                      feasible,
+                      key=lambda item:
+                          next(
+                              d["serviceMinutes"]
+                              for d in sakae["schedules"][day_type]
+                              if d["time"] == item["sakaeDeparture"]
+                              and d["destination"] == item["terminal"]
+                          ),
+                  )
+
+                  results[minimum_lead] = selected
+
+                  exp = expected[minimum_lead]
+                  assert (
+                      selected["sakaeDeparture"],
+                      selected["heiandoriArrival"],
+                      selected["connectionDeparture"],
+                      selected["transferMarginMinutes"],
+                  ) == exp, (minimum_lead, selected)
+
+              print(json.dumps({
+                  "dayType": day_type,
+                  "minimumTransferLeadComparison": results,
+                  "adoptedMinimumTransferLeadMinutes": 3,
+                  "adoptedBoundary": results[3],
+              }, ensure_ascii=False, indent=2))
+
+          print("Kamiida transfer safety-margin comparison: OK")
           PY
 
       - name: Validate current official end-of-service anchors
