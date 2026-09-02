@@ -471,7 +471,7 @@ async function tonightDecision(env, input) {
       error: String(error?.message || error)
     }));
 
-    const taxiResult = await taxiEstimate(env, {
+    const taxiResult = await safeTaxiEstimate(env, {
       origin: input.origin,
       destination: taxiDestination,
       departureTime: input.departureTime,
@@ -501,7 +501,7 @@ async function tonightDecision(env, input) {
     }
   );
 
-  const taxiResult = await taxiEstimate(env, {
+  const taxiResult = await safeTaxiEstimate(env, {
     origin: input.origin,
     destination: taxiDestination,
     departureTime: input.departureTime,
@@ -514,6 +514,17 @@ async function tonightDecision(env, input) {
     taxiDestination,
     ...composeTonightDecision(trainDecision, taxiResult)
   };
+}
+
+async function safeTaxiEstimate(env, input) {
+  try {
+    return await taxiEstimate(env, input);
+  } catch (error) {
+    return {
+      routeFound: false,
+      error: String(error?.message || error)
+    };
+  }
 }
 
 async function taxiEstimate(env, input) {
