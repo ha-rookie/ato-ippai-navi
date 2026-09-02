@@ -3,7 +3,9 @@ import {
 } from "/js/sleep.js";
 import {
   clearSleepSettings,
+  loadDestinationStation,
   loadSleepSettings,
+  saveDestinationStation,
   saveSleepSettings
 } from "/js/settings.js";
 
@@ -11,12 +13,15 @@ const $ = (id) => document.getElementById(id);
 
 const els = {
   clock: $("clock"),
+  routeBadge: $("routeBadge"),
+  destinationCode: $("destinationCode"),
   dayType: $("dayType"),
   checkButton: $("checkButton"),
   status: $("status"),
   resultsSection: $("resultsSection"),
   results: $("results"),
   taxiNote: $("taxiNote"),
+  stationToHomeLabel: $("stationToHomeLabel"),
   stationToHomeMinutes: $("stationToHomeMinutes"),
   bedtimePrepMinutes: $("bedtimePrepMinutes"),
   wakeTime: $("wakeTime"),
@@ -55,6 +60,33 @@ function updateClock() {
     hourCycle: "h23"
   }).format(new Date());
 }
+
+function selectedDestinationName() {
+  return (
+    els.destinationCode.selectedOptions?.[0]?.dataset?.name ||
+    "最寄り駅"
+  );
+}
+
+function updateDestinationUi() {
+  const name = selectedDestinationName();
+  els.routeBadge.textContent = `PoC：栄・伏見 → ${name}`;
+  els.stationToHomeLabel.textContent = `${name}駅 → 自宅`;
+}
+
+function populateDestinationStation() {
+  try {
+    const stored = loadDestinationStation();
+    if (stored) {
+      els.destinationCode.value = stored;
+    }
+  } catch {
+    // localStorageが使えない場合は既定値H22のまま続行する。
+  }
+
+  updateDestinationUi();
+}
+
 
 function currentSleepSettingsOrNull() {
   try {
@@ -133,6 +165,7 @@ async function fetchDecision(origin) {
       origin,
       departureTime: new Date().toISOString(),
       dayType: els.dayType.value,
+      destinationCode: els.destinationCode.value,
       offsetMinutes: [0, 15, 30, 60],
       stationBufferMinutes: 3,
       minimumBoardingLeadMinutes: 1,
@@ -169,7 +202,7 @@ function sleepHtml(scenario) {
   `;
 }
 
-function renderScenario(scenario) {
+function renderScenario(scenario, destinationName) {
   const label =
     offsetLabels.get(Number(scenario.offsetMinutes)) ||
     `+${scenario.offsetMinutes}分`;
@@ -196,7 +229,7 @@ function renderScenario(scenario) {
     `;
 
     if (scenario.localLastTrainArrivalTime) {
-      sub += `<br>最終列車は藤が丘 ${scenario.localLastTrainArrivalTime}着`;
+      sub += `<br>最終列車は${destinationName} ${scenario.localLastTrainArrivalTime}着`;
     }
 
     if (Number.isFinite(Number(scenario.usableMarginMinutes))) {
@@ -206,7 +239,7 @@ function renderScenario(scenario) {
     modeLabel = "タクシー";
     modeClass = "taxi";
     main = `終電後・約${yen(scenario.taxiEstimatedTotalYen)}`;
-    sub = `藤が丘 ${scenario.localDestinationStationArrivalTime || "—"}ごろ着見込み`;
+    sub = `${destinationName} ${scenario.localDestinationStationArrivalTime || "—"}ごろ着見込み`;
   }
 
   return `
@@ -228,12 +261,15 @@ function render(data) {
     ? enrichTonightDecisionWithSleep(data, settings)
     : data;
 
+  const destinationName =
+    data.train?.destination?.name || selectedDestinationName();
+
   els.results.innerHTML = displayData.scenarios
-    .map(renderScenario)
+    .map((scenario) => renderScenario(scenario, destinationName))
     .join("");
 
   els.taxiNote.textContent = data.taxi?.estimatedTotalYen
-    ? `終電後のタクシー参考概算：藤が丘駅まで約${yen(data.taxi.estimatedTotalYen)}。距離制のみの参考値です。`
+    ? `終電後のタクシー参考概算：${destinationName}駅まで約${yen(data.taxi.estimatedTotalYen)}。距離制のみの参考値です。`
     : "";
 
   els.resultsSection.classList.remove("hidden");
@@ -258,6 +294,16 @@ async function runDecision() {
 }
 
 els.checkButton.addEventListener("click", runDecision);
+
+els.destinationCode.addEventListener("change", () => {
+  updateDestinationUi();
+
+  try {
+    saveDestinationStation(els.destinationCode.value);
+  } catch {
+    // 保存できなくても、その場の判定は選択値で続行する。
+  }
+});
 
 els.saveSettingsButton.addEventListener("click", () => {
   const settings = formSettings();
@@ -284,6 +330,7 @@ els.clearSettingsButton.addEventListener("click", () => {
 });
 
 els.dayType.value = autoDayType();
+populateDestinationStation();
 populateSettings();
 updateClock();
 setInterval(updateClock, 30000);
