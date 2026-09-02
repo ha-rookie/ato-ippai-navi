@@ -7,11 +7,13 @@ on:
     paths:
       - '.github/workflows/poc-meijo-meiko-open-data.yml'
       - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-meijo-last-trains.py'
   push:
     branches: [main]
     paths:
       - '.github/workflows/poc-meijo-meiko-open-data.yml'
       - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-meijo-last-trains.py'
 
 permissions:
   contents: read
@@ -211,6 +213,54 @@ jobs:
           print("Sakae M05 deep-night normalization validation: OK")
           PY
 
+      - name: Generate Meijo direct last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-meijo-last-trains.py \
+            --right /tmp/sakae-meijo-right.json \
+            --left /tmp/sakae-meijo-left.json \
+            --output /tmp/meijo-last-trains.json \
+            --revision 2025-09-29
+
+      - name: Validate generated Meijo boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meijo-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          destinations = data["destinations"]
+          assert len(destinations) == 28, len(destinations)
+          assert destinations["M05"]["name"] == "栄"
+          assert destinations["M05"]["routes"] == {}
+
+          expected = {
+              "M01": ("00:10", "left", "新瑞橋"),
+              "M06": ("00:14", "right", "大曽根"),
+              "M12": ("00:14", "right", "大曽根"),
+              "M13": ("00:04", "right", "ナゴヤドーム前矢田"),
+              "M14": ("23:52", "right", "名城線右回り"),
+              "M22": ("00:02", "left", "瑞穂運動場東"),
+              "M23": ("00:10", "left", "新瑞橋"),
+              "M28": ("00:10", "left", "新瑞橋"),
+          }
+
+          for day_type in ("weekday", "saturday_holiday"):
+              for code, (last_departure, direction, terminal) in expected.items():
+                  route = destinations[code]["routes"]["sakae"][day_type]
+                  assert route["lastDeparture"] == last_departure, (code, route)
+                  assert route["direction"] == direction, (code, route)
+                  assert route["trainTerminal"] == terminal, (code, route)
+                  assert route["transfers"] == 0, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+          print("Generated Meijo direct boundary validation: OK")
+          PY
+
       - name: Upload normalized PoC artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -218,5 +268,6 @@ jobs:
           path: |
             /tmp/sakae-meijo-right.json
             /tmp/sakae-meijo-left.json
+            /tmp/meijo-last-trains.json
           if-no-files-found: error
           retention-days: 7
