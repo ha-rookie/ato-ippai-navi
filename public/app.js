@@ -202,12 +202,13 @@ function sleepHtml(scenario) {
   `;
 }
 
-function renderScenario(scenario, destinationName) {
+function renderScenario(scenario, destinationName, dataJourneyWalkOnly) {
   const label =
     offsetLabels.get(Number(scenario.offsetMinutes)) ||
     `+${scenario.offsetMinutes}分`;
 
   const isTrain = scenario.recommendedMode === "train";
+  const isWalk = scenario.recommendedMode === "walk";
   const isTaxi = scenario.recommendedMode === "taxi";
   const warning =
     isTrain &&
@@ -235,10 +236,17 @@ function renderScenario(scenario, destinationName) {
     if (Number.isFinite(Number(scenario.usableMarginMinutes))) {
       sub += `<br>終電までの余裕 約${Math.max(0, scenario.usableMarginMinutes)}分`;
     }
+  } else if (isWalk) {
+    modeLabel = "徒歩";
+    modeClass = "walk";
+    main = `${destinationName}駅まで徒歩 約${scenario.walkMinutes}分`;
+    sub = `${scenario.localDestinationStationArrivalTime || "—"}ごろ到着見込み`;
   } else if (isTaxi) {
     modeLabel = "タクシー";
     modeClass = "taxi";
-    main = `終電後・約${yen(scenario.taxiEstimatedTotalYen)}`;
+    main = dataJourneyWalkOnly
+      ? `タクシー 約${yen(scenario.taxiEstimatedTotalYen)}`
+      : `終電後・約${yen(scenario.taxiEstimatedTotalYen)}`;
     sub = `${destinationName} ${scenario.localDestinationStationArrivalTime || "—"}ごろ着見込み`;
   }
 
@@ -265,11 +273,19 @@ function render(data) {
     data.train?.destination?.name || selectedDestinationName();
 
   els.results.innerHTML = displayData.scenarios
-    .map((scenario) => renderScenario(scenario, destinationName))
+    .map((scenario) =>
+      renderScenario(
+        scenario,
+        destinationName,
+        data.journeyType === "walk_to_home_station"
+      )
+    )
     .join("");
 
   els.taxiNote.textContent = data.taxi?.estimatedTotalYen
-    ? `終電後のタクシー参考概算：${destinationName}駅まで約${yen(data.taxi.estimatedTotalYen)}。距離制のみの参考値です。`
+    ? data.journeyType === "walk_to_home_station"
+      ? `タクシー参考概算：${destinationName}駅まで約${yen(data.taxi.estimatedTotalYen)}。距離制のみの参考値です。`
+      : `終電後のタクシー参考概算：${destinationName}駅まで約${yen(data.taxi.estimatedTotalYen)}。距離制のみの参考値です。`
     : "";
 
   els.resultsSection.classList.remove("hidden");
