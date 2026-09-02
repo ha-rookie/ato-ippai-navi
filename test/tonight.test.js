@@ -69,3 +69,44 @@ test("unknown is returned when neither train nor taxi is available", () => {
   assert.equal(result.scenarios[0].status, "unavailable");
   assert.equal(result.scenarios[0].taxiEstimatedTotalYen, null);
 });
+
+
+test("last-train boundary data does not invent a train arrival ETA", () => {
+  const result = composeTonightDecision(
+    {
+      dataSource: "internal_last_train_json",
+      scenarios: [
+        {
+          offsetMinutes: 30,
+          canReachDestination: true,
+          recommendedOriginId: "sakae",
+          recommendedOriginName: "栄",
+          lastDeparture: "00:02",
+          localLastTrainArrivalTime: "00:23",
+          estimatedDestinationStationArrivalTime: null,
+          localDestinationStationArrivalTime: null,
+          arrivalEstimateQuality: "last_train_boundary_only"
+        }
+      ]
+    },
+    {
+      routeFound: true,
+      durationSeconds: 1200,
+      estimatedTotalYen: 8000
+    }
+  );
+
+  assert.equal(result.scenarios[0].recommendedMode, "train");
+  assert.equal(
+    result.scenarios[0].estimatedDestinationStationArrivalTime,
+    null
+  );
+  assert.equal(
+    result.scenarios[0].localDestinationStationArrivalTime,
+    null
+  );
+  assert.equal(
+    result.scenarios[0].localLastTrainArrivalTime,
+    "00:23"
+  );
+});
