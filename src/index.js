@@ -438,7 +438,13 @@ async function tonightDecision(env, input) {
   if (!input.origin) throw new Error("origin is required");
   if (!input.departureTime) throw new Error("departureTime is required");
 
-  const trainDecision = await decisionFromCurrentLocation(env, input);
+  const trainDecision = await lastTrainBoundaryFromCurrentLocation(
+    env,
+    {
+      ...input,
+      destinationCode: input.destinationCode || "H22"
+    }
+  );
 
   const taxiDestination =
     input.taxiDestination || "藤が丘駅 愛知県名古屋市";
