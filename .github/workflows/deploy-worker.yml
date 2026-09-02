@@ -414,12 +414,15 @@ jobs:
 
           assert data["destinationScope"] == "station_only", data
           assert data["taxiDestination"] == "藤が丘駅 愛知県名古屋市", data
+          assert data["train"]["dataSource"] == "internal_last_train_json", data
           assert scenarios[0]["recommendedMode"] == "train", scenarios
-          assert scenarios[0]["localDestinationStationArrivalTime"] == "23:53", scenarios
-          assert scenarios[1]["nextTrain"] == "23:52", scenarios
-          assert scenarios[1]["localDestinationStationArrivalTime"] == "00:13", scenarios
-          assert scenarios[2]["nextTrain"] == "00:02", scenarios
-          assert scenarios[2]["localDestinationStationArrivalTime"] == "00:23", scenarios
+          assert scenarios[0]["recommendedOriginId"] in {"sakae", "fushimi"}, scenarios
+          assert scenarios[0]["lastDeparture"] in {"00:02", "00:00"}, scenarios
+          assert scenarios[0]["localLastTrainArrivalTime"] == "00:23", scenarios
+          assert scenarios[0]["localDestinationStationArrivalTime"] is None, scenarios
+          assert scenarios[1]["recommendedMode"] == "train", scenarios
+          assert scenarios[2]["recommendedMode"] == "train", scenarios
+          assert scenarios[2]["usableMarginMinutes"] >= 0, scenarios
           assert scenarios[3]["recommendedMode"] == "taxi", scenarios
           assert scenarios[3]["taxiTravelMinutes"] >= 1, scenarios
           assert scenarios[3]["localDestinationStationArrivalTime"] is not None, scenarios
