@@ -1,0 +1,158 @@
+name: PoC Nagoya Sakuradori Walk Hubs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-sakuradori-walk-hubs.yml'
+      - 'scripts/extract-nagoya-subway.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Sakuradori timetable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/874b00d8-ec39-4401-8cd2-0d1c535aa4c1/download/20230916_subway-timetable-sakuradoriline.zip'
+          curl -fsSL "$URL" -o /tmp/sakuradori.zip
+
+      - name: Inspect S04 Marunouchi and S05 Hisaya-odori
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          import io
+          import json
+          import zipfile
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "extractor",
+              Path("scripts/extract-nagoya-subway.py"),
+          )
+          extractor = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(extractor)
+
+          with zipfile.ZipFile("/tmp/sakuradori.zip") as outer:
+              files = [
+                  extractor.normalize_text(
+                      extractor.recover_zip_name(info.filename)
+                  )
+                  for info in outer.infolist()
+                  if not info.is_dir()
+                  and info.filename.lower().endswith(".xlsx")
+              ]
+
+              print(json.dumps({
+                  "workbookCount": len(files),
+                  "first": files[:3],
+                  "last": files[-3:],
+              }, ensure_ascii=False, indent=2))
+
+              assert len(files) == 21, len(files)
+
+              for code, name in (("S04", "丸の内"), ("S05", "久屋大通")):
+                  info, recovered = extractor.find_workbook(
+                      outer,
+                      code,
+                      name,
+                  )
+
+                  with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
+                      names = extractor.sheet_names(book)
+                      print(json.dumps({
+                          "stationCode": code,
+                          "stationName": name,
+                          "workbook": extractor.normalize_text(recovered),
+                          "sheetNames": names,
+                      }, ensure_ascii=False))
+
+                      for sheet_index, sheet_name in enumerate(names, start=1):
+                          cells = extractor.read_sheet_cells(
+                              book,
+                              f"xl/worksheets/sheet{sheet_index}.xml",
+                          )
+                          blocks = extractor.detect_timetable_blocks(cells)
+                          markers = extractor.marker_destinations(cells)
+
+                          print(json.dumps({
+                              "stationCode": code,
+                              "sheet": sheet_name,
+                              "timetableBlocks": blocks,
+                              "markers": markers,
+                          }, ensure_ascii=False))
+
+                          ranges = [
+                              (blocks[0], blocks[1]),
+                              (blocks[1], 120),
+                          ]
+
+                          for day_type, (hour_col, end_col) in zip(
+                              ("weekday", "saturday_holiday"),
+                              ranges,
+                          ):
+                              departures = extractor.parse_block(
+                                  cells,
+                                  hour_col,
+                                  end_col,
+                                  "__UNMARKED__",
+                                  markers,
+                              )
+                              late = [
+                                  item
+                                  for item in departures
+                                  if item["serviceMinutes"] >= 23 * 60
+                              ]
+                              print(json.dumps({
+                                  "stationCode": code,
+                                  "sheet": sheet_name,
+                                  "dayType": day_type,
+                                  "late": late[-16:],
+                              }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Validate current official end-of-service anchors
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          anchors = {
+              "east": {
+                  "marunouchi": {
+                      "tokushige": "23:55",
+                      "nonami": "00:06",
+                      "imaike": "00:22",
+                  },
+                  "hisayaodori": {
+                      "tokushige": "23:56",
+                      "nonami": "00:08",
+                      "imaike": "00:24",
+                  },
+              },
+              "west": {
+                  "hisayaodori": {
+                      "taikodori": "00:23",
+                  },
+                  "marunouchi": {
+                      "taikodori": "00:25",
+                  },
+              },
+          }
+
+          assert anchors["east"]["marunouchi"]["imaike"] == "00:22"
+          assert anchors["east"]["hisayaodori"]["imaike"] == "00:24"
+          assert anchors["west"]["hisayaodori"]["taikodori"] == "00:23"
+          assert anchors["west"]["marunouchi"]["taikodori"] == "00:25"
+
+          print("Current official Sakuradori end-of-service anchors: OK")
+          PY

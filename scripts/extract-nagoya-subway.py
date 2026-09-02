@@ -112,6 +112,8 @@ def find_workbook(
     target_code = normalize_text(station_code).upper()
     target_name = normalize_text(station_name)
 
+    code_matches = []
+
     for info in outer.infolist():
         if info.is_dir() or not info.filename.lower().endswith(".xlsx"):
             continue
@@ -119,8 +121,25 @@ def find_workbook(
         recovered = recover_zip_name(info.filename)
         normalized = normalize_text(recovered)
 
-        if target_code in normalized.upper() and target_name in normalized:
+        if target_code not in normalized.upper():
+            continue
+
+        code_matches.append((info, recovered))
+
+        if target_name in normalized:
             return info, recovered
+
+    # Older Nagoya pocket-timetable ZIPs truncate some long station names
+    # in filenames (for example S03 国際センター). Station codes remain
+    # unique, so a single code match is a safe fallback.
+    if len(code_matches) == 1:
+        return code_matches[0]
+
+    if len(code_matches) > 1:
+        raise RuntimeError(
+            f"Ambiguous workbook matches for {station_code} {station_name}: "
+            + ", ".join(recovered for _, recovered in code_matches)
+        )
 
     raise RuntimeError(f"Workbook not found for {station_code} {station_name}")
 
