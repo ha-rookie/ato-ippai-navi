@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   clockToServiceMinutes,
+  eligibleOriginIds,
   evaluateLastTrainBoundary
 } from "../src/last-train.js";
 
@@ -274,4 +275,100 @@ test("Meiko E07 Nagoyako uses Sakae 00:02 boundary", () => {
   assert.equal(result.scenarios[0].recommendedOriginId, "sakae");
   assert.equal(result.scenarios[0].lastDeparture, "00:02");
   assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+
+test("eligible hubs are limited to origins with verified routes", () => {
+  assert.deepEqual(
+    eligibleOriginIds(dataset, "H22"),
+    ["sakae", "fushimi"]
+  );
+  assert.deepEqual(
+    eligibleOriginIds(dataset, "T15"),
+    ["fushimi"]
+  );
+  assert.deepEqual(
+    eligibleOriginIds(dataset, "M12"),
+    ["sakae"]
+  );
+  assert.deepEqual(
+    eligibleOriginIds(dataset, "E07"),
+    ["sakae"]
+  );
+  assert.deepEqual(
+    eligibleOriginIds(dataset, "S21"),
+    ["marunouchi", "hisayaodori"]
+  );
+});
+
+test("Sakuradori boundaries cover S01-S21 from two walk hubs", () => {
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => code.startsWith("S")).length,
+    21
+  );
+
+  const expected = {
+    S01: {
+      marunouchi: ["00:25", "太閤通"],
+      hisayaodori: ["00:23", "太閤通"]
+    },
+    S08: {
+      marunouchi: ["00:22", "今池"],
+      hisayaodori: ["00:24", "今池"]
+    },
+    S09: {
+      marunouchi: ["00:06", "野並"],
+      hisayaodori: ["00:08", "野並"]
+    },
+    S17: {
+      marunouchi: ["00:06", "野並"],
+      hisayaodori: ["00:08", "野並"]
+    },
+    S18: {
+      marunouchi: ["23:55", "徳重"],
+      hisayaodori: ["23:56", "徳重"]
+    },
+    S21: {
+      marunouchi: ["23:55", "徳重"],
+      hisayaodori: ["23:56", "徳重"]
+    }
+  };
+
+  for (const [code, origins] of Object.entries(expected)) {
+    for (const [originId, [lastDeparture, terminal]] of Object.entries(origins)) {
+      const route = dataset.destinations[code].routes[originId].weekday;
+      assert.equal(route.lastDeparture, lastDeparture, `${code}/${originId}`);
+      assert.equal(route.trainTerminal, terminal, `${code}/${originId}`);
+      assert.equal(route.transfers, 0, `${code}/${originId}`);
+      assert.equal(route.status, "verified", `${code}/${originId}`);
+    }
+  }
+});
+
+test("Sakuradori S21 chooses the safer walk hub", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:40:00+09:00",
+    dayType: "weekday",
+    destinationCode: "S21",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      marunouchi: { walkMinutes: 10 },
+      hisayaodori: { walkMinutes: 5 }
+    }
+  });
+
+  assert.equal(result.destination.name, "徳重");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "hisayaodori");
+  assert.equal(result.scenarios[0].lastDeparture, "23:56");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+test("Marunouchi and Hisaya-odori codes are home walk hubs", () => {
+  assert.ok(dataset.origins.marunouchi.stationCodes.includes("T06"));
+  assert.ok(dataset.origins.marunouchi.stationCodes.includes("S04"));
+  assert.ok(dataset.origins.hisayaodori.stationCodes.includes("M06"));
+  assert.ok(dataset.origins.hisayaodori.stationCodes.includes("S05"));
 });
