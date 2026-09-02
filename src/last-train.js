@@ -107,7 +107,9 @@ function evaluateHub({
   const lastDepartureServiceMinutes =
     clockToServiceMinutes(context.route.lastDeparture);
   const lastArrivalServiceMinutes =
-    clockToServiceMinutes(context.route.lastArrival);
+    context.route.lastArrival != null
+      ? clockToServiceMinutes(context.route.lastArrival)
+      : null;
 
   const requiredServiceMinutes =
     readyServiceMinutes + minimumBoardingLeadMinutes;
@@ -120,10 +122,13 @@ function evaluateHub({
     lastDepartureServiceMinutes
   );
 
-  const lastArrivalDate = new Date(
-    lastDepartureDate.getTime() +
-      (lastArrivalServiceMinutes - lastDepartureServiceMinutes) * 60000
-  );
+  const lastArrivalDate =
+    lastArrivalServiceMinutes != null
+      ? new Date(
+          lastDepartureDate.getTime() +
+            (lastArrivalServiceMinutes - lastDepartureServiceMinutes) * 60000
+        )
+      : null;
 
   return {
     originId,
@@ -138,9 +143,11 @@ function evaluateHub({
     lastDeparture: context.route.lastDeparture,
     estimatedLastDepartureTime: lastDepartureDate.toISOString(),
     localLastDepartureTime: localClock(lastDepartureDate),
-    lastArrival: context.route.lastArrival,
-    estimatedLastTrainArrivalTime: lastArrivalDate.toISOString(),
-    localLastTrainArrivalTime: localClock(lastArrivalDate),
+    lastArrival: context.route.lastArrival ?? null,
+    estimatedLastTrainArrivalTime:
+      lastArrivalDate?.toISOString() ?? null,
+    localLastTrainArrivalTime:
+      lastArrivalDate ? localClock(lastArrivalDate) : null,
     routeSummary: context.route.routeSummary,
     transfers: context.route.transfers,
     minutesUntilLastDeparture:

@@ -2,11 +2,18 @@ name: PoC Nagoya Subway Open Data
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-nagoya-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-higashiyama-last-trains.py'
   push:
     branches: [main]
     paths:
       - '.github/workflows/poc-nagoya-open-data.yml'
       - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-higashiyama-last-trains.py'
 
 permissions:
   contents: read
@@ -29,78 +36,120 @@ jobs:
 
           curl -fsSL "$SOURCE_URL" -o /tmp/higashiyama.zip
 
-          python3 scripts/extract-nagoya-subway.py \
-            --zip /tmp/higashiyama.zip \
-            --output /tmp/sakae-higashiyama.json \
-            --station-code H10 \
-            --station-name 栄 \
-            --direction-sheet 下り \
-            --default-terminal 藤が丘 \
-            --revision 2025-03-29 \
-            --source-url "$SOURCE_URL"
+          for station in "H10:栄:sakae" "H09:伏見:fushimi"; do
+            IFS=':' read -r code name slug <<< "$station"
 
-          python3 scripts/extract-nagoya-subway.py \
-            --zip /tmp/higashiyama.zip \
-            --output /tmp/fushimi-higashiyama.json \
-            --station-code H09 \
-            --station-name 伏見 \
-            --direction-sheet 下り \
-            --default-terminal 藤が丘 \
-            --revision 2025-03-29 \
-            --source-url "$SOURCE_URL"
+            python3 scripts/extract-nagoya-subway.py \
+              --zip /tmp/higashiyama.zip \
+              --output "/tmp/${slug}-up.json" \
+              --station-code "$code" \
+              --station-name "$name" \
+              --direction-sheet 上り \
+              --default-terminal 高畑 \
+              --revision 2025-03-29 \
+              --source-url "$SOURCE_URL"
 
-          echo
-          echo "=== Normalized JSON (late-night excerpt) ==="
+            python3 scripts/extract-nagoya-subway.py \
+              --zip /tmp/higashiyama.zip \
+              --output "/tmp/${slug}-down.json" \
+              --station-code "$code" \
+              --station-name "$name" \
+              --direction-sheet 下り \
+              --default-terminal 藤が丘 \
+              --revision 2025-03-29 \
+              --source-url "$SOURCE_URL"
+          done
+
+      - name: Generate Higashiyama last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-higashiyama-last-trains.py \
+            --origin sakae:H10:/tmp/sakae-up.json:/tmp/sakae-down.json \
+            --origin fushimi:H09:/tmp/fushimi-up.json:/tmp/fushimi-down.json \
+            --output /tmp/higashiyama-last-trains.json \
+            --revision 2025-03-29
+
+      - name: Validate generated boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/higashiyama-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["line"]["code"] == "H", data["line"]
+          assert len(data["destinations"]) == 22, len(data["destinations"])
+
+          # Existing verified PoC values must remain unchanged.
+          assert data["destinations"]["H22"]["routes"]["sakae"]["weekday"]["lastDeparture"] == "00:02"
+          assert data["destinations"]["H22"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:00"
+          assert data["destinations"]["H22"]["routes"]["sakae"]["saturday_holiday"]["lastDeparture"] == "00:02"
+          assert data["destinations"]["H22"]["routes"]["fushimi"]["saturday_holiday"]["lastDeparture"] == "00:00"
+
+          for code, destination in data["destinations"].items():
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      assert route["status"] == "verified", (code, origin_id, day_type, route)
+                      assert route["lastDeparture"], (code, origin_id, day_type, route)
+                      assert route["transfers"] == 0, (code, origin_id, day_type, route)
+
+          print("Generated direct Higashiyama boundary validation: OK")
+          print(json.dumps({
+              "H01": data["destinations"]["H01"],
+              "H08": data["destinations"]["H08"],
+              "H18": data["destinations"]["H18"],
+              "H22": data["destinations"]["H22"],
+          }, ensure_ascii=False, indent=2))
+          PY
 
           python3 - <<'PY'
           import json
 
-          for path in [
-              "/tmp/sakae-higashiyama.json",
-              "/tmp/fushimi-higashiyama.json",
-          ]:
-              with open(path, encoding="utf-8") as f:
-                  data = json.load(f)
+          with open("/tmp/higashiyama-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
 
-              result = {
-                  "source": data["source"],
-                  "station": data["station"],
-                  "directionSheet": data["directionSheet"],
-                  "defaultTerminal": data["defaultTerminal"],
-                  "markerDestinations": data["markerDestinations"],
-                  "lateNight": {},
-                  "lastToFujigaoka": {},
-              }
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
 
-              assert data["markerDestinations"].get("星") == "星ヶ丘", data["markerDestinations"]
+          assert len(production["destinations"]) == 22, len(production["destinations"])
 
-              for day_type, departures in data["schedules"].items():
-                  result["lateNight"][day_type] = [
-                      item for item in departures
-                      if item["serviceMinutes"] >= 23 * 60
-                  ]
+          for code, destination in generated["destinations"].items():
+              prod_destination = production["destinations"].get(code)
+              assert prod_destination is not None, code
+              assert prod_destination["name"] == destination["name"], code
 
-                  to_fujigaoka = [
-                      item for item in departures
-                      if item["destination"] == "藤が丘"
-                  ]
-                  result["lastToFujigaoka"][day_type] = to_fujigaoka[-1]
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      prod_route = prod_destination["routes"][origin_id][day_type]
+                      assert prod_route["lastDeparture"] == route["lastDeparture"], (
+                          code, origin_id, day_type, prod_route, route
+                      )
+                      assert prod_route.get("trainTerminal") == route.get("trainTerminal"), (
+                          code, origin_id, day_type, prod_route, route
+                      )
+                      assert prod_route["status"] == "verified", (
+                          code, origin_id, day_type, prod_route
+                      )
 
-                  if data["station"]["code"] == "H10":
-                      assert to_fujigaoka[-1]["time"] == "00:02", {
-                          "dayType": day_type,
-                          "lastToFujigaoka": to_fujigaoka[-1],
-                      }
-
-              print(json.dumps(result, ensure_ascii=False, indent=2))
+          print("Committed production JSON matches generated Higashiyama boundaries: OK")
           PY
 
-      - name: Upload normalized timetables
+          echo "=== GENERATED_HIGASHIYAMA_JSON_BEGIN ==="
+          cat /tmp/higashiyama-last-trains.json
+          echo "=== GENERATED_HIGASHIYAMA_JSON_END ==="
+
+      - name: Upload generated timetable artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sakae-fushimi-higashiyama-normalized
+          name: higashiyama-last-train-generation
           path: |
-            /tmp/sakae-higashiyama.json
-            /tmp/fushimi-higashiyama.json
+            /tmp/sakae-up.json
+            /tmp/sakae-down.json
+            /tmp/fushimi-up.json
+            /tmp/fushimi-down.json
+            /tmp/higashiyama-last-trains.json
           if-no-files-found: error
           retention-days: 7

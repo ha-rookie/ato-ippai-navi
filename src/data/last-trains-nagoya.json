@@ -45,6 +45,1176 @@
     }
   },
   "destinations": {
+    "H01": {
+      "name": "高畑",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H01"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H02": {
+      "name": "八田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H02"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "高畑",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H03": {
+      "name": "岩塚",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H03"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H04": {
+      "name": "中村公園",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H04"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H05": {
+      "name": "中村日赤",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H05"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H06": {
+      "name": "本陣",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H06"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H07": {
+      "name": "亀島",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H07"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H08": {
+      "name": "名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H08"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:17",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H09": {
+      "name": "伏見",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H09"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "岩塚",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H10": {
+      "name": "栄",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H10"
+      ],
+      "enabled": true,
+      "routes": {
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H11": {
+      "name": "新栄町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H11"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H12": {
+      "name": "千種",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H12"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H13": {
+      "name": "今池",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H13"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H14": {
+      "name": "池下",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H14"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H15": {
+      "name": "覚王山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H15"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H16": {
+      "name": "本山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H16"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H17": {
+      "name": "東山公園",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H17"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H18": {
+      "name": "星ヶ丘",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H18"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:16",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "星ヶ丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H19": {
+      "name": "一社",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H19"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H20": {
+      "name": "上社",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H20"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "H21": {
+      "name": "本郷",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H21"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "東山線 直通",
+            "trainTerminal": "藤が丘",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable"
+            ]
+          }
+        }
+      }
+    },
     "H22": {
       "name": "藤が丘",
       "city": "名古屋市",
@@ -58,6 +1228,7 @@
             "lastDeparture": "00:02",
             "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
+            "trainTerminal": "藤が丘",
             "transfers": 0,
             "status": "verified",
             "sourceIds": [
@@ -69,6 +1240,7 @@
             "lastDeparture": "00:02",
             "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
+            "trainTerminal": "藤が丘",
             "transfers": 0,
             "status": "verified",
             "sourceIds": [
@@ -82,6 +1254,7 @@
             "lastDeparture": "00:00",
             "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
+            "trainTerminal": "藤が丘",
             "transfers": 0,
             "status": "verified",
             "sourceIds": [
@@ -93,6 +1266,7 @@
             "lastDeparture": "00:00",
             "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
+            "trainTerminal": "藤が丘",
             "transfers": 0,
             "status": "verified",
             "sourceIds": [
