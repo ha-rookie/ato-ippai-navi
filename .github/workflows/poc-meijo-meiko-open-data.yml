@@ -36,73 +36,12 @@ jobs:
           curl -fsSL "$MEIJO_URL" -o /tmp/meijo.zip
           curl -fsSL "$MEIKO_URL" -o /tmp/meiko.zip
 
-      - name: Inspect Sakae M05 workbook and sheet names
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import io
-          import json
-          import unicodedata
-          import zipfile
-          import xml.etree.ElementTree as ET
-
-          NS = {
-              "m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-          }
-
-          def recover(name):
-              try:
-                  return name.encode("cp437").decode("cp932")
-              except (UnicodeEncodeError, UnicodeDecodeError):
-                  return name
-
-          def inspect(path, label):
-              with zipfile.ZipFile(path) as outer:
-                  files = []
-                  for info in outer.infolist():
-                      if info.is_dir() or not info.filename.lower().endswith(".xlsx"):
-                          continue
-                      recovered = unicodedata.normalize("NFKC", recover(info.filename))
-                      files.append((info, recovered))
-
-                  print(f"=== {label} XLSX count={len(files)} ===")
-                  for _, name in files:
-                      print(name)
-
-                  candidates = [
-                      (info, name)
-                      for info, name in files
-                      if "M05" in name.upper() and "栄" in name
-                  ]
-
-                  print(
-                      f"=== {label} Sakae M05 candidates ===",
-                      json.dumps([name for _, name in candidates], ensure_ascii=False)
-                  )
-
-                  for info, name in candidates:
-                      with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
-                          root = ET.fromstring(book.read("xl/workbook.xml"))
-                          sheets = [
-                              sheet.attrib.get("name", "")
-                              for sheet in root.findall(".//m:sheets/m:sheet", NS)
-                          ]
-                          print(
-                              f"=== {label} workbook {name} sheets ===",
-                              json.dumps(sheets, ensure_ascii=False)
-                          )
-
-          inspect("/tmp/meijo.zip", "MEIJO")
-          inspect("/tmp/meiko.zip", "MEIKO")
-          PY
-
-      - name: Inspect Sakae M05 raw timetable layout
+      - name: Validate workbook structure
         shell: bash
         run: |
           python3 - <<'PY'
           import importlib.util
           import io
-          import json
           import zipfile
           from pathlib import Path
 
@@ -113,45 +52,51 @@ jobs:
           extractor = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(extractor)
 
-          def col_name(number):
-              result = ""
-              value = number
-              while value:
-                  value, rem = divmod(value - 1, 26)
-                  result = chr(65 + rem) + result
-              return result
-
           with zipfile.ZipFile("/tmp/meijo.zip") as outer:
+              files = [
+                  extractor.normalize_text(
+                      extractor.recover_zip_name(info.filename)
+                  )
+                  for info in outer.infolist()
+                  if not info.is_dir()
+                  and info.filename.lower().endswith(".xlsx")
+              ]
+              assert len(files) == 28, len(files)
+
               info, recovered = extractor.find_workbook(
                   outer, "M05", "栄"
               )
-              print("workbook", recovered)
+              assert "M05栄" in extractor.normalize_text(recovered), recovered
 
               with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
                   names = extractor.sheet_names(book)
+                  assert names == ["上り", "下り"], names
 
-                  for sheet_name in names:
-                      sheet_index = names.index(sheet_name) + 1
-                      path = f"xl/worksheets/sheet{sheet_index}.xml"
-                      cells = extractor.read_sheet_cells(book, path)
+                  sheet_path = "xl/worksheets/sheet2.xml"
+                  cells = extractor.read_sheet_cells(book, sheet_path)
+                  note_texts = [
+                      extractor.normalize_text(value)
+                      for value in cells.values()
+                  ]
+                  assert any(
+                      "名古屋港方面へお越しの方は金山駅でお乗り換え下さい"
+                      in value
+                      for value in note_texts
+                  )
 
-                      print(f"=== SHEET {sheet_name} ===")
-                      print(
-                          "markers",
-                          json.dumps(
-                              extractor.marker_destinations(cells),
-                              ensure_ascii=False,
-                          )
-                      )
+          with zipfile.ZipFile("/tmp/meiko.zip") as outer:
+              files = [
+                  extractor.normalize_text(
+                      extractor.recover_zip_name(info.filename)
+                  )
+                  for info in outer.infolist()
+                  if not info.is_dir()
+                  and info.filename.lower().endswith(".xlsx")
+              ]
+              assert len(files) == 7, len(files)
+              assert not any("M05栄" in name for name in files)
 
-                      for row in range(1, 45):
-                          values = [
-                              f"{col_name(col)}={extractor.normalize_text(value)}"
-                              for (col, cell_row), value in sorted(cells.items())
-                              if cell_row == row
-                          ]
-                          if values:
-                              print(f"ROW {row}: " + " | ".join(values))
+          print("Meijo/Meiko workbook structure validation: OK")
           PY
 
       - name: Extract normalized Sakae M05 Meijo timetables
@@ -181,43 +126,97 @@ jobs:
             --revision 2025-09-29 \
             --source-url "$MEIJO_URL"
 
-      - name: Inspect normalized Sakae M05 late departures
+      - name: Validate normalized deep-night departures
         shell: bash
         run: |
           python3 - <<'PY'
           import json
 
-          for path in (
-              "/tmp/sakae-meijo-right.json",
-              "/tmp/sakae-meijo-left.json",
-          ):
-              with open(path, encoding="utf-8") as f:
-                  data = json.load(f)
+          with open("/tmp/sakae-meijo-right.json", encoding="utf-8") as f:
+              right = json.load(f)
+          with open("/tmp/sakae-meijo-left.json", encoding="utf-8") as f:
+              left = json.load(f)
 
-              print("===", path, "===")
-              print("sheet", data["directionSheet"])
-              print("default", data["defaultTerminal"])
-              print("markers", json.dumps(data["markerDestinations"], ensure_ascii=False))
+          assert right["markerDestinations"] == {
+              "大": "大曽根",
+              "ド": "ナゴヤドーム前矢田",
+          }, right["markerDestinations"]
 
-              for day_type, departures in data["schedules"].items():
-                  late = [
-                      d for d in departures
-                      if d["serviceMinutes"] >= 22 * 60 + 30
-                  ]
-                  print(
-                      day_type,
-                      json.dumps(late[-30:], ensure_ascii=False, indent=2)
-                  )
+          assert left["markerDestinations"] == {
+              "港": "名古屋港",
+              "瑞": "瑞穂運動場東",
+              "新": "新瑞橋",
+          }, left["markerDestinations"]
+
+          for day_type in ("weekday", "saturday_holiday"):
+              right_late = [
+                  item
+                  for item in right["schedules"][day_type]
+                  if item["serviceMinutes"] >= 23 * 60
+              ]
+              left_late = [
+                  item
+                  for item in left["schedules"][day_type]
+                  if item["serviceMinutes"] >= 23 * 60
+              ]
+
+              assert right_late[-2:] == [
+                  {
+                      "time": "00:04",
+                      "serviceMinutes": 1444,
+                      "destination": "ナゴヤドーム前矢田",
+                      "marker": "ド",
+                  },
+                  {
+                      "time": "00:14",
+                      "serviceMinutes": 1454,
+                      "destination": "大曽根",
+                      "marker": "大",
+                  },
+              ], right_late[-2:]
+
+              assert max(
+                  item["serviceMinutes"]
+                  for item in right_late
+                  if item["destination"] == "名城線右回り"
+              ) == 1432
+
+              assert left_late[-2:] == [
+                  {
+                      "time": "00:02",
+                      "serviceMinutes": 1442,
+                      "destination": "瑞穂運動場東",
+                      "marker": "瑞",
+                  },
+                  {
+                      "time": "00:10",
+                      "serviceMinutes": 1450,
+                      "destination": "新瑞橋",
+                      "marker": "新",
+                  },
+              ], left_late[-2:]
+
+              assert max(
+                  item["serviceMinutes"]
+                  for item in left_late
+                  if item["destination"] == "名城線左回り"
+              ) == 1422
+
+              assert not any(
+                  item["destination"] == "名古屋港"
+                  and item["serviceMinutes"] >= 22 * 60 + 30
+                  for item in left["schedules"][day_type]
+              )
+
+          print("Sakae M05 deep-night normalization validation: OK")
           PY
 
-      - name: Upload inspection ZIP metadata
+      - name: Upload normalized PoC artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: meijo-meiko-sakae-inspection
+          name: meijo-meiko-sakae-poc
           path: |
-            /tmp/meijo.zip
-            /tmp/meiko.zip
             /tmp/sakae-meijo-right.json
             /tmp/sakae-meijo-left.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
