@@ -48,7 +48,7 @@ export const DESTINATION_STATION_STORAGE_KEY =
 
 export function normalizeDestinationStation(value) {
   const code = String(value ?? "").trim().toUpperCase();
-  const match = /^([HT])(\d{1,2})$/.exec(code);
+  const match = /^([HTM])(\d{1,2})$/.exec(code);
 
   if (!match) {
     throw new Error("destination station must be H01-H22, T01-T20, or M01-M28");
