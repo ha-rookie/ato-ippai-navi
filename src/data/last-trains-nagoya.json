@@ -56,7 +56,7 @@
         "sakae": {
           "weekday": {
             "lastDeparture": "00:02",
-            "arrival": "00:23",
+            "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
             "transfers": 0,
             "status": "verified",
@@ -67,7 +67,7 @@
           },
           "saturday_holiday": {
             "lastDeparture": "00:02",
-            "arrival": "00:23",
+            "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
             "transfers": 0,
             "status": "verified",
@@ -80,7 +80,7 @@
         "fushimi": {
           "weekday": {
             "lastDeparture": "00:00",
-            "arrival": "00:23",
+            "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
             "transfers": 0,
             "status": "verified",
@@ -91,7 +91,7 @@
           },
           "saturday_holiday": {
             "lastDeparture": "00:00",
-            "arrival": "00:23",
+            "lastArrival": "00:23",
             "routeSummary": "東山線 藤が丘行",
             "transfers": 0,
             "status": "verified",

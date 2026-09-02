@@ -31,7 +31,7 @@ test("Sakae and Fushimi last-train JSON is verified for Fujigaoka", () => {
     "00:00"
   );
   assert.equal(
-    destination.routes.sakae.saturday_holiday.arrival,
+    destination.routes.sakae.saturday_holiday.lastArrival,
     "00:23"
   );
 });
@@ -56,6 +56,19 @@ test("boundary chooses the safer reachable hub for each scenario", () => {
   assert.equal(result.scenarios[2].localLeaveTime, "23:50");
   assert.equal(result.scenarios[2].canReachDestination, true);
   assert.equal(result.scenarios[2].recommendedOriginId, "sakae");
+  assert.equal(result.scenarios[2].localStationReadyTime, "23:57");
+  assert.equal(result.scenarios[2].lastDeparture, "00:02");
+  assert.equal(result.scenarios[2].minutesUntilLastDeparture, 5);
+  assert.equal(result.scenarios[2].usableMarginMinutes, 4);
+  assert.equal(result.scenarios[2].localLastTrainArrivalTime, "00:23");
+  assert.equal(
+    result.scenarios[2].estimatedDestinationStationArrivalTime,
+    null
+  );
+  assert.equal(
+    result.scenarios[2].arrivalEstimateQuality,
+    "last_train_boundary_only"
+  );
 
   assert.equal(result.scenarios[3].localLeaveTime, "00:20");
   assert.equal(result.scenarios[3].canReachDestination, false);
