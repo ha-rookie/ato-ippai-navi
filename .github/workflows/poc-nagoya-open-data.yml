@@ -105,6 +105,10 @@ jobs:
           }, ensure_ascii=False, indent=2))
           PY
 
+          echo "=== GENERATED_HIGASHIYAMA_JSON_BEGIN ==="
+          cat /tmp/higashiyama-last-trains.json
+          echo "=== GENERATED_HIGASHIYAMA_JSON_END ==="
+
       - name: Upload generated timetable artifacts
         uses: actions/upload-artifact@v4
         with:
