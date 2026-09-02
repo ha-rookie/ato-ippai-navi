@@ -70,7 +70,7 @@ function selectedDestinationName() {
 
 function updateDestinationUi() {
   const name = selectedDestinationName();
-  els.routeBadge.textContent = `PoC：栄・伏見 → ${name}`;
+  els.routeBadge.textContent = `深夜帰宅判定 → ${name}`;
   els.stationToHomeLabel.textContent = `${name}駅 → 自宅`;
 }
 
@@ -297,7 +297,7 @@ async function runDecision() {
 
   try {
     const origin = await getLocation();
-    els.status.textContent = "栄・伏見への徒歩と終電・タクシーを計算しています…";
+    els.status.textContent = "利用できる駅への徒歩と終電・タクシーを計算しています…";
 
     const data = await fetchDecision(origin);
     render(data);

@@ -615,6 +615,53 @@ jobs:
           print("Meiko E07 Nagoyako tonight smoke test: OK")
           PY
 
+          cat > /tmp/s21-tonight-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:30:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "S21",
+            "offsetMinutes": [0, 30],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1,
+            "includeDispatchFee": true
+          }
+          JSON
+
+          curl -fsS \
+            -H "content-type: application/json" \
+            --data @/tmp/s21-tonight-request.json \
+            "$BASE_URL/api/tonight-decision" \
+            -o /tmp/s21-tonight.json
+
+          cat /tmp/s21-tonight.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/s21-tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          scenarios = data["scenarios"]
+          walk_options = data["train"]["walkOptions"]
+
+          assert data["destinationCode"] == "S21", data
+          assert data["destinationName"] == "徳重", data
+          assert data["train"]["destination"]["code"] == "S21", data
+          assert set(walk_options) == {"marunouchi", "hisayaodori"}, walk_options
+          assert scenarios[0]["recommendedMode"] == "train", scenarios
+          assert scenarios[0]["recommendedOriginId"] in {
+              "marunouchi", "hisayaodori"
+          }, scenarios
+          assert scenarios[0]["lastDeparture"] in {"23:55", "23:56"}, scenarios
+          assert scenarios[1]["recommendedMode"] == "taxi", scenarios
+
+          print("Sakuradori S21 Tokushige tonight smoke test: OK")
+          PY
+
           cat > /tmp/h10-walk-request.json <<'JSON'
           {
             "origin": {

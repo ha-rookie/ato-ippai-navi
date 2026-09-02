@@ -5,7 +5,7 @@ import {
 import { estimateNagoyaTaxiFare } from "./taxi.js";
 import { composeTonightDecision } from "./tonight.js";
 import { composeWalkHomeDecision } from "./walk-home.js";
-import { evaluateLastTrainBoundary } from "./last-train.js";
+import { eligibleOriginIds, evaluateLastTrainBoundary } from "./last-train.js";
 import LAST_TRAINS_NAGOYA from "./data/last-trains-nagoya.json" with { type: "json" };
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -307,8 +307,12 @@ async function lastTrainBoundaryFromCurrentLocation(env, input) {
     input.minimumBoardingLeadMinutes ?? 1
   );
 
+  const eligibleIds = new Set(
+    eligibleOriginIds(LAST_TRAINS_NAGOYA, destinationCode)
+  );
+
   const hubEntries = Object.entries(LAST_TRAINS_NAGOYA.origins)
-    .filter(([, hub]) => hub.enabled);
+    .filter(([originId]) => eligibleIds.has(originId));
 
   const walkResults = await Promise.all(
     hubEntries.map(async ([originId, hub]) => {

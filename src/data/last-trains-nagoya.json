@@ -49,6 +49,13 @@
       "license": "CC BY 4.0",
       "revision": "2025-09-29",
       "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip"
+    },
+    {
+      "id": "nagoya-subway-pocket-timetable-sakuradori",
+      "publisher": "名古屋市交通局",
+      "license": "CC BY 4.0",
+      "revision": "2023-09-16",
+      "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/874b00d8-ec39-4401-8cd2-0d1c535aa4c1/download/20230916_subway-timetable-sakuradoriline.zip"
     }
   ],
   "origins": {
@@ -68,6 +75,24 @@
         "T07"
       ],
       "walkDestination": "伏見駅 愛知県名古屋市",
+      "enabled": true
+    },
+    "marunouchi": {
+      "name": "丸の内",
+      "stationCodes": [
+        "T06",
+        "S04"
+      ],
+      "walkDestination": "丸の内駅 愛知県名古屋市",
+      "enabled": true
+    },
+    "hisayaodori": {
+      "name": "久屋大通",
+      "stationCodes": [
+        "M06",
+        "S05"
+      ],
+      "walkDestination": "久屋大通駅 愛知県名古屋市",
       "enabled": true
     }
   },
@@ -3305,6 +3330,1176 @@
             "sourceIds": [
               "nagoya-subway-pocket-timetable-meijo",
               "nagoya-subway-pocket-timetable-meiko"
+            ]
+          }
+        }
+      }
+    },
+    "S01": {
+      "name": "太閤通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S01"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:25",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:25",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S02": {
+      "name": "名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S02"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:25",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:25",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S03": {
+      "name": "国際センター",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S03"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:25",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:25",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S04": {
+      "name": "丸の内",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S04"
+      ],
+      "enabled": true,
+      "routes": {
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:23",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "太閤通",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S05": {
+      "name": "久屋大通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S05"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S06": {
+      "name": "高岳",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S06"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S07": {
+      "name": "車道",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S07"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S08": {
+      "name": "今池",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S08"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:22",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:24",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "今池",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S09": {
+      "name": "吹上",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S09"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S10": {
+      "name": "御器所",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S10"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S11": {
+      "name": "桜山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S11"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S12": {
+      "name": "瑞穂区役所",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S12"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S13": {
+      "name": "瑞穂運動場西",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S13"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S14": {
+      "name": "新瑞橋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S14"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S15": {
+      "name": "桜本町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S15"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S16": {
+      "name": "鶴里",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S16"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S17": {
+      "name": "野並",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S17"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:08",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "野並",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S18": {
+      "name": "鳴子北",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S18"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S19": {
+      "name": "相生山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S19"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S20": {
+      "name": "神沢",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S20"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        }
+      }
+    },
+    "S21": {
+      "name": "徳重",
+      "city": "名古屋市",
+      "stationCodes": [
+        "S21"
+      ],
+      "enabled": true,
+      "routes": {
+        "marunouchi": {
+          "weekday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:55",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          }
+        },
+        "hisayaodori": {
+          "weekday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:56",
+            "lastArrival": null,
+            "routeSummary": "桜通線 直通",
+            "trainTerminal": "徳重",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-sakuradori"
             ]
           }
         }
