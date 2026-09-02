@@ -23,7 +23,7 @@ function memoryStorage() {
   };
 }
 
-test("destination station accepts supported Higashiyama, Tsurumai, and Meijo codes", () => {
+test("destination station accepts supported Higashiyama, Tsurumai, Meijo, and Meiko codes", () => {
   assert.equal(normalizeDestinationStation("h1"), "H01");
   assert.equal(normalizeDestinationStation("H22"), "H22");
   assert.equal(normalizeDestinationStation("t1"), "T01");
@@ -31,18 +31,24 @@ test("destination station accepts supported Higashiyama, Tsurumai, and Meijo cod
   assert.equal(normalizeDestinationStation("T20"), "T20");
   assert.equal(normalizeDestinationStation("m1"), "M01");
   assert.equal(normalizeDestinationStation("M28"), "M28");
+  assert.equal(normalizeDestinationStation("e2"), "E02");
+  assert.equal(normalizeDestinationStation("E07"), "E07");
 
   assert.throws(
     () => normalizeDestinationStation("H23"),
-    /H01-H22, T01-T20, or M01-M28/
+    /H01-H22, T01-T20, M01-M28, or E01-E07/
   );
   assert.throws(
     () => normalizeDestinationStation("T21"),
-    /H01-H22, T01-T20, or M01-M28/
+    /H01-H22, T01-T20, M01-M28, or E01-E07/
   );
   assert.throws(
     () => normalizeDestinationStation("M29"),
-    /H01-H22, T01-T20, or M01-M28/
+    /H01-H22, T01-T20, M01-M28, or E01-E07/
+  );
+  assert.throws(
+    () => normalizeDestinationStation("E08"),
+    /H01-H22, T01-T20, M01-M28, or E01-E07/
   );
 });
 

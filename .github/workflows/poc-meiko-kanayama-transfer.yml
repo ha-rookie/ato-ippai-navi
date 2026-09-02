@@ -1,0 +1,169 @@
+name: PoC Nagoya Meiko Kanayama Transfer
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meiko-kanayama-transfer.yml'
+      - 'scripts/extract-nagoya-subway.py'
+      - 'scripts/generate-meiko-transfer-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Meijo and Meiko timetable ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+          MEIKO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip'
+
+          curl -fsSL "$MEIJO_URL" -o /tmp/meijo.zip
+          curl -fsSL "$MEIKO_URL" -o /tmp/meiko.zip
+
+      - name: Extract normalized Sakae and Kanayama timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+          MEIKO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip'
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/sakae-meijo-left.json \
+            --station-code M05 \
+            --station-name 栄 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/kanayama-meijo-down.json \
+            --station-code M01 \
+            --station-name 金山 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meiko.zip \
+            --output /tmp/kanayama-meiko-down.json \
+            --station-code E01 \
+            --station-name 金山 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIKO_URL"
+
+      - name: Generate Sakae to Meiko last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-meiko-transfer-last-trains.py \
+            --sakae-left /tmp/sakae-meijo-left.json \
+            --kanayama-meijo-down /tmp/kanayama-meijo-down.json \
+            --kanayama-meiko-down /tmp/kanayama-meiko-down.json \
+            --output /tmp/meiko-transfer-last-trains.json \
+            --minimum-transfer-lead-minutes 1 \
+            --revision 2025-09-29
+
+      - name: Validate generated transfer boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meiko-transfer-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["transferPolicy"] == {
+              "station": "金山",
+              "stationCodes": ["M01", "E01"],
+              "minimumTransferLeadMinutes": 1,
+              "sameMinuteTransferAllowed": False,
+          }, data["transferPolicy"]
+
+          destinations = data["destinations"]
+          assert list(destinations) == [
+              "E01", "E02", "E03", "E04", "E05", "E06", "E07"
+          ], list(destinations)
+
+          for day_type in ("weekday", "saturday_holiday"):
+              e01 = destinations["E01"]["routes"]["sakae"][day_type]
+              assert e01["lastDeparture"] == "00:10", e01
+              assert e01["lastArrival"] == "00:18", e01
+              assert e01["transfers"] == 0, e01
+
+              for code in ("E02", "E03", "E04", "E05", "E06", "E07"):
+                  route = destinations[code]["routes"]["sakae"][day_type]
+                  assert route["lastDeparture"] == "00:02", (code, route)
+                  assert route["transferAt"] == "金山", (code, route)
+                  assert route["transferReadyTime"] == "00:10", (code, route)
+                  assert route["connectionDeparture"] == "00:18", (code, route)
+                  assert route["transferMarginMinutes"] == 8, (code, route)
+                  assert route["minimumTransferLeadMinutes"] == 1, (code, route)
+                  assert route["transfers"] == 1, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+          print("Sakae -> Kanayama -> Meiko boundary validation: OK")
+          PY
+
+      - name: Compare generated Meiko boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meiko-transfer-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert len([
+              code
+              for code in production["destinations"]
+              if code.startswith("E")
+          ]) == 7
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"].get(code)
+              assert prod is not None, code
+              assert prod["enabled"] is True, code
+              assert prod["name"] == destination["name"], code
+              assert prod["stationCodes"] == destination["stationCodes"], code
+              assert prod["routes"] == destination["routes"], code
+
+          source_ids = {source["id"] for source in production["sources"]}
+          assert "nagoya-subway-pocket-timetable-meiko" in source_ids
+
+          print("Production Meiko boundary comparison: OK")
+          PY
+
+      - name: Upload normalized PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: meiko-kanayama-transfer-poc
+          path: |
+            /tmp/sakae-meijo-left.json
+            /tmp/kanayama-meijo-down.json
+            /tmp/kanayama-meiko-down.json
+            /tmp/meiko-transfer-last-trains.json
+          if-no-files-found: error
+          retention-days: 7

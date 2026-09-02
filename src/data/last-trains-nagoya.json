@@ -42,6 +42,13 @@
       "license": "CC BY 4.0",
       "revision": "2025-09-29",
       "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip"
+    },
+    {
+      "id": "nagoya-subway-pocket-timetable-meiko",
+      "publisher": "名古屋市交通局",
+      "license": "CC BY 4.0",
+      "revision": "2025-09-29",
+      "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip"
     }
   ],
   "origins": {
@@ -2928,6 +2935,376 @@
             "status": "verified",
             "sourceIds": [
               "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "E01": {
+      "name": "金山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E01"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": "00:18",
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": "00:18",
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "E02": {
+      "name": "日比野",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E02"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          }
+        }
+      }
+    },
+    "E03": {
+      "name": "六番町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E03"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          }
+        }
+      }
+    },
+    "E04": {
+      "name": "東海通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E04"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          }
+        }
+      }
+    },
+    "E05": {
+      "name": "港区役所",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E05"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          }
+        }
+      }
+    },
+    "E06": {
+      "name": "築地口",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E06"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          }
+        }
+      }
+    },
+    "E07": {
+      "name": "名古屋港",
+      "city": "名古屋市",
+      "stationCodes": [
+        "E07"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り → 金山乗換 → 名港線",
+            "trainTerminal": "瑞穂運動場東",
+            "transferAt": "金山",
+            "transferStationCodes": [
+              "M01",
+              "E01"
+            ],
+            "transferReadyTime": "00:10",
+            "connectionDeparture": "00:18",
+            "connectionTerminal": "名古屋港",
+            "minimumTransferLeadMinutes": 1,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "nagoya-subway-pocket-timetable-meiko"
             ]
           }
         }
