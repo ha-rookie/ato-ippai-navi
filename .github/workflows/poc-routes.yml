@@ -1,4 +1,4 @@
-name: PoC Routes Transit Controls
+name: PoC Google Routes Japan Transit
 
 on:
   workflow_dispatch:
@@ -13,62 +13,262 @@ permissions:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
-      - name: Compare Nagoya, Tokyo, New York transit
+      - name: Wait for exact Worker build and run transit matrix
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
 
-          test_transit () {
-            label="$1"
-            origin="$2"
-            dest="$3"
-            departure="$4"
-
-            cat > /tmp/request.json <<JSON
-          {
-            "origin": $origin,
-            "destination": $dest,
-            "departureTime": "$departure"
-          }
-          JSON
-
-            echo
-            echo "===== $label / $departure ====="
-
-            curl -fsS               -H "content-type: application/json"               --data @/tmp/request.json               "$BASE_URL/api/transit"               -o "/tmp/$label.json"
-
-            cat "/tmp/$label.json"
-            echo
-          }
-
-          # Nagoya: Sakae -> Fujigaoka, 12:00 JST
-          test_transit             "nagoya"             '{"latitude":35.1707,"longitude":136.9087}'             '{"latitude":35.1822,"longitude":137.0216}'             "2026-09-02T03:00:00Z"
-
-          # Tokyo Station -> Shinjuku Station, 12:00 JST
-          test_transit             "tokyo"             '{"latitude":35.681236,"longitude":139.767125}'             '{"latitude":35.690921,"longitude":139.700258}'             "2026-09-02T03:00:00Z"
-
-          # Times Square -> Grand Central, 08:00 EDT
-          test_transit             "newyork"             '{"latitude":40.7580,"longitude":-73.9855}'             '{"latitude":40.7527,"longitude":-73.9772}'             "2026-09-02T12:00:00Z"
-
           python3 - <<'PY'
           import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
 
-          print("=== Control summary ===")
-          for label in ["nagoya", "tokyo", "newyork"]:
-              with open(f"/tmp/{label}.json", encoding="utf-8") as f:
-                  data = json.load(f)
+          base = os.environ["BASE_URL"]
+          expected_sha = os.environ["EXPECTED_BUILD_SHA"]
 
-              print(label, {
+          def get_json(url, timeout=20):
+              with urllib.request.urlopen(url, timeout=timeout) as response:
+                  return json.load(response)
+
+          def post_json(path, payload, timeout=40):
+              body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+              request = urllib.request.Request(
+                  base + path,
+                  data=body,
+                  headers={"content-type": "application/json"},
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=timeout) as response:
+                      return response.status, json.load(response)
+              except urllib.error.HTTPError as exc:
+                  raw = exc.read().decode("utf-8", errors="replace")
+                  try:
+                      data = json.loads(raw)
+                  except json.JSONDecodeError:
+                      data = {"raw": raw}
+                  return exc.code, data
+
+          print("=== Wait for deployed GitHub SHA ===")
+          for attempt in range(1, 31):
+              try:
+                  health = get_json(base + "/health")
+              except Exception as exc:
+                  print(f"{attempt}/30 health error: {exc}")
+                  time.sleep(2)
+                  continue
+
+              actual = health.get("buildSha")
+              print(f"{attempt}/30 expected={expected_sha} actual={actual}")
+
+              if actual == expected_sha:
+                  break
+
+              time.sleep(2)
+          else:
+              raise SystemExit("Expected Worker build SHA was not visible within 60 seconds")
+
+          cases = [
+              {
+                  "name": "nagoya_now_coords",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216}
+                  },
+              },
+              {
+                  "name": "nagoya_explicit_1500_coords",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216},
+                      "departureTime": "2026-09-02T06:00:00Z"
+                  },
+              },
+              {
+                  "name": "nagoya_now_addresses",
+                  "group": "japan",
+                  "payload": {
+                      "origin": "栄駅 愛知県名古屋市",
+                      "destination": "藤が丘駅 愛知県名古屋市"
+                  },
+              },
+              {
+                  "name": "nagoya_no_region_code",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216},
+                      "omitRegionCode": True
+                  },
+              },
+              {
+                  "name": "nagoya_alternatives",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216},
+                      "computeAlternativeRoutes": True
+                  },
+              },
+              {
+                  "name": "nagoya_subway_preference",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216},
+                      "allowedTravelModes": ["SUBWAY"]
+                  },
+              },
+              {
+                  "name": "nagoya_rail_preference",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216},
+                      "allowedTravelModes": ["RAIL"]
+                  },
+              },
+              {
+                  "name": "nagoya_less_walking",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.1707, "longitude": 136.9087},
+                      "destination": {"latitude": 35.1822, "longitude": 137.0216},
+                      "routingPreference": "LESS_WALKING"
+                  },
+              },
+              {
+                  "name": "nagoya_sakae_kanayama",
+                  "group": "japan",
+                  "payload": {
+                      "origin": "栄駅 愛知県名古屋市",
+                      "destination": "金山駅 愛知県名古屋市"
+                  },
+              },
+              {
+                  "name": "nagoya_fushimi_nagoya",
+                  "group": "japan",
+                  "payload": {
+                      "origin": "伏見駅 愛知県名古屋市",
+                      "destination": "名古屋駅 愛知県名古屋市"
+                  },
+              },
+              {
+                  "name": "tokyo_station_shinjuku",
+                  "group": "japan",
+                  "payload": {
+                      "origin": {"latitude": 35.681236, "longitude": 139.767125},
+                      "destination": {"latitude": 35.690921, "longitude": 139.700258}
+                  },
+              },
+              {
+                  "name": "newyork_control",
+                  "group": "control",
+                  "payload": {
+                      "origin": {"latitude": 40.7580, "longitude": -73.9855},
+                      "destination": {"latitude": 40.7527, "longitude": -73.9772},
+                      "omitRegionCode": True,
+                      "languageCode": "en"
+                  },
+              },
+              {
+                  "name": "lisbon_official_style_control",
+                  "group": "control",
+                  "payload": {
+                      "origin": "Humberto Delgado Airport, Portugal",
+                      "destination": "Basílica of Estrela, Praça da Estrela, 1200-667 Lisboa, Portugal",
+                      "computeAlternativeRoutes": True,
+                      "allowedTravelModes": ["TRAIN"],
+                      "routingPreference": "LESS_WALKING",
+                      "omitRegionCode": True,
+                      "languageCode": "en"
+                  },
+              },
+          ]
+
+          results = []
+
+          for case in cases:
+              print()
+              print("=" * 88)
+              print(case["name"])
+              print("=" * 88)
+
+              status, data = post_json("/api/transit", case["payload"])
+              summary = {
+                  "name": case["name"],
+                  "group": case["group"],
+                  "httpStatus": status,
                   "routeFound": data.get("routeFound"),
                   "rawRouteCount": data.get("rawRouteCount"),
+                  "departureTimeMode": data.get("departureTimeMode"),
                   "firstTransitDeparture": data.get("firstTransitDeparture"),
                   "lastTransitArrival": data.get("lastTransitArrival"),
-                  "waitMinutes": data.get("waitMinutes"),
                   "fare": data.get("fare"),
-              })
+                  "requestOptions": data.get("requestOptions"),
+                  "error": data.get("error"),
+              }
+              results.append(summary)
+              print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+              if data.get("routeFound"):
+                  route = (data.get("routes") or [{}])[0]
+                  print("first route steps:")
+                  print(json.dumps(route.get("steps"), ensure_ascii=False, indent=2))
+
+          japan = [r for r in results if r["group"] == "japan"]
+          controls = [r for r in results if r["group"] == "control"]
+
+          japan_successes = [r["name"] for r in japan if r["routeFound"] is True]
+          control_successes = [r["name"] for r in controls if r["routeFound"] is True]
+
+          verdict = {
+              "japanCaseCount": len(japan),
+              "japanSuccessCount": len(japan_successes),
+              "japanSuccesses": japan_successes,
+              "controlCaseCount": len(controls),
+              "controlSuccessCount": len(control_successes),
+              "controlSuccesses": control_successes,
+              "googleOnlyTransitCandidate":
+                  len(japan_successes) > 0 and len(control_successes) > 0,
+          }
+
+          print()
+          print("=" * 88)
+          print("VERDICT")
+          print("=" * 88)
+          print(json.dumps(verdict, ensure_ascii=False, indent=2))
+
+          with open("/tmp/google-routes-japan-transit.json", "w", encoding="utf-8") as f:
+              json.dump(
+                  {"verdict": verdict, "results": results},
+                  f,
+                  ensure_ascii=False,
+                  indent=2,
+              )
+
+          # At least one overseas control must work; otherwise the test cannot
+          # distinguish Japan coverage from a broken request/API configuration.
+          if not control_successes:
+              raise SystemExit(
+                  "No overseas control route succeeded; PoC result is inconclusive"
+              )
           PY
+
+      - name: Upload PoC result
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-routes-japan-transit
+          path: /tmp/google-routes-japan-transit.json
+          if-no-files-found: error
+          retention-days: 14
