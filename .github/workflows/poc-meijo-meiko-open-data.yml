@@ -195,7 +195,8 @@ jobs:
                   data = json.load(f)
 
               print("===", path, "===")
-              print("heading", data["heading"])
+              print("sheet", data["directionSheet"])
+              print("default", data["defaultTerminal"])
               print("markers", json.dumps(data["markerDestinations"], ensure_ascii=False))
 
               for day_type, departures in data["schedules"].items():
