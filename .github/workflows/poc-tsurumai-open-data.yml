@@ -79,12 +79,69 @@ jobs:
                   print(day_type, json.dumps(late[-20:], ensure_ascii=False, indent=2))
           PY
 
-      - name: Upload Tsurumai inspection artifacts
+      - name: Generate Tsurumai last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-tsurumai-last-trains.py \
+            --up /tmp/fushimi-tsurumai-up.json \
+            --down /tmp/fushimi-tsurumai-down.json \
+            --output /tmp/tsurumai-last-trains.json \
+            --revision 2024-03-16
+
+      - name: Validate generated boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/tsurumai-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["line"]["code"] == "T", data["line"]
+          assert len(data["destinations"]) == 20, len(data["destinations"])
+
+          # 名古屋市交通局「鶴舞線始発・終発時刻」の伏見基準と突合。
+          # 北向き: 上小田井行 00:13 / 浄心行 00:24
+          assert data["destinations"]["T01"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:13"
+          assert data["destinations"]["T03"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:13"
+          assert data["destinations"]["T04"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:24"
+          assert data["destinations"]["T06"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:24"
+
+          # 南向き: 赤池行 00:04 / 八事行 00:14
+          assert data["destinations"]["T08"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:14"
+          assert data["destinations"]["T15"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:14"
+          assert data["destinations"]["T16"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:04"
+          assert data["destinations"]["T20"]["routes"]["fushimi"]["weekday"]["lastDeparture"] == "00:04"
+
+          for code, destination in data["destinations"].items():
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      assert route["status"] == "verified", (code, origin_id, day_type, route)
+                      assert route["lastDeparture"], (code, origin_id, day_type, route)
+                      assert route["transfers"] == 0, (code, origin_id, day_type, route)
+
+          print("Generated direct Tsurumai boundary validation: OK")
+          print(json.dumps({
+              "T01": data["destinations"]["T01"],
+              "T04": data["destinations"]["T04"],
+              "T15": data["destinations"]["T15"],
+              "T20": data["destinations"]["T20"],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+          echo "=== GENERATED_TSURUMAI_JSON_BEGIN ==="
+          cat /tmp/tsurumai-last-trains.json
+          echo "=== GENERATED_TSURUMAI_JSON_END ==="
+
+      - name: Upload Tsurumai generation artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tsurumai-fushimi-inspection
+          name: tsurumai-fushimi-generation
           path: |
             /tmp/fushimi-tsurumai-up.json
             /tmp/fushimi-tsurumai-down.json
+            /tmp/tsurumai-last-trains.json
           if-no-files-found: error
           retention-days: 7
