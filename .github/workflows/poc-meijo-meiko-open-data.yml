@@ -1,0 +1,222 @@
+name: PoC Nagoya Meijo Meiko Open Data
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meijo-meiko-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meijo-meiko-open-data.yml'
+      - 'scripts/extract-nagoya-subway.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Meijo and Meiko timetable ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+          MEIKO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/5e684b8c-81d4-4df3-b325-795325e0773c/download/20250929_subway-timetable-meikoline.zip'
+
+          curl -fsSL "$MEIJO_URL" -o /tmp/meijo.zip
+          curl -fsSL "$MEIKO_URL" -o /tmp/meiko.zip
+
+      - name: Validate workbook structure
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          import io
+          import zipfile
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "extractor",
+              Path("scripts/extract-nagoya-subway.py"),
+          )
+          extractor = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(extractor)
+
+          with zipfile.ZipFile("/tmp/meijo.zip") as outer:
+              files = [
+                  extractor.normalize_text(
+                      extractor.recover_zip_name(info.filename)
+                  )
+                  for info in outer.infolist()
+                  if not info.is_dir()
+                  and info.filename.lower().endswith(".xlsx")
+              ]
+              assert len(files) == 28, len(files)
+
+              info, recovered = extractor.find_workbook(
+                  outer, "M05", "栄"
+              )
+              assert "M05栄" in extractor.normalize_text(recovered), recovered
+
+              with zipfile.ZipFile(io.BytesIO(outer.read(info))) as book:
+                  names = extractor.sheet_names(book)
+                  assert names == ["上り", "下り"], names
+
+                  sheet_path = "xl/worksheets/sheet2.xml"
+                  cells = extractor.read_sheet_cells(book, sheet_path)
+                  note_texts = [
+                      extractor.normalize_text(value)
+                      for value in cells.values()
+                  ]
+                  assert any(
+                      "名古屋港方面へお越しの方は金山駅でお乗り換え下さい"
+                      in value
+                      for value in note_texts
+                  )
+
+          with zipfile.ZipFile("/tmp/meiko.zip") as outer:
+              files = [
+                  extractor.normalize_text(
+                      extractor.recover_zip_name(info.filename)
+                  )
+                  for info in outer.infolist()
+                  if not info.is_dir()
+                  and info.filename.lower().endswith(".xlsx")
+              ]
+              assert len(files) == 7, len(files)
+              assert not any("M05栄" in name for name in files)
+
+          print("Meijo/Meiko workbook structure validation: OK")
+          PY
+
+      - name: Extract normalized Sakae M05 Meijo timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/sakae-meijo-right.json \
+            --station-code M05 \
+            --station-name 栄 \
+            --direction-sheet 上り \
+            --default-terminal 名城線右回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/sakae-meijo-left.json \
+            --station-code M05 \
+            --station-name 栄 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+      - name: Validate normalized deep-night departures
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/sakae-meijo-right.json", encoding="utf-8") as f:
+              right = json.load(f)
+          with open("/tmp/sakae-meijo-left.json", encoding="utf-8") as f:
+              left = json.load(f)
+
+          assert right["markerDestinations"] == {
+              "大": "大曽根",
+              "ド": "ナゴヤドーム前矢田",
+          }, right["markerDestinations"]
+
+          assert left["markerDestinations"] == {
+              "港": "名古屋港",
+              "瑞": "瑞穂運動場東",
+              "新": "新瑞橋",
+          }, left["markerDestinations"]
+
+          for day_type in ("weekday", "saturday_holiday"):
+              right_late = [
+                  item
+                  for item in right["schedules"][day_type]
+                  if item["serviceMinutes"] >= 23 * 60
+              ]
+              left_late = [
+                  item
+                  for item in left["schedules"][day_type]
+                  if item["serviceMinutes"] >= 23 * 60
+              ]
+
+              assert right_late[-2:] == [
+                  {
+                      "time": "00:04",
+                      "serviceMinutes": 1444,
+                      "destination": "ナゴヤドーム前矢田",
+                      "marker": "ド",
+                  },
+                  {
+                      "time": "00:14",
+                      "serviceMinutes": 1454,
+                      "destination": "大曽根",
+                      "marker": "大",
+                  },
+              ], right_late[-2:]
+
+              assert max(
+                  item["serviceMinutes"]
+                  for item in right_late
+                  if item["destination"] == "名城線右回り"
+              ) == 1432
+
+              assert left_late[-2:] == [
+                  {
+                      "time": "00:02",
+                      "serviceMinutes": 1442,
+                      "destination": "瑞穂運動場東",
+                      "marker": "瑞",
+                  },
+                  {
+                      "time": "00:10",
+                      "serviceMinutes": 1450,
+                      "destination": "新瑞橋",
+                      "marker": "新",
+                  },
+              ], left_late[-2:]
+
+              assert max(
+                  item["serviceMinutes"]
+                  for item in left_late
+                  if item["destination"] == "名城線左回り"
+              ) == 1422
+
+              assert not any(
+                  item["destination"] == "名古屋港"
+                  and item["serviceMinutes"] >= 22 * 60 + 30
+                  for item in left["schedules"][day_type]
+              )
+
+          print("Sakae M05 deep-night normalization validation: OK")
+          PY
+
+      - name: Upload normalized PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: meijo-meiko-sakae-poc
+          path: |
+            /tmp/sakae-meijo-right.json
+            /tmp/sakae-meijo-left.json
+          if-no-files-found: error
+          retention-days: 7
