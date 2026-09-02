@@ -41,3 +41,48 @@ export function loadSleepSettings(storage) {
 export function clearSleepSettings(storage) {
   resolveStorage(storage).removeItem(SLEEP_SETTINGS_STORAGE_KEY);
 }
+
+
+export const DESTINATION_STATION_STORAGE_KEY =
+  "atoIppaiNavi.destinationStation.v1";
+
+export function normalizeDestinationStation(value) {
+  const code = String(value ?? "").trim().toUpperCase();
+  const match = /^H(\d{1,2})$/.exec(code);
+
+  if (!match) {
+    throw new Error("destination station must be H01-H22");
+  }
+
+  const number = Number(match[1]);
+
+  if (number < 1 || number > 22) {
+    throw new Error("destination station must be H01-H22");
+  }
+
+  return `H${String(number).padStart(2, "0")}`;
+}
+
+export function saveDestinationStation(value, storage) {
+  const code = normalizeDestinationStation(value);
+  const target = resolveStorage(storage);
+  target.setItem(DESTINATION_STATION_STORAGE_KEY, code);
+  return code;
+}
+
+export function loadDestinationStation(storage) {
+  const target = resolveStorage(storage);
+  const raw = target.getItem(DESTINATION_STATION_STORAGE_KEY);
+
+  if (!raw) return null;
+
+  try {
+    return normalizeDestinationStation(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function clearDestinationStation(storage) {
+  resolveStorage(storage).removeItem(DESTINATION_STATION_STORAGE_KEY);
+}

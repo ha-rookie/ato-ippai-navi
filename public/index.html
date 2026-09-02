@@ -14,7 +14,7 @@
       <div class="eyebrow">NAGOYA NIGHT DECISION</div>
       <h1>あと一杯ナビ</h1>
       <p class="lead">もう少し飲むか、帰るか。<br>終電・タクシー・睡眠を一画面で。</p>
-      <div class="route-badge">PoC：栄 → 藤が丘</div>
+      <div id="routeBadge" class="route-badge">PoC：栄・伏見 → 藤が丘</div>
     </header>
 
     <section class="panel" aria-labelledby="decision-title">
@@ -25,6 +25,35 @@
         </div>
         <span id="clock" class="clock">--:--</span>
       </div>
+
+      <label class="field">
+        <span>帰宅先の最寄り駅</span>
+        <select id="destinationCode">
+          <option value="H01" data-name="高畑">H01 高畑</option>
+          <option value="H02" data-name="八田">H02 八田</option>
+          <option value="H03" data-name="岩塚">H03 岩塚</option>
+          <option value="H04" data-name="中村公園">H04 中村公園</option>
+          <option value="H05" data-name="中村日赤">H05 中村日赤</option>
+          <option value="H06" data-name="本陣">H06 本陣</option>
+          <option value="H07" data-name="亀島">H07 亀島</option>
+          <option value="H08" data-name="名古屋">H08 名古屋</option>
+          <option value="H09" data-name="伏見">H09 伏見</option>
+          <option value="H10" data-name="栄">H10 栄</option>
+          <option value="H11" data-name="新栄町">H11 新栄町</option>
+          <option value="H12" data-name="千種">H12 千種</option>
+          <option value="H13" data-name="今池">H13 今池</option>
+          <option value="H14" data-name="池下">H14 池下</option>
+          <option value="H15" data-name="覚王山">H15 覚王山</option>
+          <option value="H16" data-name="本山">H16 本山</option>
+          <option value="H17" data-name="東山公園">H17 東山公園</option>
+          <option value="H18" data-name="星ヶ丘">H18 星ヶ丘</option>
+          <option value="H19" data-name="一社">H19 一社</option>
+          <option value="H20" data-name="上社">H20 上社</option>
+          <option value="H21" data-name="本郷">H21 本郷</option>
+          <option value="H22" data-name="藤が丘" selected>H22 藤が丘</option>
+        </select>
+      </label>
+      <p class="hint">最寄り駅はこの端末だけに保存します。自宅住所は登録しません。</p>
 
       <label class="field">
         <span>ダイヤ区分</span>
@@ -65,7 +94,7 @@
 
       <div class="settings-grid">
         <label class="field">
-          <span>藤が丘駅 → 自宅</span>
+          <span id="stationToHomeLabel">藤が丘駅 → 自宅</span>
           <div class="input-unit">
             <input id="stationToHomeMinutes" type="number" min="0" max="180" inputmode="numeric" placeholder="例 10">
             <span>分</span>
@@ -96,7 +125,7 @@
     <section class="panel info-panel">
       <h2>このPoCで見ているもの</h2>
       <ul>
-        <li>現在地から栄駅までの徒歩時間</li>
+        <li>現在地から栄・伏見までの徒歩時間</li>
         <li>駅構内3分＋乗車前1分の安全マージン</li>
         <li>名古屋市交通局の公式時刻表</li>
         <li>終電後のタクシー距離制参考概算</li>
