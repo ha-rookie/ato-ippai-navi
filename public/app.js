@@ -171,8 +171,8 @@ function renderScenario(scenario) {
   const isTaxi = scenario.recommendedMode === "taxi";
   const warning =
     isTrain &&
-    Number.isFinite(Number(scenario.minutesUntilLastTrain)) &&
-    Number(scenario.minutesUntilLastTrain) <= 10;
+    Number.isFinite(Number(scenario.usableMarginMinutes)) &&
+    Number(scenario.usableMarginMinutes) <= 10;
 
   let main = "判定できません";
   let sub = "";
@@ -182,14 +182,14 @@ function renderScenario(scenario) {
   if (isTrain) {
     modeLabel = warning ? "終電注意" : "電車";
     modeClass = "train";
-    main = `${scenario.nextTrain} に乗れる`;
+    main = `${scenario.recommendedOriginName}から終電 ${scenario.lastDeparture} に間に合う`;
     sub = `
-      栄駅ホーム ${scenario.localStationReadyTime}ごろ
+      ${scenario.recommendedOriginName}駅 ${scenario.localStationReadyTime}ごろ
       → 藤が丘 ${scenario.localDestinationStationArrivalTime}ごろ
     `;
 
-    if (warning) {
-      sub += `<br>藤が丘行の最終 ${scenario.lastTrain} まで残り約${scenario.minutesUntilLastTrain}分`;
+    if (Number.isFinite(Number(scenario.usableMarginMinutes))) {
+      sub += `<br>終電までの余裕 約${Math.max(0, scenario.usableMarginMinutes)}分`;
     }
   } else if (isTaxi) {
     modeLabel = "タクシー";
@@ -234,7 +234,7 @@ async function runDecision() {
 
   try {
     const origin = await getLocation();
-    els.status.textContent = "徒歩・終電・タクシーを計算しています…";
+    els.status.textContent = "栄・伏見への徒歩と終電・タクシーを計算しています…";
 
     const data = await fetchDecision(origin);
     render(data);
