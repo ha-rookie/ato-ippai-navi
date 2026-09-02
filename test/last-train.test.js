@@ -228,3 +228,50 @@ test("Meijo M12 Ozone boundary uses Sakae direct route", () => {
   assert.equal(result.scenarios[0].lastDeparture, "00:14");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+test("Meiko boundaries cover E01-E07 with verified Kanayama transfer", () => {
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => code.startsWith("E")).length,
+    7
+  );
+
+  const e01 = dataset.destinations.E01.routes.sakae.weekday;
+  assert.equal(e01.lastDeparture, "00:10");
+  assert.equal(e01.lastArrival, "00:18");
+  assert.equal(e01.transfers, 0);
+
+  for (const code of ["E02", "E03", "E04", "E05", "E06", "E07"]) {
+    const route = dataset.destinations[code].routes.sakae.weekday;
+    assert.equal(route.lastDeparture, "00:02", code);
+    assert.equal(route.transferAt, "金山", code);
+    assert.deepEqual(route.transferStationCodes, ["M01", "E01"], code);
+    assert.equal(route.transferReadyTime, "00:10", code);
+    assert.equal(route.connectionDeparture, "00:18", code);
+    assert.equal(route.transferMarginMinutes, 8, code);
+    assert.equal(route.minimumTransferLeadMinutes, 1, code);
+    assert.equal(route.transfers, 1, code);
+    assert.equal(route.status, "verified", code);
+  }
+});
+
+test("Meiko E07 Nagoyako uses Sakae 00:02 boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:45:00+09:00",
+    dayType: "weekday",
+    destinationCode: "E07",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakae: { walkMinutes: 4 },
+      fushimi: { walkMinutes: 14 }
+    }
+  });
+
+  assert.equal(result.destination.name, "名古屋港");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "sakae");
+  assert.equal(result.scenarios[0].lastDeparture, "00:02");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
