@@ -146,7 +146,8 @@ jobs:
               prod = production["destinations"][code]
               assert prod["name"] == destination["name"], code
               if code == "T07":
-                  assert prod["enabled"] is False
+                  # 伏見駅そのものはwalk-homeモードで利用するため有効。
+                  assert prod["enabled"] is True
                   continue
               assert prod["enabled"] is True
               for origin_id, day_types in destination["routes"].items():
