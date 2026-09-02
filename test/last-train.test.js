@@ -175,3 +175,56 @@ test("Tsurumai direct boundary uses Fushimi only", () => {
 test("Tsurumai Fushimi hub is enabled now that walk-only handling exists", () => {
   assert.equal(dataset.destinations.T07.enabled, true);
 });
+
+
+test("Meijo direct boundaries cover the full M01-M28 station set", () => {
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => code.startsWith("M")).length,
+    28
+  );
+
+  const expected = {
+    M01: ["00:10", "left", "新瑞橋"],
+    M06: ["00:14", "right", "大曽根"],
+    M12: ["00:14", "right", "大曽根"],
+    M13: ["00:04", "right", "ナゴヤドーム前矢田"],
+    M14: ["23:52", "right", "名城線右回り"],
+    M22: ["00:02", "left", "瑞穂運動場東"],
+    M23: ["00:10", "left", "新瑞橋"],
+    M28: ["00:10", "left", "新瑞橋"]
+  };
+
+  for (const [code, [lastDeparture, direction, terminal]] of Object.entries(expected)) {
+    const route = dataset.destinations[code].routes.sakae.weekday;
+    assert.equal(route.lastDeparture, lastDeparture, code);
+    assert.equal(route.direction, direction, code);
+    assert.equal(route.trainTerminal, terminal, code);
+    assert.equal(route.transfers, 0, code);
+  }
+});
+
+test("Meijo M05 Sakae destination is enabled for walk-home handling", () => {
+  assert.equal(dataset.destinations.M05.enabled, true);
+  assert.deepEqual(dataset.destinations.M05.routes, {});
+});
+
+test("Meijo M12 Ozone boundary uses Sakae direct route", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:50:00+09:00",
+    dayType: "weekday",
+    destinationCode: "M12",
+    offsetMinutes: [0, 30],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakae: { walkMinutes: 4 },
+      fushimi: { walkMinutes: 14 }
+    }
+  });
+
+  assert.equal(result.destination.name, "大曽根");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "sakae");
+  assert.equal(result.scenarios[0].lastDeparture, "00:14");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
