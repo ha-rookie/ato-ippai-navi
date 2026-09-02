@@ -105,6 +105,38 @@ jobs:
           }, ensure_ascii=False, indent=2))
           PY
 
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/higashiyama-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert len(production["destinations"]) == 22, len(production["destinations"])
+
+          for code, destination in generated["destinations"].items():
+              prod_destination = production["destinations"].get(code)
+              assert prod_destination is not None, code
+              assert prod_destination["name"] == destination["name"], code
+
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      prod_route = prod_destination["routes"][origin_id][day_type]
+                      assert prod_route["lastDeparture"] == route["lastDeparture"], (
+                          code, origin_id, day_type, prod_route, route
+                      )
+                      assert prod_route.get("trainTerminal") == route.get("trainTerminal"), (
+                          code, origin_id, day_type, prod_route, route
+                      )
+                      assert prod_route["status"] == "verified", (
+                          code, origin_id, day_type, prod_route
+                      )
+
+          print("Committed production JSON matches generated Higashiyama boundaries: OK")
+          PY
+
           echo "=== GENERATED_HIGASHIYAMA_JSON_BEGIN ==="
           cat /tmp/higashiyama-last-trains.json
           echo "=== GENERATED_HIGASHIYAMA_JSON_END ==="
