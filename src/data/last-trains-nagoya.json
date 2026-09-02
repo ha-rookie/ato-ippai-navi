@@ -35,6 +35,13 @@
       "id": "nagoya-subway-first-last-tsurumai",
       "publisher": "名古屋市交通局",
       "url": "https://www.kotsu.city.nagoya.jp/rp/subway/TRP0000190.htm"
+    },
+    {
+      "id": "nagoya-subway-pocket-timetable-meijo",
+      "publisher": "名古屋市交通局",
+      "license": "CC BY 4.0",
+      "revision": "2025-09-29",
+      "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip"
     }
   ],
   "origins": {
@@ -1940,6 +1947,987 @@
             "status": "verified",
             "sourceIds": [
               "nagoya-subway-pocket-timetable-tsurumai"
+            ]
+          }
+        }
+      }
+    },
+    "M01": {
+      "name": "金山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M01"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M02": {
+      "name": "東別院",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M02"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M03": {
+      "name": "上前津",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M03"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M04": {
+      "name": "矢場町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M04"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M05": {
+      "name": "栄",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M05"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "M06": {
+      "name": "久屋大通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M06"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M07": {
+      "name": "名古屋城",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M07"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M08": {
+      "name": "名城公園",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M08"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M09": {
+      "name": "黒川",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M09"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M10": {
+      "name": "志賀本通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M10"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M11": {
+      "name": "平安通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M11"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M12": {
+      "name": "大曽根",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M12"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:14",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "大曽根",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M13": {
+      "name": "ナゴヤドーム前矢田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M13"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "ナゴヤドーム前矢田",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "ナゴヤドーム前矢田",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M14": {
+      "name": "砂田橋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M14"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M15": {
+      "name": "茶屋ヶ坂",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M15"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M16": {
+      "name": "自由ヶ丘",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M16"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M17": {
+      "name": "本山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M17"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M18": {
+      "name": "名古屋大学",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M18"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M19": {
+      "name": "八事日赤",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M19"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M20": {
+      "name": "八事",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M20"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M21": {
+      "name": "総合リハビリセンター",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M21"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:52",
+            "lastArrival": null,
+            "routeSummary": "名城線 右回り 直通",
+            "trainTerminal": "名城線右回り",
+            "direction": "right",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M22": {
+      "name": "瑞穂運動場東",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M22"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "瑞穂運動場東",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "瑞穂運動場東",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M23": {
+      "name": "新瑞橋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M23"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M24": {
+      "name": "妙音通",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M24"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M25": {
+      "name": "堀田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M25"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M26": {
+      "name": "熱田神宮伝馬町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M26"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M27": {
+      "name": "熱田神宮西",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M27"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          }
+        }
+      }
+    },
+    "M28": {
+      "name": "西高蔵",
+      "city": "名古屋市",
+      "stationCodes": [
+        "M28"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:10",
+            "lastArrival": null,
+            "routeSummary": "名城線 左回り 直通",
+            "trainTerminal": "新瑞橋",
+            "direction": "left",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo"
             ]
           }
         }
