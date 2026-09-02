@@ -131,6 +131,37 @@ jobs:
           }, ensure_ascii=False, indent=2))
           PY
 
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/tsurumai-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert len([c for c in production["destinations"] if c.startswith("T")]) == 20
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"][code]
+              assert prod["name"] == destination["name"], code
+              if code == "T07":
+                  assert prod["enabled"] is False
+                  continue
+              assert prod["enabled"] is True
+              for origin_id, day_types in destination["routes"].items():
+                  for day_type, route in day_types.items():
+                      prod_route = prod["routes"][origin_id][day_type]
+                      assert prod_route["lastDeparture"] == route["lastDeparture"], (
+                          code, origin_id, day_type, prod_route, route
+                      )
+                      assert prod_route["trainTerminal"] == route["trainTerminal"], (
+                          code, origin_id, day_type, prod_route, route
+                      )
+
+          print("Committed production JSON matches generated Tsurumai boundaries: OK")
+          PY
+
           echo "=== GENERATED_TSURUMAI_JSON_BEGIN ==="
           cat /tmp/tsurumai-last-trains.json
           echo "=== GENERATED_TSURUMAI_JSON_END ==="
