@@ -114,7 +114,11 @@ jobs:
           with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
               production = json.load(f)
 
-          assert len(production["destinations"]) == 22, len(production["destinations"])
+          assert len([
+              code
+              for code in production["destinations"]
+              if code.startswith("H")
+          ]) == 22
 
           for code, destination in generated["destinations"].items():
               prod_destination = production["destinations"].get(code)
