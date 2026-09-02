@@ -6,64 +6,109 @@
 
 ## 目的
 
-「あと一杯ナビ」に必要な、公共交通・自動車ルート取得が実用レベルで可能かを確認する。
+「あと一杯ナビ」の公共交通判定を、Google Routes APIだけで成立させられるか確認する。
 
-## 確認済み
+## 結論
 
-- Google Cloud Billing設定
-- Routes API有効化
-- APIキー作成
-- APIキーをRoutes APIのみに制限
-- Cloudflare Workers Secretへ `GOOGLE_MAPS_API_KEY` を登録
-- WorkerからSecretを参照できることを確認
-- WorkerからGoogle Routes APIへリクエストし HTTP 200 を確認
+**2026-09-02時点の実測では、日本の公共交通判定をGoogle Routes APIのTRANSITだけで実装する案はNo-Goとする。**
 
-## 重要
+Google Routes APIへの通信やリクエスト構造が壊れているわけではない。
+同一Worker・同一APIキー・同一実装で、海外の対照ケースは正常に公共交通ルートを返した。
 
-HTTP 200は「通信経路が成立した」ことの確認であり、サービス成立性の確認ではない。
+一方、日本の11ケースはすべて HTTP 200 だが `routes: []` 相当で、公共交通ルートは0件だった。
 
-最初のTRANSIT試験では、HTTP 200に対しレスポンス本体が空のオブジェクトとなったため、公共交通ルート取得条件は未検証として扱う。
+この結果は「Googleが日本のTRANSITを公式に非対応と明記している」という意味ではない。
+公式仕様はTRANSITを「利用可能な地域」で提供するとしているが、Routes APIの公開カバレッジ表から日本のTRANSIT可否を直接確認できなかったため、ここでは**本プロジェクト環境での制御試験結果**として扱う。
 
-## 未確認
+## 検証結果
 
-- 錦三丁目 → 藤が丘駅のTRANSITルート
-- 錦三丁目 → 金山駅のTRANSITルート
-- 深夜帯で今 / +15 / +30 / +60分の境界が取れるか
-- 終電後に翌朝便が返った場合の判別
-- transitFare
-- DRIVE distanceMeters
-- スマホGPSをoriginに使った場合のルート
-- タクシー概算精度
+### 日本
 
-## PoC合格条件
+以下11ケースはすべて `HTTP 200 / routeFound=false / rawRouteCount=0`。
 
-### 必須
+- 名古屋 栄→藤が丘：現在時刻・座標
+- 名古屋 栄→藤が丘：15:00 JST明示・座標
+- 名古屋 栄→藤が丘：駅名住所
+- 名古屋 栄→藤が丘：regionCode省略
+- 名古屋 栄→藤が丘：alternative routes有効
+- 名古屋 栄→藤が丘：SUBWAY preference
+- 名古屋 栄→藤が丘：RAIL preference
+- 名古屋 栄→藤が丘：LESS_WALKING
+- 名古屋 栄→金山
+- 名古屋 伏見→名古屋
+- 東京 東京駅→新宿駅
 
-- 23時台の通常TRANSITルートが返る
-- 終電直前でもルートが返る
-- 終電後とその夜のルートを区別できる
-- 最初に乗る駅・発車時刻が取れる
-- DRIVEの距離が取れる
-- 最寄り駅モードで自宅情報なしでも成立する
+### 海外対照
 
-### 任意
+- New York: Times Square → Grand Central
+  - `routeFound=true`
+  - 42 St Shuttleを取得
+  - Transit fare USD 3も取得
+- Lisbon: Google公式サンプル相当
+  - `routeFound=true`
+  - 6 routes取得
+  - 複数のTRANSIT stepを取得
 
-- transitFareが取得できる
-- 最寄り乗車駅をRoutes API側で自然に選択できる
+### 自動判定
 
-## 次の試験
+```json
+{
+  "japanCaseCount": 11,
+  "japanSuccessCount": 0,
+  "controlCaseCount": 2,
+  "controlSuccessCount": 2,
+  "googleOnlyTransitCandidate": false
+}
+```
 
-GitHubをコードの正本にし、Cloudflare WorkerをGitHub経由でデプロイする。
+GitHub Actions:
 
-テスト候補:
+```text
+PoC Google Routes Japan Transit
+run #6
+run_id: 33595421765
+result: success
+```
 
-- 錦三丁目付近 → 藤が丘駅
-- 錦三丁目付近 → 金山駅
-- 22:30 / 23:30 / 23:45 / 00:00 / 00:15 JST
-- TRANSITとDRIVEの両方を確認
+PoC結果JSONはGitHub Actions Artifact `google-routes-japan-transit` として保存した。
+
+## 確認済みのGoogle Routes機能
+
+- Worker → Google Routes API通信
+- WALK
+- DRIVE
+- TRANSITリクエスト自体
+- departureTime省略（Google既定のnow）
+- departureTime明示
+- computeAlternativeRoutes
+- transitPreferences.allowedTravelModes
+- transitPreferences.routingPreference
+- regionCode有無
+- 座標 / 住所指定
+
+## プロジェクトへの影響
+
+### Google Routes APIだけに限定する場合
+
+現状では、公共交通を使った「今 / +15 / +30 / +60分後に帰れるか」を日本で信頼して判定できない。
+
+そのため、Google Routes APIだけに限定するなら、現在の「あと一杯ナビ」の公共交通要件は満たせない。
+
+### 既存PoCについて
+
+名古屋市交通局公式時刻表を使った栄→藤が丘判定は別方式として成立済みだが、栄・伏見周辺の複数路線・複数事業者へ拡張すると自前の乗換案内実装に近づく。
+
+したがって、次の設計判断はコード追加より先に行う。
+
+1. Google Routes APIだけ、という制約を優先して公共交通機能を縮小する
+2. 公共交通判定のため別データ/APIを許可する
+3. プロダクト要件自体を見直す
 
 ## 判定
 
-- 通信経路PoC: **OK**
-- 公共交通成立性PoC: **継続**
-- サービス成立性PoC: **未判定**
+- Google Routes API 通信PoC: **OK**
+- WALK: **OK**
+- DRIVE: **OK**
+- 海外TRANSIT: **OK**
+- 日本TRANSIT: **本プロジェクトの制御試験では0/11**
+- Google Routes APIだけで日本の公共交通判定: **No-Go**
