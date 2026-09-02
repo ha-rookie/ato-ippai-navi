@@ -91,3 +91,58 @@ test("same-minute arrival at the platform cannot board the last train", () => {
   assert.equal(result.scenarios[0].options[0].lastDeparture, "00:00");
   assert.equal(result.scenarios[0].options[0].canReachDestination, false);
 });
+
+
+test("generated Higashiyama boundaries cover west and east destinations", () => {
+  assert.equal(Object.keys(dataset.destinations).length, 22);
+
+  assert.equal(
+    dataset.destinations.H01.routes.sakae.weekday.lastDeparture,
+    "00:02"
+  );
+  assert.equal(
+    dataset.destinations.H01.routes.fushimi.weekday.lastDeparture,
+    "00:04"
+  );
+
+  assert.equal(
+    dataset.destinations.H08.routes.sakae.weekday.lastDeparture,
+    "00:16"
+  );
+  assert.equal(
+    dataset.destinations.H08.routes.fushimi.weekday.lastDeparture,
+    "00:17"
+  );
+
+  assert.equal(
+    dataset.destinations.H18.routes.sakae.weekday.lastDeparture,
+    "00:16"
+  );
+  assert.equal(
+    dataset.destinations.H18.routes.fushimi.weekday.lastDeparture,
+    "00:10"
+  );
+});
+
+test("stations without last-arrival data still evaluate the boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-05T00:05:00+09:00",
+    dayType: "weekday",
+    destinationCode: "H18",
+    offsetMinutes: [0],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakae: { walkMinutes: 4 },
+      fushimi: { walkMinutes: 14 }
+    }
+  });
+
+  const scenario = result.scenarios[0];
+
+  assert.equal(scenario.canReachDestination, true);
+  assert.equal(scenario.recommendedOriginId, "sakae");
+  assert.equal(scenario.lastDeparture, "00:16");
+  assert.equal(scenario.lastArrival, null);
+  assert.equal(scenario.localLastTrainArrivalTime, null);
+});
