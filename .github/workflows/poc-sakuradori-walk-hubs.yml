@@ -8,6 +8,7 @@ on:
       - '.github/workflows/poc-sakuradori-walk-hubs.yml'
       - 'scripts/extract-nagoya-subway.py'
       - 'scripts/generate-sakuradori-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -207,6 +208,42 @@ jobs:
           assert data["destinations"]["S05"]["routes"].get("hisayaodori") is None
 
           print("Generated Sakuradori boundary validation: OK")
+          PY
+
+      - name: Compare generated Sakuradori boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/sakuradori-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert len([
+              code
+              for code in production["destinations"]
+              if code.startswith("S")
+          ]) == 21
+
+          assert production["origins"]["marunouchi"]["enabled"] is True
+          assert production["origins"]["hisayaodori"]["enabled"] is True
+          assert production["origins"]["marunouchi"]["stationCodes"] == ["T06", "S04"]
+          assert production["origins"]["hisayaodori"]["stationCodes"] == ["M06", "S05"]
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"].get(code)
+              assert prod is not None, code
+              assert prod["enabled"] is True, code
+              assert prod["name"] == destination["name"], code
+              assert prod["stationCodes"] == destination["stationCodes"], code
+              assert prod["routes"] == destination["routes"], code
+
+          source_ids = {source["id"] for source in production["sources"]}
+          assert "nagoya-subway-pocket-timetable-sakuradori" in source_ids
+
+          print("Production Sakuradori boundary comparison: OK")
           PY
 
       - name: Validate current official end-of-service anchors
