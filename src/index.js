@@ -438,16 +438,24 @@ async function tonightDecision(env, input) {
   if (!input.origin) throw new Error("origin is required");
   if (!input.departureTime) throw new Error("departureTime is required");
 
+  const destinationCode = input.destinationCode || "H22";
+  const destination = LAST_TRAINS_NAGOYA.destinations[destinationCode];
+
+  if (!destination?.enabled) {
+    throw new Error(`destination is not enabled: ${destinationCode}`);
+  }
+
   const trainDecision = await lastTrainBoundaryFromCurrentLocation(
     env,
     {
       ...input,
-      destinationCode: input.destinationCode || "H22"
+      destinationCode
     }
   );
 
   const taxiDestination =
-    input.taxiDestination || "藤が丘駅 愛知県名古屋市";
+    input.taxiDestination ||
+    `${destination.name}駅 愛知県名古屋市`;
 
   const taxiResult = await taxiEstimate(env, {
     origin: input.origin,
@@ -457,6 +465,8 @@ async function tonightDecision(env, input) {
   });
 
   return {
+    destinationCode,
+    destinationName: destination.name,
     taxiDestination,
     ...composeTonightDecision(trainDecision, taxiResult)
   };
