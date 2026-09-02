@@ -57,6 +57,13 @@ ROUTE_LABELS = {
     "left": "名城線 左回り 直通",
 }
 
+# Some Sakae departures continue from Kanayama onto the Meiko Line.
+# For Meijo-destination reachability, those trains cover the left-direction
+# arc only as far as M01 Kanayama before leaving the circular line.
+EXTERNAL_TERMINAL_CODE_OVERRIDES = {
+    "名古屋港": "M01",
+}
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -222,6 +229,9 @@ def main() -> None:
 
     index_by_code, terminal_indexes = station_indexes()
     origin_index = index_by_code[ORIGIN_CODE]
+
+    for terminal_name, station_code in EXTERNAL_TERMINAL_CODE_OVERRIDES.items():
+        terminal_indexes[terminal_name] = index_by_code[station_code]
 
     known_terminals = set(terminal_indexes) | set(FULL_LOOP_TERMINALS.values())
     unknown = set()
