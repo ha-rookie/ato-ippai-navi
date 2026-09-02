@@ -150,6 +150,13 @@ async function fetchDecision(origin) {
 }
 
 function sleepHtml(scenario) {
+  if (
+    scenario.recommendedMode === "train" &&
+    !scenario.estimatedDestinationStationArrivalTime
+  ) {
+    return '<div class="sleep-line">睡眠時間：終電時刻のみのため未算出</div>';
+  }
+
   if (!scenario.sleep) {
     return '<div class="sleep-line">睡眠時間：設定すると表示</div>';
   }
@@ -185,8 +192,12 @@ function renderScenario(scenario) {
     main = `${scenario.recommendedOriginName}から終電 ${scenario.lastDeparture} に間に合う`;
     sub = `
       ${scenario.recommendedOriginName}駅 ${scenario.localStationReadyTime}ごろ
-      → 藤が丘 ${scenario.localDestinationStationArrivalTime}ごろ
+      ／ 最終 ${scenario.lastDeparture}
     `;
+
+    if (scenario.localLastTrainArrivalTime) {
+      sub += `<br>最終列車は藤が丘 ${scenario.localLastTrainArrivalTime}着`;
+    }
 
     if (Number.isFinite(Number(scenario.usableMarginMinutes))) {
       sub += `<br>終電までの余裕 約${Math.max(0, scenario.usableMarginMinutes)}分`;
