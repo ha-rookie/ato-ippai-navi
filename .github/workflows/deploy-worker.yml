@@ -631,13 +631,33 @@ jobs:
           }
           JSON
 
-          curl -fsS \
-            -H "content-type: application/json" \
-            --data @/tmp/s21-tonight-request.json \
-            "$BASE_URL/api/tonight-decision" \
-            -o /tmp/s21-tonight.json
+          s21_ready=0
 
-          cat /tmp/s21-tonight.json
+          for attempt in $(seq 1 5); do
+            echo "Sakuradori S21 smoke test attempt $attempt/5"
+
+            status=$(curl -sS \
+              -o /tmp/s21-tonight.json \
+              -w '%{http_code}' \
+              -H "content-type: application/json" \
+              --data @/tmp/s21-tonight-request.json \
+              "$BASE_URL/api/tonight-decision")
+
+            echo "HTTP status: $status"
+            cat /tmp/s21-tonight.json
+
+            if [ "$status" = "200" ]; then
+              s21_ready=1
+              break
+            fi
+
+            sleep 2
+          done
+
+          if [ "$s21_ready" -ne 1 ]; then
+            echo "Sakuradori S21 API did not return 200."
+            exit 1
+          fi
 
           python3 - <<'PY'
           import json
