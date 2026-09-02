@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "serviceArea": {
+    "id": "nagoya-city",
+    "name": "名古屋市内",
+    "purpose": "繁華街からの深夜帰宅・タクシーフォールバック判定"
+  },
+  "metadata": {
+    "effectiveFrom": "2025-03-29",
+    "checkedAt": "2026-09-03",
+    "timezone": "Asia/Tokyo"
+  },
+  "sources": [
+    {
+      "id": "nagoya-subway-pocket-timetable",
+      "publisher": "名古屋市交通局",
+      "license": "CC BY 4.0",
+      "revision": "2025-03-29",
+      "url": "https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/46beb3f0-6707-46ee-9d9d-2b3bb2567965/download/20250329_subway-timetable-higashiyamaline_.zip"
+    },
+    {
+      "id": "nagoya-subway-first-last",
+      "publisher": "名古屋市交通局",
+      "url": "https://bus-sekkin.kotsu.city.nagoya.jp/rp/subway/TRP0000188.htm"
+    }
+  ],
+  "origins": {
+    "sakae": {
+      "name": "栄",
+      "stationCodes": [
+        "H10",
+        "M05"
+      ],
+      "walkDestination": "栄駅 愛知県名古屋市",
+      "enabled": true
+    },
+    "fushimi": {
+      "name": "伏見",
+      "stationCodes": [
+        "H09",
+        "T07"
+      ],
+      "walkDestination": "伏見駅 愛知県名古屋市",
+      "enabled": true
+    }
+  },
+  "destinations": {
+    "H22": {
+      "name": "藤が丘",
+      "city": "名古屋市",
+      "stationCodes": [
+        "H22"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "00:02",
+            "arrival": "00:23",
+            "routeSummary": "東山線 藤が丘行",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable",
+              "nagoya-subway-first-last"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:02",
+            "arrival": "00:23",
+            "routeSummary": "東山線 藤が丘行",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable",
+              "nagoya-subway-first-last"
+            ]
+          }
+        },
+        "fushimi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "arrival": "00:23",
+            "routeSummary": "東山線 藤が丘行",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable",
+              "nagoya-subway-first-last"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "arrival": "00:23",
+            "routeSummary": "東山線 藤が丘行",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable",
+              "nagoya-subway-first-last"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
