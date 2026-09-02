@@ -154,6 +154,61 @@ jobs:
                               print(f"ROW {row}: " + " | ".join(values))
           PY
 
+      - name: Extract normalized Sakae M05 Meijo timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MEIJO_URL='https://data.bodik.jp/dataset/e4b42f45-e415-4a48-9ff3-20faeb7c3400/resource/e6fb0551-8fba-49fd-b0ef-c2dc5e2444e4/download/20250929_subway-timetable-meijoline.zip'
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/sakae-meijo-right.json \
+            --station-code M05 \
+            --station-name 栄 \
+            --direction-sheet 上り \
+            --default-terminal 名城線右回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+          python3 scripts/extract-nagoya-subway.py \
+            --zip /tmp/meijo.zip \
+            --output /tmp/sakae-meijo-left.json \
+            --station-code M05 \
+            --station-name 栄 \
+            --direction-sheet 下り \
+            --default-terminal 名城線左回り \
+            --revision 2025-09-29 \
+            --source-url "$MEIJO_URL"
+
+      - name: Inspect normalized Sakae M05 late departures
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          for path in (
+              "/tmp/sakae-meijo-right.json",
+              "/tmp/sakae-meijo-left.json",
+          ):
+              with open(path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              print("===", path, "===")
+              print("heading", data["heading"])
+              print("markers", json.dumps(data["markerDestinations"], ensure_ascii=False))
+
+              for day_type, departures in data["schedules"].items():
+                  late = [
+                      d for d in departures
+                      if d["serviceMinutes"] >= 22 * 60 + 30
+                  ]
+                  print(
+                      day_type,
+                      json.dumps(late[-30:], ensure_ascii=False, indent=2)
+                  )
+          PY
+
       - name: Upload inspection ZIP metadata
         uses: actions/upload-artifact@v4
         with:
@@ -161,5 +216,7 @@ jobs:
           path: |
             /tmp/meijo.zip
             /tmp/meiko.zip
+            /tmp/sakae-meijo-right.json
+            /tmp/sakae-meijo-left.json
           if-no-files-found: error
           retention-days: 1
