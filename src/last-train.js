@@ -220,10 +220,21 @@ export function evaluateLastTrainBoundary(dataset, input) {
       canReachDestination: recommended != null,
       recommendedOriginId: recommended?.originId ?? null,
       recommendedOriginName: recommended?.originName ?? null,
+      stationReadyTime: recommended?.stationReadyTime ?? null,
+      localStationReadyTime: recommended?.localStationReadyTime ?? null,
       lastDeparture: recommended?.lastDeparture ?? null,
+      estimatedLastDepartureTime:
+        recommended?.estimatedLastDepartureTime ?? null,
+      minutesUntilLastDeparture:
+        recommended?.minutesUntilLastDeparture ?? null,
+      usableMarginMinutes:
+        recommended?.usableMarginMinutes ?? null,
+      estimatedDestinationStationArrivalTime:
+        recommended?.estimatedDestinationStationArrivalTime ?? null,
       localDestinationStationArrivalTime:
         recommended?.localDestinationStationArrivalTime ?? null,
       routeSummary: recommended?.routeSummary ?? null,
+      transfers: recommended?.transfers ?? null,
       options
     };
   });
