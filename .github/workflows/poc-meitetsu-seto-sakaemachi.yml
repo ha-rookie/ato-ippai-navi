@@ -1,0 +1,101 @@
+name: PoC Meitetsu Seto Sakaemachi
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meitetsu-seto-sakaemachi.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official Meitetsu Seto timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEEKDAY_URL='https://www.meitetsu.co.jp/train/timetable/__icsFiles/afieldfile/2026/02/25/20260314_ST_W1.pdf'
+          HOLIDAY_URL='https://www.meitetsu.co.jp/train/timetable/__icsFiles/afieldfile/2026/02/25/20260314_ST_H1.pdf'
+
+          curl -fsSL "$WEEKDAY_URL" -o /tmp/seto-weekday.pdf
+          curl -fsSL "$HOLIDAY_URL" -o /tmp/seto-holiday.pdf
+
+          test -s /tmp/seto-weekday.pdf
+          test -s /tmp/seto-holiday.pdf
+
+      - name: Convert official PDFs to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/seto-weekday.pdf /tmp/seto-weekday.txt
+          pdftotext -layout /tmp/seto-holiday.pdf /tmp/seto-holiday.txt
+
+          grep -q '2026年03月14日改正' /tmp/seto-weekday.txt
+          grep -q '2026年03月14日改正' /tmp/seto-holiday.txt
+          grep -q '栄.*町' /tmp/seto-weekday.txt
+          grep -q '大森.*金城学院前' /tmp/seto-weekday.txt
+
+      - name: Inspect late-night timetable text
+        shell: bash
+        run: |
+          echo '===== WEEKDAY LAST 120 LINES ====='
+          tail -n 120 /tmp/seto-weekday.txt
+
+          echo '===== HOLIDAY LAST 120 LINES ====='
+          tail -n 120 /tmp/seto-holiday.txt
+
+      - name: Validate known late-night anchors
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          weekday = Path('/tmp/seto-weekday.txt').read_text(
+              encoding='utf-8',
+              errors='replace',
+          )
+          holiday = Path('/tmp/seto-holiday.txt').read_text(
+              encoding='utf-8',
+              errors='replace',
+          )
+
+          for text in (weekday, holiday):
+              assert '栄' in text and '町' in text
+              assert '喜多山' in text
+              assert '大森・金城学院前' in text
+              assert '尾張瀬戸' in text
+
+          # Official 2026-03-14 timetable late-night anchor:
+          # final Sakaemachi departure is 00:00 to Kitayama.
+          assert '2481' in weekday
+          assert '2481' in holiday
+
+          print('Meitetsu Seto PDF extraction anchors: OK')
+          PY
+
+      - name: Upload extracted text artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: meitetsu-seto-poc
+          path: |
+            /tmp/seto-weekday.txt
+            /tmp/seto-holiday.txt
+          if-no-files-found: error
+          retention-days: 7
