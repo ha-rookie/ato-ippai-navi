@@ -137,22 +137,55 @@ def marker_destinations(cells: dict[tuple[int, int], str]) -> dict[str, str]:
 
 
 def detect_timetable_blocks(cells: dict[tuple[int, int], str]) -> list[int]:
-    """Find hour columns by locating repeated '4' entries in row 4.
+    """Find the weekday and Saturday/holiday timetable start columns.
 
-    The pocket timetable places weekday and Saturday/holiday blocks side by side.
-    H10 Sakae currently yields columns B and AX.
+    Newer pocket timetables label the block starts with "平日" and
+    "土曜・日曜・休日" (for example Meijo M05 at B/AX). Older layouts
+    can also be recognized by the repeated first-hour value in row 4.
     """
-    candidates = [
-        col
-        for (col, row), value in cells.items()
-        if row == 4 and normalize_text(value) == "4"
-    ]
-    candidates.sort()
 
-    if len(candidates) < 2:
-        raise RuntimeError(f"Expected at least two timetable blocks, got {candidates}")
+    weekday = []
+    holiday = []
 
-    return candidates[:2]
+    for (col, row), value in cells.items():
+        if row > 6:
+            continue
+
+        text = normalize_text(value)
+
+        if text == "平日":
+            weekday.append(col)
+        elif "土曜" in text and ("休日" in text or "日曜" in text):
+            holiday.append(col)
+
+    if weekday and holiday:
+        candidates = sorted([weekday[0], holiday[0]])
+        if candidates[0] != candidates[1]:
+            return candidates
+
+    # Backward-compatible fallback for the earlier Higashiyama/Tsurumai
+    # pocket timetable layout used by the existing PoC.
+    by_row: dict[int, list[tuple[int, str]]] = {}
+
+    for (col, row), value in cells.items():
+        if row > 6:
+            continue
+        text = normalize_text(value)
+        if re.fullmatch(r"\d{1,2}", text):
+            by_row.setdefault(row, []).append((col, text))
+
+    for row in sorted(by_row):
+        values = by_row[row]
+        groups: dict[str, list[int]] = {}
+        for col, text in values:
+            groups.setdefault(text, []).append(col)
+
+        for cols in groups.values():
+            if len(cols) >= 2:
+                candidates = sorted(cols)
+                return candidates[:2]
+
+    raise RuntimeError("Expected weekday and Saturday/holiday timetable blocks")
 
 
 def parse_block(
