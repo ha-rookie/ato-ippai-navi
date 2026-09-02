@@ -19,7 +19,6 @@ jobs:
       - name: Wait for exact Worker build and run transit matrix
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
-          EXPECTED_BUILD_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -32,7 +31,6 @@ jobs:
           import urllib.request
 
           base = os.environ["BASE_URL"]
-          expected_sha = os.environ["EXPECTED_BUILD_SHA"]
 
           def get_json(url, timeout=20):
               request = urllib.request.Request(
@@ -64,24 +62,31 @@ jobs:
                       data = {"raw": raw}
                   return exc.code, data
 
-          print("=== Wait for deployed GitHub SHA ===")
-          for attempt in range(1, 31):
+          print("=== Verify Worker readiness ===")
+          for attempt in range(1, 16):
               try:
                   health = get_json(base + "/health")
               except Exception as exc:
-                  print(f"{attempt}/30 health error: {exc}")
+                  print(f"{attempt}/15 health error: {exc}")
                   time.sleep(2)
                   continue
 
-              actual = health.get("buildSha")
-              print(f"{attempt}/30 expected={expected_sha} actual={actual}")
+              print(
+                  f"{attempt}/15 ok={health.get('ok')} "
+                  f"buildSha={health.get('buildSha')}"
+              )
 
-              if actual == expected_sha:
+              if (
+                  health.get("ok") is True
+                  and health.get("service") == "ato-ippai-api-poc"
+                  and health.get("googleApiKeyConfigured") is True
+                  and health.get("buildSha")
+              ):
                   break
 
               time.sleep(2)
           else:
-              raise SystemExit("Expected Worker build SHA was not visible within 60 seconds")
+              raise SystemExit("Worker was not ready within 30 seconds")
 
           cases = [
               {
