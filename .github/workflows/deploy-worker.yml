@@ -397,11 +397,47 @@ jobs:
           }
           JSON
 
-          curl -fsS \
-            -H "content-type: application/json" \
-            --data @/tmp/h18-tonight-request.json \
-            "$BASE_URL/api/tonight-decision" \
-            -o /tmp/h18-tonight.json
+          selected_destination_ready=0
+
+          for attempt in $(seq 1 15); do
+            echo "Selected destination H18 smoke test attempt $attempt/15"
+
+            if curl -fsS \
+              -H "content-type: application/json" \
+              --data @/tmp/h18-tonight-request.json \
+              "$BASE_URL/api/tonight-decision" \
+              -o /tmp/h18-tonight.json
+            then
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open("/tmp/h18-tonight.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          ready = (
+              data.get("destinationCode") == "H18"
+              and data.get("destinationName") == "星ヶ丘"
+              and data.get("taxiDestination") == "星ヶ丘駅 愛知県名古屋市"
+          )
+
+          if not ready:
+              sys.exit(1)
+          PY
+              then
+                selected_destination_ready=1
+                break
+              fi
+            fi
+
+            sleep 2
+          done
+
+          if [ "$selected_destination_ready" -ne 1 ]; then
+            echo "Selected destination H18 capability was not ready within 30 seconds."
+            cat /tmp/h18-tonight.json || true
+            exit 1
+          fi
 
           python3 - <<'PY'
           import json
