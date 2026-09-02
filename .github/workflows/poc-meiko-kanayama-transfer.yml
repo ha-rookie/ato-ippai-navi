@@ -8,6 +8,7 @@ on:
       - '.github/workflows/poc-meiko-kanayama-transfer.yml'
       - 'scripts/extract-nagoya-subway.py'
       - 'scripts/generate-meiko-transfer-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -122,6 +123,37 @@ jobs:
                   assert route["status"] == "verified", (code, route)
 
           print("Sakae -> Kanayama -> Meiko boundary validation: OK")
+          PY
+
+      - name: Compare generated Meiko boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meiko-transfer-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert len([
+              code
+              for code in production["destinations"]
+              if code.startswith("E")
+          ]) == 7
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"].get(code)
+              assert prod is not None, code
+              assert prod["enabled"] is True, code
+              assert prod["name"] == destination["name"], code
+              assert prod["stationCodes"] == destination["stationCodes"], code
+              assert prod["routes"] == destination["routes"], code
+
+          source_ids = {source["id"] for source in production["sources"]}
+          assert "nagoya-subway-pocket-timetable-meiko" in source_ids
+
+          print("Production Meiko boundary comparison: OK")
           PY
 
       - name: Upload normalized PoC artifacts
