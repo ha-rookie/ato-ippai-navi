@@ -1,0 +1,49 @@
+name: Diagnose S21 Production
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-s21-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call production S21 API
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:30:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "S21",
+            "offsetMinutes": [0, 30],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1,
+            "includeDispatchFee": true
+          }
+          JSON
+
+          status=$(curl -sS \
+            -o /tmp/response.json \
+            -w '%{http_code}' \
+            -H 'content-type: application/json' \
+            --data @/tmp/request.json \
+            'https://ato-ippai-api-poc.edward-se-pg.workers.dev/api/tonight-decision')
+
+          echo "HTTP_STATUS=$status"
+          cat /tmp/response.json
+
+          # Diagnostic workflow intentionally succeeds after printing the body.
+          test -n "$status"
