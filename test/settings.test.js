@@ -23,22 +23,24 @@ function memoryStorage() {
   };
 }
 
-test("destination station accepts H01-H22 only", () => {
+test("destination station accepts supported Higashiyama and Tsurumai codes", () => {
   assert.equal(normalizeDestinationStation("h1"), "H01");
-  assert.equal(normalizeDestinationStation("H18"), "H18");
   assert.equal(normalizeDestinationStation("H22"), "H22");
+  assert.equal(normalizeDestinationStation("t1"), "T01");
+  assert.equal(normalizeDestinationStation("T15"), "T15");
+  assert.equal(normalizeDestinationStation("T20"), "T20");
 
   assert.throws(
-    () => normalizeDestinationStation("H00"),
-    /H01-H22/
+    () => normalizeDestinationStation("H23"),
+    /H01-H22 or T01-T20/
   );
   assert.throws(
-    () => normalizeDestinationStation("H23"),
-    /H01-H22/
+    () => normalizeDestinationStation("T21"),
+    /H01-H22 or T01-T20/
   );
   assert.throws(
     () => normalizeDestinationStation("M05"),
-    /H01-H22/
+    /H01-H22 or T01-T20/
   );
 });
 
