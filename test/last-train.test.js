@@ -563,3 +563,59 @@ test("Aonami AN11 uses the 23:36 Kinjo-futo boundary", () => {
   assert.equal(result.scenarios[0].lastDeparture, "23:36");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+test("Kintetsu Nagoya boundaries use namespaced KT-E01-KT-E07 codes", () => {
+  const expected = {
+    "KT-E02": ["E02", "米野", "00:06"],
+    "KT-E03": ["E03", "黄金", "00:07"],
+    "KT-E04": ["E04", "烏森", "00:09"],
+    "KT-E05": ["E05", "近鉄八田", "00:11"],
+    "KT-E06": ["E06", "伏屋", "00:14"],
+    "KT-E07": ["E07", "戸田", "00:16"]
+  };
+
+  assert.deepEqual(dataset.destinations["KT-E01"].routes, {});
+  assert.equal(dataset.destinations["KT-E01"].officialStationCode, "E01");
+  assert.ok(dataset.origins.nagoya.stationCodes.includes("KT-E01"));
+
+  for (const [code, [officialCode, name, arrival]] of Object.entries(expected)) {
+    const destination = dataset.destinations[code];
+    const route = destination.routes.nagoya.weekday;
+
+    assert.equal(destination.operator, "kintetsu", code);
+    assert.equal(destination.officialStationCode, officialCode, code);
+    assert.equal(destination.name, name, code);
+    assert.equal(route.lastDeparture, "00:04", code);
+    assert.equal(route.lastArrival, arrival, code);
+    assert.equal(route.trainTerminal, "富吉", code);
+    assert.equal(route.routeSummary, "近鉄名古屋線 普通 直通", code);
+    assert.equal(route.transfers, 0, code);
+    assert.equal(route.status, "verified", code);
+  }
+});
+
+test("Kintetsu Nagoya destinations only need Nagoya walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "KT-E07"), ["nagoya"]);
+});
+
+test("Kintetsu KT-E07 uses the 00:04 Tomiyoshi local boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:40:00+09:00",
+    dayType: "weekday",
+    destinationCode: "KT-E07",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 8 }
+    }
+  });
+
+  assert.equal(result.destination.name, "戸田");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "00:04");
+  assert.equal(result.scenarios[0].lastArrival, "00:16");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
