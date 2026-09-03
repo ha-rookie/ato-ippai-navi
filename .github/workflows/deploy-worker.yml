@@ -841,6 +841,95 @@ jobs:
           print("Meitetsu Seto ST11/ST12 safe boundary smoke test: OK")
           PY
 
+          cat > /tmp/an09-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:40:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "AN09",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          cat > /tmp/an11-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:15:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "AN11",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          for code in AN09 AN11; do
+            request="/tmp/${code,,}-boundary-request.json"
+            output="/tmp/${code,,}-boundary.json"
+            ready=0
+
+            for attempt in $(seq 1 5); do
+              echo "Aonami $code smoke test attempt $attempt/5"
+
+              status=$(curl -sS \
+                -o "$output" \
+                -w '%{http_code}' \
+                -H "content-type: application/json" \
+                --data @"$request" \
+                "$BASE_URL/api/last-train-boundary")
+
+              echo "HTTP status: $status"
+              cat "$output"
+
+              if [ "$status" = "200" ]; then
+                ready=1
+                break
+              fi
+
+              sleep 2
+            done
+
+            if [ "$ready" -ne 1 ]; then
+              echo "Aonami $code boundary API did not return 200."
+              exit 1
+            fi
+          done
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/an09-boundary.json", encoding="utf-8") as f:
+              an09 = json.load(f)
+          with open("/tmp/an11-boundary.json", encoding="utf-8") as f:
+              an11 = json.load(f)
+
+          assert an09["destination"]["code"] == "AN09", an09
+          assert an09["destination"]["name"] == "稲永", an09
+          assert set(an09["walkOptions"]) == {"nagoya"}, an09["walkOptions"]
+          assert an09["scenarios"][0]["canReachDestination"] is True, an09
+          assert an09["scenarios"][0]["recommendedOriginId"] == "nagoya", an09
+          assert an09["scenarios"][0]["lastDeparture"] == "23:58", an09
+          assert an09["scenarios"][1]["canReachDestination"] is False, an09
+
+          assert an11["destination"]["code"] == "AN11", an11
+          assert an11["destination"]["name"] == "金城ふ頭", an11
+          assert set(an11["walkOptions"]) == {"nagoya"}, an11["walkOptions"]
+          assert an11["scenarios"][0]["canReachDestination"] is True, an11
+          assert an11["scenarios"][0]["recommendedOriginId"] == "nagoya", an11
+          assert an11["scenarios"][0]["lastDeparture"] == "23:36", an11
+          assert an11["scenarios"][1]["canReachDestination"] is False, an11
+
+          print("Aonami AN09/AN11 safe boundary smoke test: OK")
+          PY
+
           cat > /tmp/h10-walk-request.json <<'JSON'
           {
             "origin": {
