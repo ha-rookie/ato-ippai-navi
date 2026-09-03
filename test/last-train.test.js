@@ -303,7 +303,7 @@ test("eligible hubs are limited to origins with verified routes", () => {
 
 test("Sakuradori boundaries cover S01-S21 from two walk hubs", () => {
   assert.equal(
-    Object.keys(dataset.destinations).filter((code) => code.startsWith("S")).length,
+    Object.keys(dataset.destinations).filter((code) => /^S\d{2}$/.test(code)).length,
     21
   );
 
@@ -415,5 +415,78 @@ test("Kamiida K01 boundary is reachable before midnight but not after", () => {
   assert.equal(result.scenarios[0].lastDeparture, "00:04");
   assert.equal(result.scenarios[0].routeSummary, "名城線 右回り → 平安通乗換 → 上飯田線");
   assert.equal(result.scenarios[0].transfers, 1);
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+
+test("Meitetsu Seto boundaries cover Nagoya-city ST01-ST12", () => {
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => /^ST\d{2}$/.test(code)).length,
+    12
+  );
+
+  assert.deepEqual(dataset.destinations.ST01.routes, {});
+  assert.ok(dataset.origins.sakaemachi.stationCodes.includes("ST01"));
+
+  for (const code of [
+    "ST02", "ST03", "ST04", "ST05", "ST06",
+    "ST07", "ST08", "ST09", "ST10", "ST11"
+  ]) {
+    const route = dataset.destinations[code].routes.sakaemachi.weekday;
+    assert.equal(route.lastDeparture, "00:00", code);
+    assert.equal(route.trainTerminal, "喜多山", code);
+    assert.equal(route.transfers, 0, code);
+    assert.equal(route.status, "verified", code);
+  }
+
+  const st12 = dataset.destinations.ST12.routes.sakaemachi.weekday;
+  assert.equal(st12.lastDeparture, "23:45");
+  assert.equal(st12.trainTerminal, "尾張瀬戸");
+  assert.equal(st12.transfers, 0);
+  assert.equal(st12.status, "verified");
+});
+
+test("Meitetsu Seto destinations only need the Sakaemachi walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "ST11"), ["sakaemachi"]);
+  assert.deepEqual(eligibleOriginIds(dataset, "ST12"), ["sakaemachi"]);
+});
+
+test("Meitetsu Seto ST11 keeps the 00:00 Kitayama boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:40:00+09:00",
+    dayType: "weekday",
+    destinationCode: "ST11",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakaemachi: { walkMinutes: 5 }
+    }
+  });
+
+  assert.equal(result.destination.name, "喜多山");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "sakaemachi");
+  assert.equal(result.scenarios[0].lastDeparture, "00:00");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+test("Meitetsu Seto ST12 boundary is 23:45", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:30:00+09:00",
+    dayType: "weekday",
+    destinationCode: "ST12",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      sakaemachi: { walkMinutes: 5 }
+    }
+  });
+
+  assert.equal(result.destination.name, "大森・金城学院前");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "sakaemachi");
+  assert.equal(result.scenarios[0].lastDeparture, "23:45");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
