@@ -38,34 +38,40 @@ test("destination station accepts supported subway line codes", () => {
   assert.equal(normalizeDestinationStation("k1"), "K01");
   assert.equal(normalizeDestinationStation("st1"), "ST01");
   assert.equal(normalizeDestinationStation("ST12"), "ST12");
+  assert.equal(normalizeDestinationStation("an1"), "AN01");
+  assert.equal(normalizeDestinationStation("AN11"), "AN11");
 
   assert.throws(
     () => normalizeDestinationStation("H23"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
   assert.throws(
     () => normalizeDestinationStation("T21"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
   assert.throws(
     () => normalizeDestinationStation("M29"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
   assert.throws(
     () => normalizeDestinationStation("E08"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
   assert.throws(
     () => normalizeDestinationStation("S22"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
   assert.throws(
     () => normalizeDestinationStation("K02"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
   assert.throws(
     () => normalizeDestinationStation("ST13"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, or ST01-ST12/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
+  );
+  assert.throws(
+    () => normalizeDestinationStation("AN12"),
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11/
   );
 });
 
@@ -89,6 +95,9 @@ test("selected destination is stored and restored locally", () => {
     "ST12"
   );
   assert.equal(loadDestinationStation(storage), "ST12");
+
+  assert.equal(saveDestinationStation("an9", storage), "AN09");
+  assert.equal(loadDestinationStation(storage), "AN09");
 });
 
 test("invalid stored destination is ignored", () => {
