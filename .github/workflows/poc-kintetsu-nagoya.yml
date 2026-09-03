@@ -270,14 +270,24 @@ jobs:
               assert "普通" in text, text[:1500]
               assert "富吉" in text, text[:1500]
 
+              normalized = text.replace("：", ":")
+              departure_pos = normalized.find("0:04発")
+
+              if departure_pos < 0:
+                  raise RuntimeError(
+                      f"00:04 departure not found in {day_type} detail"
+                  )
+
+              train_text = normalized[departure_pos:]
               positions = []
 
               for station in expected_stations:
-                  pos = text.find(station)
+                  pos = train_text.find(station)
 
                   if pos < 0:
                       raise RuntimeError(
-                          f"{station} not found in {day_type} detail"
+                          f"{station} not found after 00:04 departure "
+                          f"in {day_type} detail"
                       )
 
                   positions.append(pos)
@@ -287,7 +297,23 @@ jobs:
                       f"Station order changed in {day_type}: {positions}"
                   )
 
-              assert re.search(r"0:04|00:04", text), text[:2500]
+              expected_times = {
+                  "近鉄名古屋": "0:04",
+                  "米野": "0:06",
+                  "黄金": "0:07",
+                  "烏森": "0:09",
+                  "近鉄八田": "0:11",
+                  "伏屋": "0:14",
+                  "戸田": "0:16",
+                  "近鉄蟹江": "0:18",
+                  "富吉": "0:22",
+              }
+
+              for station, clock in expected_times.items():
+                  if station == "近鉄名古屋":
+                      assert f"{clock}発 {station}" in train_text, train_text
+                  else:
+                      assert f"{clock}着 {station}" in train_text, train_text
 
           print("Kintetsu 00:04 Tomiyoshi stop sequence: OK")
           PY
