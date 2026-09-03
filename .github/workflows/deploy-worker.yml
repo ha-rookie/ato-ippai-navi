@@ -847,7 +847,7 @@ jobs:
               "latitude": 35.1715,
               "longitude": 136.9057
             },
-            "departureTime": "2026-09-04T23:40:00+09:00",
+            "departureTime": "2026-09-04T23:20:00+09:00",
             "dayType": "weekday",
             "destinationCode": "AN09",
             "offsetMinutes": [0, 15],
@@ -862,7 +862,7 @@ jobs:
               "latitude": 35.1715,
               "longitude": 136.9057
             },
-            "departureTime": "2026-09-04T23:15:00+09:00",
+            "departureTime": "2026-09-04T22:55:00+09:00",
             "dayType": "weekday",
             "destinationCode": "AN11",
             "offsetMinutes": [0, 15],
