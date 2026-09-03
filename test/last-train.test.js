@@ -303,7 +303,7 @@ test("eligible hubs are limited to origins with verified routes", () => {
 
 test("Sakuradori boundaries cover S01-S21 from two walk hubs", () => {
   assert.equal(
-    Object.keys(dataset.destinations).filter((code) => /^S\\d{2}$/.test(code)).length,
+    Object.keys(dataset.destinations).filter((code) => /^S\d{2}$/.test(code)).length,
     21
   );
 
