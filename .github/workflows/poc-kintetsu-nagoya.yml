@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/poc-kintetsu-nagoya.yml'
       - 'scripts/generate-kintetsu-nagoya-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -371,6 +372,35 @@ jobs:
                   assert route["status"] == "verified", (code, route)
 
           print("Generated Kintetsu KT-E01-KT-E07 boundary validation: OK")
+          PY
+
+      - name: Compare generated Kintetsu boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/kintetsu-nagoya-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert "KT-E01" in production["origins"]["nagoya"]["stationCodes"]
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"].get(code)
+              assert prod is not None, code
+              assert prod["enabled"] is True, code
+              assert prod["operator"] == destination["operator"], code
+              assert prod["officialStationCode"] == destination["officialStationCode"], code
+              assert prod["name"] == destination["name"], code
+              assert prod["stationCodes"] == destination["stationCodes"], code
+              assert prod["routes"] == destination["routes"], code
+
+          source_ids = {source["id"] for source in production["sources"]}
+          assert "kintetsu-nagoya-official-timetable" in source_ids
+
+          print("Production Kintetsu Nagoya boundary comparison: OK")
           PY
 
       - name: Upload official HTML artifacts

@@ -80,6 +80,12 @@
       "publisher": "名古屋臨海高速鉄道",
       "revision": "2026-03-14",
       "url": "https://www.aonamiline.co.jp/train/timetable"
+    },
+    {
+      "id": "kintetsu-nagoya-official-timetable",
+      "publisher": "近畿日本鉄道",
+      "revision": "2026-03-14",
+      "url": "https://eki.kintetsu.co.jp/norikae/T5?USR=PC&d=1&slCode=413-1"
     }
   ],
   "origins": {
@@ -132,7 +138,8 @@
       "stationCodes": [
         "H08",
         "S02",
-        "AN01"
+        "AN01",
+        "KT-E01"
       ],
       "walkDestination": "名古屋駅 愛知県名古屋市",
       "enabled": true
@@ -5332,6 +5339,233 @@
             "status": "verified",
             "sourceIds": [
               "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KT-E01": {
+      "operator": "kintetsu",
+      "officialStationCode": "E01",
+      "name": "近鉄名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E01"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "KT-E02": {
+      "operator": "kintetsu",
+      "officialStationCode": "E02",
+      "name": "米野",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E02"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:06",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:06",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KT-E03": {
+      "operator": "kintetsu",
+      "officialStationCode": "E03",
+      "name": "黄金",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E03"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:07",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:07",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KT-E04": {
+      "operator": "kintetsu",
+      "officialStationCode": "E04",
+      "name": "烏森",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E04"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:09",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:09",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KT-E05": {
+      "operator": "kintetsu",
+      "officialStationCode": "E05",
+      "name": "近鉄八田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E05"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:11",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:11",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KT-E06": {
+      "operator": "kintetsu",
+      "officialStationCode": "E06",
+      "name": "伏屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E06"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:14",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:14",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KT-E07": {
+      "operator": "kintetsu",
+      "officialStationCode": "E07",
+      "name": "戸田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KT-E07"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:16",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:04",
+            "lastArrival": "00:16",
+            "routeSummary": "近鉄名古屋線 普通 直通",
+            "trainTerminal": "富吉",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "kintetsu-nagoya-official-timetable"
             ]
           }
         }

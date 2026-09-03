@@ -111,12 +111,13 @@ jobs:
           with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
               production = json.load(f)
 
-          assert production["origins"]["nagoya"] == {
-              "name": "名古屋",
-              "stationCodes": ["H08", "S02", "AN01"],
-              "walkDestination": "名古屋駅 愛知県名古屋市",
-              "enabled": True,
-          }
+          nagoya = production["origins"]["nagoya"]
+          assert nagoya["name"] == "名古屋"
+          assert nagoya["walkDestination"] == "名古屋駅 愛知県名古屋市"
+          assert nagoya["enabled"] is True
+          assert {"H08", "S02", "AN01"}.issubset(
+              set(nagoya["stationCodes"])
+          )
 
           assert len([
               code for code in production["destinations"]
