@@ -749,6 +749,98 @@ jobs:
           print("Kamiida K01 safe boundary smoke test: OK")
           PY
 
+          cat > /tmp/st11-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:40:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "ST11",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          for code in ST11 ST12; do
+            request="/tmp/${code,,}-boundary-request.json"
+
+            if [ "$code" = "ST12" ]; then
+              cat > "$request" <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:30:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "ST12",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+            fi
+
+            output="/tmp/${code,,}-boundary.json"
+            ready=0
+
+            for attempt in $(seq 1 5); do
+              echo "Meitetsu Seto $code smoke test attempt $attempt/5"
+
+              status=$(curl -sS \
+                -o "$output" \
+                -w '%{http_code}' \
+                -H "content-type: application/json" \
+                --data @"$request" \
+                "$BASE_URL/api/last-train-boundary")
+
+              echo "HTTP status: $status"
+              cat "$output"
+
+              if [ "$status" = "200" ]; then
+                ready=1
+                break
+              fi
+
+              sleep 2
+            done
+
+            if [ "$ready" -ne 1 ]; then
+              echo "Meitetsu Seto $code boundary API did not return 200."
+              exit 1
+            fi
+          done
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/st11-boundary.json", encoding="utf-8") as f:
+              st11 = json.load(f)
+          with open("/tmp/st12-boundary.json", encoding="utf-8") as f:
+              st12 = json.load(f)
+
+          assert st11["destination"]["code"] == "ST11", st11
+          assert st11["destination"]["name"] == "喜多山", st11
+          assert set(st11["walkOptions"]) == {"sakaemachi"}, st11["walkOptions"]
+          assert st11["scenarios"][0]["canReachDestination"] is True, st11
+          assert st11["scenarios"][0]["recommendedOriginId"] == "sakaemachi", st11
+          assert st11["scenarios"][0]["lastDeparture"] == "00:00", st11
+          assert st11["scenarios"][1]["canReachDestination"] is False, st11
+
+          assert st12["destination"]["code"] == "ST12", st12
+          assert st12["destination"]["name"] == "大森・金城学院前", st12
+          assert set(st12["walkOptions"]) == {"sakaemachi"}, st12["walkOptions"]
+          assert st12["scenarios"][0]["canReachDestination"] is True, st12
+          assert st12["scenarios"][0]["recommendedOriginId"] == "sakaemachi", st12
+          assert st12["scenarios"][0]["lastDeparture"] == "23:45", st12
+          assert st12["scenarios"][1]["canReachDestination"] is False, st12
+
+          print("Meitetsu Seto ST11/ST12 safe boundary smoke test: OK")
+          PY
+
           cat > /tmp/h10-walk-request.json <<'JSON'
           {
             "origin": {
