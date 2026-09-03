@@ -68,7 +68,36 @@ def last_late_block(text: str) -> str:
     if not matches:
         raise RuntimeError("No train-number block found")
 
-    return text[matches[-1].start():]
+    # Some official PDFs contain an empty repeated form after the real final
+    # timetable. Walk backward and choose the last block that actually has
+    # multiple Sakaemachi departure times.
+    for index in range(len(matches) - 1, -1, -1):
+        start = matches[index].start()
+        end = (
+            matches[index + 1].start()
+            if index + 1 < len(matches)
+            else len(text)
+        )
+        block = text[start:end]
+
+        origin_match = re.search(
+            r"栄\s+町\s+発\s+([^\n]+)",
+            block,
+        )
+        if not origin_match:
+            continue
+
+        origin_tokens = re.findall(
+            r"\b\d{3,4}\b",
+            origin_match.group(1),
+        )
+
+        if len(origin_tokens) >= 2:
+            return block
+
+    raise RuntimeError(
+        "No populated late-night train-number block found"
+    )
 
 
 def parse_day(path: Path) -> dict:
