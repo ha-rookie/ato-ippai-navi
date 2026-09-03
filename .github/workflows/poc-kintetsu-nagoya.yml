@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/poc-kintetsu-nagoya.yml'
+      - 'scripts/generate-kintetsu-nagoya-last-trains.py'
 
 permissions:
   contents: read
@@ -318,6 +319,60 @@ jobs:
           print("Kintetsu 00:04 Tomiyoshi stop sequence: OK")
           PY
 
+      - name: Generate KT-E01-KT-E07 boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-kintetsu-nagoya-last-trains.py \
+            --weekday-detail /tmp/kintetsu-weekday-detail.html \
+            --holiday-detail /tmp/kintetsu-holiday-detail.html \
+            --output /tmp/kintetsu-nagoya-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated Kintetsu Nagoya boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/kintetsu-nagoya-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          expected = {
+              "KT-E01": ("E01", "近鉄名古屋", None),
+              "KT-E02": ("E02", "米野", "00:06"),
+              "KT-E03": ("E03", "黄金", "00:07"),
+              "KT-E04": ("E04", "烏森", "00:09"),
+              "KT-E05": ("E05", "近鉄八田", "00:11"),
+              "KT-E06": ("E06", "伏屋", "00:14"),
+              "KT-E07": ("E07", "戸田", "00:16"),
+          }
+
+          assert set(data["destinations"]) == set(expected)
+          assert data["destinations"]["KT-E01"]["routes"] == {}
+
+          for code, (official, name, arrival) in expected.items():
+              destination = data["destinations"][code]
+              assert destination["operator"] == "kintetsu", code
+              assert destination["officialStationCode"] == official, code
+              assert destination["name"] == name, code
+              assert destination["stationCodes"] == [code], code
+
+              if arrival is None:
+                  continue
+
+              for day_type in ("weekday", "saturday_holiday"):
+                  route = destination["routes"]["nagoya"][day_type]
+                  assert route["lastDeparture"] == "00:04", (code, route)
+                  assert route["lastArrival"] == arrival, (code, route)
+                  assert route["trainTerminal"] == "富吉", (code, route)
+                  assert route["transfers"] == 0, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+          print("Generated Kintetsu KT-E01-KT-E07 boundary validation: OK")
+          PY
+
       - name: Upload official HTML artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -327,5 +382,6 @@ jobs:
             /tmp/kintetsu-holiday.html
             /tmp/kintetsu-weekday-detail.html
             /tmp/kintetsu-holiday-detail.html
+            /tmp/kintetsu-nagoya-last-trains.json
           if-no-files-found: error
           retention-days: 7
