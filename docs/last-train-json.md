@@ -330,3 +330,41 @@ AN01公式HTMLの「23時台58分」「稲永駅行臨時ダイヤ」
 
 PDF/HTMLの構造または改正日が変わった場合はCIをfail-closedし、
 未確認データをverifiedとして更新しない。
+
+
+## 他社駅番号の名前空間
+
+事業者間で公式駅番号が衝突する場合、内部destination codeにoperator prefixを付ける。
+
+最初の適用対象は近鉄名古屋線。
+
+近鉄公式駅番号:
+- E01 近鉄名古屋
+- E02 米野
+- E03 黄金
+- E04 烏森
+- E05 近鉄八田
+- E06 伏屋
+- E07 戸田
+
+名古屋市営地下鉄名港線もE01〜E07を使用するため、JSON key/API/localStorageではそのまま使わない。
+
+内部code:
+- KT-E01
+- KT-E02
+- ...
+- KT-E07
+
+表示:
+- UIでは公式駅番号と駅名を表示する
+- 例: E01 近鉄名古屋
+
+内部:
+- destinationCode=KT-E01
+- operator=kintetsu
+- officialStationCode=E01
+
+この分離により既存の名港線E01〜E07と衝突しない。
+
+APIはdestinationCodeをproduction JSONのkeyとして参照するため、
+サーバー側のroute判定ロジックはハイフン付きcodeでも変更不要。
