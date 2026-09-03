@@ -113,6 +113,185 @@ jobs:
           print("Kintetsu official timetable HTML inspection: OK")
           PY
 
+      - name: Download and inspect 00:04 Tomiyoshi train details
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import html
+          import re
+          from pathlib import Path
+          from urllib.parse import urljoin
+
+
+          def decode(path: str) -> str:
+              raw = Path(path).read_bytes()
+
+              for encoding in ("utf-8", "cp932", "shift_jis"):
+                  try:
+                      return raw.decode(encoding)
+                  except UnicodeDecodeError:
+                      pass
+
+              raise RuntimeError(f"Unable to decode {path}")
+
+
+          def plain(fragment: str) -> str:
+              fragment = re.sub(
+                  r"<script.*?</script>",
+                  " ",
+                  fragment,
+                  flags=re.I | re.S,
+              )
+              fragment = re.sub(
+                  r"<style.*?</style>",
+                  " ",
+                  fragment,
+                  flags=re.I | re.S,
+              )
+              fragment = re.sub(r"<[^>]+>", " ", fragment)
+              return re.sub(
+                  r"\s+",
+                  " ",
+                  html.unescape(fragment),
+              ).strip()
+
+
+          base = "https://eki.kintetsu.co.jp/norikae/"
+
+          for source_path, output_path in (
+              ("/tmp/kintetsu-weekday.html", "/tmp/weekday-detail-url.txt"),
+              ("/tmp/kintetsu-holiday.html", "/tmp/holiday-detail-url.txt"),
+          ):
+              source = decode(source_path)
+              matches = []
+
+              for match in re.finditer(
+                  r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+                  source,
+                  flags=re.I | re.S,
+              ):
+                  href = html.unescape(match.group(1))
+                  label = plain(match.group(2))
+
+                  if re.fullmatch(
+                      r"0:04\s+富吉\s+普通",
+                      label,
+                  ):
+                      matches.append(urljoin(base, href))
+
+              if len(matches) != 1:
+                  raise RuntimeError(
+                      f"Expected exactly one 00:04 Tomiyoshi detail link "
+                      f"in {source_path}, got {matches}"
+                  )
+
+              Path(output_path).write_text(
+                  matches[0] + "\n",
+                  encoding="utf-8",
+              )
+              print(source_path, matches[0])
+          PY
+
+          WEEKDAY_DETAIL_URL=$(cat /tmp/weekday-detail-url.txt)
+          HOLIDAY_DETAIL_URL=$(cat /tmp/holiday-detail-url.txt)
+
+          curl -fsSL "$WEEKDAY_DETAIL_URL" -o /tmp/kintetsu-weekday-detail.html
+          curl -fsSL "$HOLIDAY_DETAIL_URL" -o /tmp/kintetsu-holiday-detail.html
+
+          test -s /tmp/kintetsu-weekday-detail.html
+          test -s /tmp/kintetsu-holiday-detail.html
+
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import html
+          import re
+          from pathlib import Path
+
+
+          def decode(path: str) -> str:
+              raw = Path(path).read_bytes()
+
+              for encoding in ("utf-8", "cp932", "shift_jis"):
+                  try:
+                      return raw.decode(encoding)
+                  except UnicodeDecodeError:
+                      pass
+
+              raise RuntimeError(f"Unable to decode {path}")
+
+
+          def plain(source: str) -> str:
+              source = re.sub(
+                  r"<script.*?</script>",
+                  " ",
+                  source,
+                  flags=re.I | re.S,
+              )
+              source = re.sub(
+                  r"<style.*?</style>",
+                  " ",
+                  source,
+                  flags=re.I | re.S,
+              )
+              source = re.sub(r"<[^>]+>", " ", source)
+              return re.sub(
+                  r"\s+",
+                  " ",
+                  html.unescape(source),
+              ).strip()
+
+
+          expected_stations = [
+              "近鉄名古屋",
+              "米野",
+              "黄金",
+              "烏森",
+              "近鉄八田",
+              "伏屋",
+              "戸田",
+              "近鉄蟹江",
+              "富吉",
+          ]
+
+          for path, day_type in (
+              ("/tmp/kintetsu-weekday-detail.html", "weekday"),
+              ("/tmp/kintetsu-holiday-detail.html", "saturday_holiday"),
+          ):
+              text = plain(decode(path))
+
+              print("====", day_type, "detail ====")
+              print(text[:5000])
+
+              assert "普通" in text, text[:1500]
+              assert "富吉" in text, text[:1500]
+
+              positions = []
+
+              for station in expected_stations:
+                  pos = text.find(station)
+
+                  if pos < 0:
+                      raise RuntimeError(
+                          f"{station} not found in {day_type} detail"
+                      )
+
+                  positions.append(pos)
+
+              if positions != sorted(positions):
+                  raise RuntimeError(
+                      f"Station order changed in {day_type}: {positions}"
+                  )
+
+              assert re.search(r"0:04|00:04", text), text[:2500]
+
+          print("Kintetsu 00:04 Tomiyoshi stop sequence: OK")
+          PY
+
       - name: Upload official HTML artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -120,5 +299,7 @@ jobs:
           path: |
             /tmp/kintetsu-weekday.html
             /tmp/kintetsu-holiday.html
+            /tmp/kintetsu-weekday-detail.html
+            /tmp/kintetsu-holiday-detail.html
           if-no-files-found: error
           retention-days: 7
