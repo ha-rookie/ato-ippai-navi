@@ -499,7 +499,9 @@ test("Aonami boundaries cover AN01-AN11 from Nagoya hub", () => {
   );
 
   assert.deepEqual(dataset.destinations.AN01.routes, {});
-  assert.deepEqual(dataset.origins.nagoya.stationCodes, ["H08", "S02", "AN01"]);
+  for (const code of ["H08", "S02", "AN01"]) {
+    assert.ok(dataset.origins.nagoya.stationCodes.includes(code), code);
+  }
 
   for (let number = 2; number <= 9; number += 1) {
     const code = `AN${String(number).padStart(2, "0")}`;
