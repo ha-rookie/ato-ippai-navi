@@ -1,0 +1,387 @@
+name: PoC Kintetsu Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-kintetsu-nagoya.yml'
+      - 'scripts/generate-kintetsu-nagoya-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Kintetsu Nagoya timetables
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEEKDAY_URL='https://eki.kintetsu.co.jp/norikae/T5?USR=PC&d=1&dw=0&slCode=413-1'
+          HOLIDAY_URL='https://eki.kintetsu.co.jp/norikae/T5?USR=PC&d=1&dw=1&slCode=413-1'
+
+          curl -fsSL "$WEEKDAY_URL" -o /tmp/kintetsu-weekday.html
+          curl -fsSL "$HOLIDAY_URL" -o /tmp/kintetsu-holiday.html
+
+          test -s /tmp/kintetsu-weekday.html
+          test -s /tmp/kintetsu-holiday.html
+
+      - name: Inspect encoding and late-night anchors
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import html
+          import re
+          from pathlib import Path
+
+
+          def decode(path: str) -> str:
+              raw = Path(path).read_bytes()
+
+              for encoding in ("utf-8", "cp932", "shift_jis"):
+                  try:
+                      text = raw.decode(encoding)
+                      print(path, "encoding=", encoding)
+                      return text
+                  except UnicodeDecodeError:
+                      pass
+
+              raise RuntimeError(f"Unable to decode {path}")
+
+
+          def plain(text: str) -> str:
+              text = re.sub(r"<script.*?</script>", " ", text, flags=re.I | re.S)
+              text = re.sub(r"<style.*?</style>", " ", text, flags=re.I | re.S)
+              text = re.sub(r"<[^>]+>", " ", text)
+              return re.sub(r"\s+", " ", html.unescape(text))
+
+
+          for path, day_type in (
+              ("/tmp/kintetsu-weekday.html", "weekday"),
+              ("/tmp/kintetsu-holiday.html", "saturday_holiday"),
+          ):
+              source = decode(path)
+              text = plain(source)
+
+              assert "近鉄名古屋" in text, text[:500]
+              assert (
+                  "2026/3/14現在" in text
+                  or "2026年3月14日現在" in text
+              ), text[:1000]
+              assert "富吉" in text
+              assert re.search(
+                  r"(?:^|\s)0:04\s+富吉\s+普通(?:\s|$)",
+                  text,
+              ), text[-1500:]
+
+              print("====", day_type, "plain tail ====")
+              print(text[-3000:])
+
+              anchors = []
+
+              for match in re.finditer(
+                  r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+                  source,
+                  flags=re.I | re.S,
+              ):
+                  href = html.unescape(match.group(1))
+                  label = plain(match.group(2))
+
+                  if (
+                      "T7" in href
+                      or "富吉" in label
+                      or re.search(r"(?:^|\s)04(?:\s|$)", label)
+                  ):
+                      anchors.append((href, label))
+
+              print("====", day_type, "candidate anchors ====")
+
+              for href, label in anchors[-60:]:
+                  print(repr(label), href)
+
+              assert anchors, "No timetable detail anchors found"
+
+          print("Kintetsu official timetable HTML inspection: OK")
+          PY
+
+      - name: Download and inspect 00:04 Tomiyoshi train details
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import html
+          import re
+          from pathlib import Path
+          from urllib.parse import urljoin
+
+
+          def decode(path: str) -> str:
+              raw = Path(path).read_bytes()
+
+              for encoding in ("utf-8", "cp932", "shift_jis"):
+                  try:
+                      return raw.decode(encoding)
+                  except UnicodeDecodeError:
+                      pass
+
+              raise RuntimeError(f"Unable to decode {path}")
+
+
+          def plain(fragment: str) -> str:
+              fragment = re.sub(
+                  r"<script.*?</script>",
+                  " ",
+                  fragment,
+                  flags=re.I | re.S,
+              )
+              fragment = re.sub(
+                  r"<style.*?</style>",
+                  " ",
+                  fragment,
+                  flags=re.I | re.S,
+              )
+              fragment = re.sub(r"<[^>]+>", " ", fragment)
+              return re.sub(
+                  r"\s+",
+                  " ",
+                  html.unescape(fragment),
+              ).strip()
+
+
+          base = "https://eki.kintetsu.co.jp/norikae/"
+
+          for source_path, output_path in (
+              ("/tmp/kintetsu-weekday.html", "/tmp/weekday-detail-url.txt"),
+              ("/tmp/kintetsu-holiday.html", "/tmp/holiday-detail-url.txt"),
+          ):
+              source = decode(source_path)
+              matches = []
+
+              for match in re.finditer(
+                  r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+                  source,
+                  flags=re.I | re.S,
+              ):
+                  href = html.unescape(match.group(1))
+                  label = plain(match.group(2))
+
+                  if re.fullmatch(
+                      r"0:04\s+富吉\s+普通",
+                      label,
+                  ):
+                      matches.append(urljoin(base, href))
+
+              if len(matches) != 1:
+                  raise RuntimeError(
+                      f"Expected exactly one 00:04 Tomiyoshi detail link "
+                      f"in {source_path}, got {matches}"
+                  )
+
+              Path(output_path).write_text(
+                  matches[0] + "\n",
+                  encoding="utf-8",
+              )
+              print(source_path, matches[0])
+          PY
+
+          WEEKDAY_DETAIL_URL=$(cat /tmp/weekday-detail-url.txt)
+          HOLIDAY_DETAIL_URL=$(cat /tmp/holiday-detail-url.txt)
+
+          curl -fsSL "$WEEKDAY_DETAIL_URL" -o /tmp/kintetsu-weekday-detail.html
+          curl -fsSL "$HOLIDAY_DETAIL_URL" -o /tmp/kintetsu-holiday-detail.html
+
+          test -s /tmp/kintetsu-weekday-detail.html
+          test -s /tmp/kintetsu-holiday-detail.html
+
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import html
+          import re
+          from pathlib import Path
+
+
+          def decode(path: str) -> str:
+              raw = Path(path).read_bytes()
+
+              for encoding in ("utf-8", "cp932", "shift_jis"):
+                  try:
+                      return raw.decode(encoding)
+                  except UnicodeDecodeError:
+                      pass
+
+              raise RuntimeError(f"Unable to decode {path}")
+
+
+          def plain(source: str) -> str:
+              source = re.sub(
+                  r"<script.*?</script>",
+                  " ",
+                  source,
+                  flags=re.I | re.S,
+              )
+              source = re.sub(
+                  r"<style.*?</style>",
+                  " ",
+                  source,
+                  flags=re.I | re.S,
+              )
+              source = re.sub(r"<[^>]+>", " ", source)
+              return re.sub(
+                  r"\s+",
+                  " ",
+                  html.unescape(source),
+              ).strip()
+
+
+          expected_stations = [
+              "近鉄名古屋",
+              "米野",
+              "黄金",
+              "烏森",
+              "近鉄八田",
+              "伏屋",
+              "戸田",
+              "近鉄蟹江",
+              "富吉",
+          ]
+
+          for path, day_type in (
+              ("/tmp/kintetsu-weekday-detail.html", "weekday"),
+              ("/tmp/kintetsu-holiday-detail.html", "saturday_holiday"),
+          ):
+              text = plain(decode(path))
+
+              print("====", day_type, "detail ====")
+              print(text[:5000])
+
+              assert "普通" in text, text[:1500]
+              assert "富吉" in text, text[:1500]
+
+              normalized = text.replace("：", ":")
+              departure_pos = normalized.find("0:04発")
+
+              if departure_pos < 0:
+                  raise RuntimeError(
+                      f"00:04 departure not found in {day_type} detail"
+                  )
+
+              train_text = normalized[departure_pos:]
+              positions = []
+
+              for station in expected_stations:
+                  pos = train_text.find(station)
+
+                  if pos < 0:
+                      raise RuntimeError(
+                          f"{station} not found after 00:04 departure "
+                          f"in {day_type} detail"
+                      )
+
+                  positions.append(pos)
+
+              if positions != sorted(positions):
+                  raise RuntimeError(
+                      f"Station order changed in {day_type}: {positions}"
+                  )
+
+              expected_times = {
+                  "近鉄名古屋": "0:04",
+                  "米野": "0:06",
+                  "黄金": "0:07",
+                  "烏森": "0:09",
+                  "近鉄八田": "0:11",
+                  "伏屋": "0:14",
+                  "戸田": "0:16",
+                  "近鉄蟹江": "0:18",
+                  "富吉": "0:22",
+              }
+
+              for station, clock in expected_times.items():
+                  if station == "近鉄名古屋":
+                      assert f"{clock}発 {station}" in train_text, train_text
+                  else:
+                      assert f"{clock}着 {station}" in train_text, train_text
+
+          print("Kintetsu 00:04 Tomiyoshi stop sequence: OK")
+          PY
+
+      - name: Generate KT-E01-KT-E07 boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-kintetsu-nagoya-last-trains.py \
+            --weekday-detail /tmp/kintetsu-weekday-detail.html \
+            --holiday-detail /tmp/kintetsu-holiday-detail.html \
+            --output /tmp/kintetsu-nagoya-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated Kintetsu Nagoya boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/kintetsu-nagoya-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          expected = {
+              "KT-E01": ("E01", "近鉄名古屋", None),
+              "KT-E02": ("E02", "米野", "00:06"),
+              "KT-E03": ("E03", "黄金", "00:07"),
+              "KT-E04": ("E04", "烏森", "00:09"),
+              "KT-E05": ("E05", "近鉄八田", "00:11"),
+              "KT-E06": ("E06", "伏屋", "00:14"),
+              "KT-E07": ("E07", "戸田", "00:16"),
+          }
+
+          assert set(data["destinations"]) == set(expected)
+          assert data["destinations"]["KT-E01"]["routes"] == {}
+
+          for code, (official, name, arrival) in expected.items():
+              destination = data["destinations"][code]
+              assert destination["operator"] == "kintetsu", code
+              assert destination["officialStationCode"] == official, code
+              assert destination["name"] == name, code
+              assert destination["stationCodes"] == [code], code
+
+              if arrival is None:
+                  continue
+
+              for day_type in ("weekday", "saturday_holiday"):
+                  route = destination["routes"]["nagoya"][day_type]
+                  assert route["lastDeparture"] == "00:04", (code, route)
+                  assert route["lastArrival"] == arrival, (code, route)
+                  assert route["trainTerminal"] == "富吉", (code, route)
+                  assert route["transfers"] == 0, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+          print("Generated Kintetsu KT-E01-KT-E07 boundary validation: OK")
+          PY
+
+      - name: Upload official HTML artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kintetsu-nagoya-poc
+          path: |
+            /tmp/kintetsu-weekday.html
+            /tmp/kintetsu-holiday.html
+            /tmp/kintetsu-weekday-detail.html
+            /tmp/kintetsu-holiday-detail.html
+            /tmp/kintetsu-nagoya-last-trains.json
+          if-no-files-found: error
+          retention-days: 7
