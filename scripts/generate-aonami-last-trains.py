@@ -82,9 +82,18 @@ def validate_terminal_note(raw_html: str) -> None:
             "Inaei-bound final train"
         )
 
-    if not re.search(r"23\s*[:：]?\s*58", text):
+    if "令和8年3月14日改正ダイヤ" not in text:
         raise RuntimeError(
-            "Official AN01 page no longer contains the 23:58 departure"
+            "Official AN01 page revision is no longer 2026-03-14"
+        )
+
+    # The HTML table stores the hour cell ("23") separately from the
+    # departure-minute cells ("17 36 58※"), so do not require "23:58"
+    # as a contiguous string.
+    if not re.search(r"23.{0,160}58", text):
+        raise RuntimeError(
+            "Official AN01 page no longer contains 58 minutes in the "
+            "23-hour timetable row"
         )
 
 
