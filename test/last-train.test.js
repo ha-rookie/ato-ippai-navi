@@ -490,3 +490,76 @@ test("Meitetsu Seto ST12 boundary is 23:45", () => {
   assert.equal(result.scenarios[0].lastDeparture, "23:45");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+test("Aonami boundaries cover AN01-AN11 from Nagoya hub", () => {
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => /^AN\d{2}$/.test(code)).length,
+    11
+  );
+
+  assert.deepEqual(dataset.destinations.AN01.routes, {});
+  assert.deepEqual(dataset.origins.nagoya.stationCodes, ["H08", "S02", "AN01"]);
+
+  for (let number = 2; number <= 9; number += 1) {
+    const code = `AN${String(number).padStart(2, "0")}`;
+    const route = dataset.destinations[code].routes.nagoya.weekday;
+    assert.equal(route.lastDeparture, "23:58", code);
+    assert.equal(route.trainTerminal, "稲永", code);
+    assert.equal(route.transfers, 0, code);
+    assert.equal(route.status, "verified", code);
+  }
+
+  for (const code of ["AN10", "AN11"]) {
+    const route = dataset.destinations[code].routes.nagoya.weekday;
+    assert.equal(route.lastDeparture, "23:36", code);
+    assert.equal(route.trainTerminal, "金城ふ頭", code);
+    assert.equal(route.transfers, 0, code);
+    assert.equal(route.status, "verified", code);
+  }
+});
+
+test("Aonami destinations only need Nagoya walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "AN09"), ["nagoya"]);
+  assert.deepEqual(eligibleOriginIds(dataset, "AN11"), ["nagoya"]);
+});
+
+test("Aonami AN09 uses the 23:58 Inaei-bound final train", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:40:00+09:00",
+    dayType: "weekday",
+    destinationCode: "AN09",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 8 }
+    }
+  });
+
+  assert.equal(result.destination.name, "稲永");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:58");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+test("Aonami AN11 uses the 23:36 Kinjo-futo boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:15:00+09:00",
+    dayType: "weekday",
+    destinationCode: "AN11",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 8 }
+    }
+  });
+
+  assert.equal(result.destination.name, "金城ふ頭");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:36");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
