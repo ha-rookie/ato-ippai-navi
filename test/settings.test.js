@@ -83,6 +83,12 @@ test("selected destination is stored and restored locally", () => {
     "H18"
   );
   assert.equal(loadDestinationStation(storage), "H18");
+
+  assert.equal(
+    saveDestinationStation("st12", storage),
+    "ST12"
+  );
+  assert.equal(loadDestinationStation(storage), "ST12");
 });
 
 test("invalid stored destination is ignored", () => {
