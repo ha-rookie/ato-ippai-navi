@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/poc-meitetsu-seto-sakaemachi.yml'
       - 'scripts/generate-meitetsu-seto-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -132,6 +133,43 @@ jobs:
               assert st12["status"] == "verified", st12
 
           print("Generated Meitetsu Seto ST01-ST12 boundary validation: OK")
+          PY
+
+      - name: Compare generated Seto boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/meitetsu-seto-last-trains.json", encoding="utf-8") as f:
+              generated = json.load(f)
+          with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
+              production = json.load(f)
+
+          assert production["origins"]["sakaemachi"] == {
+              "name": "栄町",
+              "stationCodes": ["ST01"],
+              "walkDestination": "栄町駅 愛知県名古屋市",
+              "enabled": True,
+          }
+
+          assert len([
+              code for code in production["destinations"]
+              if code.startswith("ST")
+          ]) == 12
+
+          for code, destination in generated["destinations"].items():
+              prod = production["destinations"].get(code)
+              assert prod is not None, code
+              assert prod["enabled"] is True, code
+              assert prod["name"] == destination["name"], code
+              assert prod["stationCodes"] == destination["stationCodes"], code
+              assert prod["routes"] == destination["routes"], code
+
+          source_ids = {source["id"] for source in production["sources"]}
+          assert "meitetsu-seto-line-timetable" in source_ids
+
+          print("Production Meitetsu Seto boundary comparison: OK")
           PY
 
       - name: Upload extracted text artifacts
