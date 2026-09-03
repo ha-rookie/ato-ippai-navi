@@ -46,20 +46,46 @@ export function clearSleepSettings(storage) {
 export const DESTINATION_STATION_STORAGE_KEY =
   "atoIppaiNavi.destinationStation.v1";
 
+const DESTINATION_STATION_ERROR =
+  "destination station must be H01-H22, T01-T20, M01-M28, E01-E07, " +
+  "S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07";
+
 export function normalizeDestinationStation(value) {
   const code = String(value ?? "").trim().toUpperCase();
+
+  const operatorMatch = /^(KT)-E(\d{1,2})$/.exec(code);
+
+  if (operatorMatch) {
+    const number = Number(operatorMatch[2]);
+
+    if (number < 1 || number > 7) {
+      throw new Error(DESTINATION_STATION_ERROR);
+    }
+
+    return `KT-E${String(number).padStart(2, "0")}`;
+  }
+
   const match = /^(AN|ST|[HTMESK])(\d{1,2})$/.exec(code);
 
   if (!match) {
-    throw new Error("destination station must be H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11");
+    throw new Error(DESTINATION_STATION_ERROR);
   }
 
   const line = match[1];
   const number = Number(match[2]);
-  const max = { H: 22, T: 20, M: 28, E: 7, S: 21, K: 1, ST: 12, AN: 11 }[line];
+  const max = {
+    H: 22,
+    T: 20,
+    M: 28,
+    E: 7,
+    S: 21,
+    K: 1,
+    ST: 12,
+    AN: 11
+  }[line];
 
   if (number < 1 || number > max) {
-    throw new Error("destination station must be H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, or AN01-AN11");
+    throw new Error(DESTINATION_STATION_ERROR);
   }
 
   return `${line}${String(number).padStart(2, "0")}`;
