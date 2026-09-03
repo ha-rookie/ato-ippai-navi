@@ -73,9 +73,15 @@ jobs:
               text = plain(source)
 
               assert "近鉄名古屋" in text, text[:500]
-              assert "2026年3月14日現在" in text, text[:1000]
+              assert (
+                  "2026/3/14現在" in text
+                  or "2026年3月14日現在" in text
+              ), text[:1000]
               assert "富吉" in text
-              assert re.search(r"(?:^|\s)0(?:\s|$)", text), text[-1500:]
+              assert re.search(
+                  r"(?:^|\s)0:04\s+富吉\s+普通(?:\s|$)",
+                  text,
+              ), text[-1500:]
 
               print("====", day_type, "plain tail ====")
               print(text[-3000:])
