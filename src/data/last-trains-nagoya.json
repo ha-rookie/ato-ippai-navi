@@ -68,6 +68,12 @@
       "id": "nagoya-subway-first-last-kamiida",
       "publisher": "名古屋市交通局",
       "url": "https://www.kotsu.city.nagoya.jp/rp/subway/TRP0000192.htm"
+    },
+    {
+      "id": "meitetsu-seto-line-timetable",
+      "publisher": "名古屋鉄道",
+      "revision": "2026-03-14",
+      "url": "https://www.meitetsu.co.jp/train/timetable/"
     }
   ],
   "origins": {
@@ -105,6 +111,14 @@
         "S05"
       ],
       "walkDestination": "久屋大通駅 愛知県名古屋市",
+      "enabled": true
+    },
+    "sakaemachi": {
+      "name": "栄町",
+      "stationCodes": [
+        "ST01"
+      ],
+      "walkDestination": "栄町駅 愛知県名古屋市",
       "enabled": true
     }
   },
@@ -4570,6 +4584,389 @@
               "nagoya-subway-pocket-timetable-meijo",
               "nagoya-subway-pocket-timetable-kamiida",
               "nagoya-subway-first-last-kamiida"
+            ]
+          }
+        }
+      }
+    },
+    "ST01": {
+      "name": "栄町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST01"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "ST02": {
+      "name": "東大手",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST02"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST03": {
+      "name": "清水",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST03"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST04": {
+      "name": "尼ケ坂",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST04"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST05": {
+      "name": "森下",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST05"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST06": {
+      "name": "大曽根",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST06"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST07": {
+      "name": "矢田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST07"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST08": {
+      "name": "守山自衛隊前",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST08"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST09": {
+      "name": "瓢箪山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST09"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST10": {
+      "name": "小幡",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST10"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST11": {
+      "name": "喜多山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST11"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:00",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "喜多山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "ST12": {
+      "name": "大森・金城学院前",
+      "city": "名古屋市",
+      "stationCodes": [
+        "ST12"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakaemachi": {
+          "weekday": {
+            "lastDeparture": "23:45",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "尾張瀬戸",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:45",
+            "lastArrival": null,
+            "routeSummary": "名鉄瀬戸線 直通",
+            "trainTerminal": "尾張瀬戸",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-seto-line-timetable"
             ]
           }
         }
