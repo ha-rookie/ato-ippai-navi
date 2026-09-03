@@ -74,6 +74,12 @@
       "publisher": "名古屋鉄道",
       "revision": "2026-03-14",
       "url": "https://www.meitetsu.co.jp/train/timetable/"
+    },
+    {
+      "id": "aonami-official-timetable",
+      "publisher": "名古屋臨海高速鉄道",
+      "revision": "2026-03-14",
+      "url": "https://www.aonamiline.co.jp/train/timetable"
     }
   ],
   "origins": {
@@ -119,6 +125,16 @@
         "ST01"
       ],
       "walkDestination": "栄町駅 愛知県名古屋市",
+      "enabled": true
+    },
+    "nagoya": {
+      "name": "名古屋",
+      "stationCodes": [
+        "H08",
+        "S02",
+        "AN01"
+      ],
+      "walkDestination": "名古屋駅 愛知県名古屋市",
       "enabled": true
     }
   },
@@ -4967,6 +4983,355 @@
             "status": "verified",
             "sourceIds": [
               "meitetsu-seto-line-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN01": {
+      "name": "名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN01"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "AN02": {
+      "name": "ささしまライブ",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN02"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN03": {
+      "name": "小本",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN03"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN04": {
+      "name": "荒子",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN04"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN05": {
+      "name": "南荒子",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN05"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN06": {
+      "name": "中島",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN06"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN07": {
+      "name": "港北",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN07"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN08": {
+      "name": "荒子川公園",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN08"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN09": {
+      "name": "稲永",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN09"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:58",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "稲永",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN10": {
+      "name": "野跡",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN10"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:36",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "金城ふ頭",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:36",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "金城ふ頭",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "AN11": {
+      "name": "金城ふ頭",
+      "city": "名古屋市",
+      "stationCodes": [
+        "AN11"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:36",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "金城ふ頭",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:36",
+            "lastArrival": null,
+            "routeSummary": "あおなみ線 直通",
+            "trainTerminal": "金城ふ頭",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "aonami-official-timetable"
             ]
           }
         }
