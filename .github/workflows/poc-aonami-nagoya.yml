@@ -1,0 +1,111 @@
+name: PoC Aonami Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-aonami-nagoya.yml'
+      - 'scripts/generate-aonami-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official Aonami sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEEKDAY_URL='https://www.aonamiline.co.jp/sys/wp-content/uploads/timetable_weekdown2026.pdf'
+          HOLIDAY_URL='https://www.aonamiline.co.jp/sys/wp-content/uploads/timetable_holidown2026.pdf'
+          AN01_URL='https://www.aonamiline.co.jp/train/an01-nagoya/an01-timetable'
+
+          curl -fsSL "$WEEKDAY_URL" -o /tmp/aonami-weekday.pdf
+          curl -fsSL "$HOLIDAY_URL" -o /tmp/aonami-holiday.pdf
+          curl -fsSL "$AN01_URL" -o /tmp/an01.html
+
+          test -s /tmp/aonami-weekday.pdf
+          test -s /tmp/aonami-holiday.pdf
+          test -s /tmp/an01.html
+
+      - name: Convert official PDFs to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/aonami-weekday.pdf /tmp/aonami-weekday.txt
+          pdftotext -layout /tmp/aonami-holiday.pdf /tmp/aonami-holiday.txt
+
+          grep -q '名古屋' /tmp/aonami-weekday.txt
+          grep -q '金城ふ頭' /tmp/aonami-weekday.txt
+          grep -q '23:58' /tmp/aonami-weekday.txt
+          grep -q '23:58' /tmp/aonami-holiday.txt
+
+      - name: Generate AN01-AN11 boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-aonami-last-trains.py \
+            --weekday /tmp/aonami-weekday.txt \
+            --holiday /tmp/aonami-holiday.txt \
+            --an01-html /tmp/an01.html \
+            --output /tmp/aonami-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated Aonami boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/aonami-last-trains.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert len(data["destinations"]) == 11
+          assert data["destinations"]["AN01"]["routes"] == {}
+
+          for day_type in ("weekday", "saturday_holiday"):
+              for number in range(2, 10):
+                  code = f"AN{number:02d}"
+                  route = data["destinations"][code]["routes"]["nagoya"][day_type]
+                  assert route["lastDeparture"] == "23:58", (code, route)
+                  assert route["trainTerminal"] == "稲永", (code, route)
+                  assert route["transfers"] == 0, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+              for code in ("AN10", "AN11"):
+                  route = data["destinations"][code]["routes"]["nagoya"][day_type]
+                  assert route["lastDeparture"] == "23:36", (code, route)
+                  assert route["trainTerminal"] == "金城ふ頭", (code, route)
+                  assert route["transfers"] == 0, (code, route)
+                  assert route["status"] == "verified", (code, route)
+
+          print("Generated Aonami AN01-AN11 boundary validation: OK")
+          PY
+
+      - name: Upload PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aonami-nagoya-poc
+          path: |
+            /tmp/aonami-weekday.txt
+            /tmp/aonami-holiday.txt
+            /tmp/aonami-last-trains.json
+          if-no-files-found: error
+          retention-days: 7
