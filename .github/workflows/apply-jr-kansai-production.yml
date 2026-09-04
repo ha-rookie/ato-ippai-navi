@@ -28,10 +28,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'No production changes to commit.'
-            exit 0
-          fi
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -41,8 +37,12 @@ jobs:
             public/js/settings.js \
             test/settings.test.js \
             test/last-train.test.js \
-            scripts/generate-jr-kansai-nagoya-last-trains.py \
-            .github/workflows/poc-jr-kansai-nagoya.yml \
-            .github/workflows/deploy-worker.yml
+            scripts/generate-jr-kansai-nagoya-last-trains.py
+
+          if git diff --cached --quiet; then
+            echo 'No production changes to commit.'
+            exit 0
+          fi
+
           git commit -m 'feat: add JR Kansai Nagoya production support'
           git push origin HEAD:feat/jr-kansai-nagoya
