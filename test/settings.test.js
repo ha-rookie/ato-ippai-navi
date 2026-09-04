@@ -42,46 +42,60 @@ test("destination station accepts supported subway line codes", () => {
   assert.equal(normalizeDestinationStation("AN11"), "AN11");
   assert.equal(normalizeDestinationStation("kt-e1"), "KT-E01");
   assert.equal(normalizeDestinationStation("KT-E07"), "KT-E07");
+  assert.equal(normalizeDestinationStation("jr-cj0"), "JR-CJ00");
+  assert.equal(normalizeDestinationStation("JR-CJ2"), "JR-CJ02");
 
   assert.throws(
     () => normalizeDestinationStation("H23"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("T21"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("M29"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("E08"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("S22"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("K02"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("ST13"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("AN12"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("KT-E08"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
   );
   assert.throws(
     () => normalizeDestinationStation("KT01"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, or KT-E01-KT-E07/
+    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
+  );
+  assert.throws(
+    () => normalizeDestinationStation("JR-CJ03"),
+    /JR-CJ00-JR-CJ02/
+  );
+  assert.throws(
+    () => normalizeDestinationStation("CJ01"),
+    /JR-CJ00-JR-CJ02/
+  );
+  assert.throws(
+    () => normalizeDestinationStation("JRCJ01"),
+    /JR-CJ00-JR-CJ02/
   );
 });
 
@@ -111,6 +125,9 @@ test("selected destination is stored and restored locally", () => {
 
   assert.equal(saveDestinationStation("kt-e7", storage), "KT-E07");
   assert.equal(loadDestinationStation(storage), "KT-E07");
+
+  assert.equal(saveDestinationStation("jr-cj2", storage), "JR-CJ02");
+  assert.equal(loadDestinationStation(storage), "JR-CJ02");
 });
 
 test("invalid stored destination is ignored", () => {

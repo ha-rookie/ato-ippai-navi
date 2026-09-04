@@ -117,6 +117,7 @@ def verify_timetable(path: Path) -> None:
 def route() -> dict:
     return {
         "lastDeparture": LAST_DEPARTURE,
+        "lastArrival": None,
         "routeSummary": "JR関西本線 普通 直通",
         "trainTerminal": TRAIN_TERMINAL,
         "transfers": 0,

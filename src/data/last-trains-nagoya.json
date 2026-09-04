@@ -7,7 +7,7 @@
   },
   "metadata": {
     "effectiveFrom": null,
-    "checkedAt": "2026-09-03",
+    "checkedAt": "2026-09-04",
     "timezone": "Asia/Tokyo",
     "effectiveFromStrategy": "source-specific"
   },
@@ -86,6 +86,12 @@
       "publisher": "近畿日本鉄道",
       "revision": "2026-03-14",
       "url": "https://eki.kintetsu.co.jp/norikae/T5?USR=PC&d=1&slCode=413-1"
+    },
+    {
+      "id": "jr-central-kansai-official-timetable",
+      "publisher": "東海旅客鉄道",
+      "revision": "2026-03-14",
+      "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/kansai_Nagoya_B_wh_d.pdf"
     }
   ],
   "origins": {
@@ -139,7 +145,8 @@
         "H08",
         "S02",
         "AN01",
-        "KT-E01"
+        "KT-E01",
+        "JR-CJ00"
       ],
       "walkDestination": "名古屋駅 愛知県名古屋市",
       "enabled": true
@@ -5566,6 +5573,89 @@
             "status": "verified",
             "sourceIds": [
               "kintetsu-nagoya-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CJ00": {
+      "operator": "jr-central",
+      "officialStationCode": "CJ00",
+      "name": "名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CJ00"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "JR-CJ01": {
+      "operator": "jr-central",
+      "officialStationCode": "CJ01",
+      "name": "八田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CJ01"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:57",
+            "lastArrival": null,
+            "routeSummary": "JR関西本線 普通 直通",
+            "trainTerminal": "四日市",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-kansai-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:57",
+            "lastArrival": null,
+            "routeSummary": "JR関西本線 普通 直通",
+            "trainTerminal": "四日市",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-kansai-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CJ02": {
+      "operator": "jr-central",
+      "officialStationCode": "CJ02",
+      "name": "春田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CJ02"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:57",
+            "lastArrival": null,
+            "routeSummary": "JR関西本線 普通 直通",
+            "trainTerminal": "四日市",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-kansai-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:57",
+            "lastArrival": null,
+            "routeSummary": "JR関西本線 普通 直通",
+            "trainTerminal": "四日市",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-kansai-official-timetable"
             ]
           }
         }
