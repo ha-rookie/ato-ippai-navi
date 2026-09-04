@@ -1,0 +1,109 @@
+name: Inspect JR Tokaido Nagoya
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [poc/jr-tokaido-nagoya]
+    paths:
+      - '.github/workflows/inspect-jr-tokaido-nagoya.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official JR Central sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEEKDAY_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_w_u.pdf'
+          HOLIDAY_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_h_u.pdf'
+          NUMBERING_URL='https://global.jr-central.co.jp/en/info/railwaymap/_pdf/railwaymap.pdf'
+
+          curl -fsSL "$WEEKDAY_URL" -o /tmp/jr-tokaido-nagoya-weekday.pdf
+          curl -fsSL "$HOLIDAY_URL" -o /tmp/jr-tokaido-nagoya-holiday.pdf
+          curl -fsSL "$NUMBERING_URL" -o /tmp/jr-station-numbering.pdf
+
+          for file in \
+            /tmp/jr-tokaido-nagoya-weekday.pdf \
+            /tmp/jr-tokaido-nagoya-holiday.pdf \
+            /tmp/jr-station-numbering.pdf
+          do
+            test -s "$file"
+            pdfinfo "$file" | grep -q '^Pages:'
+          done
+
+      - name: Convert official PDFs to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/jr-tokaido-nagoya-weekday.pdf /tmp/jr-tokaido-nagoya-weekday.txt
+          pdftotext -layout /tmp/jr-tokaido-nagoya-holiday.pdf /tmp/jr-tokaido-nagoya-holiday.txt
+          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt || true
+
+          test -s /tmp/jr-tokaido-nagoya-weekday.txt
+          test -s /tmp/jr-tokaido-nagoya-holiday.txt
+
+      - name: Inspect late-night timetable blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo '=== WEEKDAY: header ==='
+          head -40 /tmp/jr-tokaido-nagoya-weekday.txt
+          echo '=== WEEKDAY: 23/0-hour tail ==='
+          tail -90 /tmp/jr-tokaido-nagoya-weekday.txt
+          echo '=== WEEKDAY: destination/type matches ==='
+          grep -n -E '23|^[[:space:]]*0([[:space:]]|$)|普通|快速|新快速|特別快速|岡崎|大府|刈谷|豊橋|武豊' /tmp/jr-tokaido-nagoya-weekday.txt | tail -100 || true
+
+          echo '=== HOLIDAY: header ==='
+          head -40 /tmp/jr-tokaido-nagoya-holiday.txt
+          echo '=== HOLIDAY: 23/0-hour tail ==='
+          tail -90 /tmp/jr-tokaido-nagoya-holiday.txt
+          echo '=== HOLIDAY: destination/type matches ==='
+          grep -n -E '23|^[[:space:]]*0([[:space:]]|$)|普通|快速|新快速|特別快速|岡崎|大府|刈谷|豊橋|武豊' /tmp/jr-tokaido-nagoya-holiday.txt | tail -100 || true
+
+      - name: Record Nagoya-city station scope
+        shell: bash
+        run: |
+          cat <<'EOF'
+          Reviewed JR Central Tokaido station-number scope:
+          - CA68 Nagoya
+          - CA67 Otobashi
+          - CA66 Kanayama
+          - CA65 Atsuta
+          - CA64 Kasadera
+          - CA63 Odaka
+          - CA62 Minami-Odaka
+          - CA61 Kyowa is outside Nagoya city
+          - CA69 Biwajima is outside Nagoya city
+          EOF
+
+      - name: Upload official inspection artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-tokaido-nagoya-inspection
+          path: |
+            /tmp/jr-tokaido-nagoya-weekday.pdf
+            /tmp/jr-tokaido-nagoya-weekday.txt
+            /tmp/jr-tokaido-nagoya-holiday.pdf
+            /tmp/jr-tokaido-nagoya-holiday.txt
+            /tmp/jr-station-numbering.pdf
+            /tmp/jr-station-numbering.txt
+          if-no-files-found: error
+          retention-days: 7
