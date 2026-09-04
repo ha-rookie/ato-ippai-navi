@@ -39,92 +39,102 @@ jobs:
 
           test -s /tmp/jr-kansai-nagoya.pdf
           test -s /tmp/jr-station-numbering.pdf
+          pdfinfo /tmp/jr-kansai-nagoya.pdf | grep -q '^Pages:'
+          pdfinfo /tmp/jr-station-numbering.pdf | grep -q '^Pages:'
 
-      - name: Convert official PDFs to layout text
+      - name: Convert official timetable PDF to layout text
         shell: bash
         run: |
           set -euo pipefail
 
           pdftotext -layout /tmp/jr-kansai-nagoya.pdf /tmp/jr-kansai-nagoya.txt
-          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt
-
           test -s /tmp/jr-kansai-nagoya.txt
-          test -s /tmp/jr-station-numbering.txt
 
-      - name: Inspect Nagoya late-night timetable
+          # The current official railway-map PDF renders station numbers as
+          # graphics and is not reliably machine-readable with pdftotext.
+          # Keep the source PDF as an artifact; CJ00/CJ01/CJ02 are reviewed
+          # static metadata rather than pretending the CI can parse them.
+          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt || true
+
+      - name: Generate JR-CJ00-JR-CJ02 boundaries
         shell: bash
         run: |
           set -euo pipefail
 
+          python3 scripts/generate-jr-kansai-nagoya-last-trains.py \
+            --timetable /tmp/jr-kansai-nagoya.txt \
+            --output /tmp/jr-kansai-nagoya-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated JR Kansai boundaries
+        shell: bash
+        run: |
           python3 - <<'PY'
-          from pathlib import Path
-          import re
+          import json
 
-          text = Path('/tmp/jr-kansai-nagoya.txt').read_text(encoding='utf-8')
-          normalized = re.sub(r'[ \t]+', ' ', text)
-          lines = text.splitlines()
+          with open('/tmp/jr-kansai-nagoya-last-trains.json', encoding='utf-8') as f:
+              data = json.load(f)
 
-          required = ['関西線時刻表', '名古屋', '八田', '春田', '四日市', '普通']
-          for token in required:
-              assert token in text, f'missing timetable token: {token}'
+          expected = {
+              'JR-CJ00': ('CJ00', '名古屋'),
+              'JR-CJ01': ('CJ01', '八田'),
+              'JR-CJ02': ('CJ02', '春田'),
+          }
 
-          print('==== JR Kansai Nagoya 23:00 block ====')
-          anchors = [
-              index for index, line in enumerate(lines)
-              if re.search(r'^\s*23\s+11\b', line)
-          ]
-          assert anchors, '23:00 row anchor not found'
+          assert data['operator'] == {
+              'id': 'jr-central',
+              'name': '東海旅客鉄道',
+          }
+          assert data['line']['code'] == 'CJ'
+          assert data['line']['revision'] == '2026-03-14'
+          assert set(data['destinations']) == set(expected)
+          assert data['destinations']['JR-CJ00']['routes'] == {}
 
-          for anchor in anchors:
-              for line in lines[max(0, anchor - 3):min(len(lines), anchor + 10)]:
-                  print(line)
-              print('---')
+          for code, (official, name) in expected.items():
+              destination = data['destinations'][code]
+              assert destination['operator'] == 'jr-central', code
+              assert destination['officialStationCode'] == official, code
+              assert destination['name'] == name, code
+              assert destination['stationCodes'] == [code], code
 
-          # Current official 2026-03 PDF has the same late-night boundary
-          # on weekdays and Saturdays/Sundays/holidays: 23:57 local to Yokkaichi.
-          assert normalized.count('11 25 40 57') >= 2, 'late-night minute row changed'
-          assert '四日市' in normalized
-          assert '普通' in normalized
+              if code == 'JR-CJ00':
+                  continue
 
-          print('JR Kansai Nagoya late-night structure inspection: OK')
+              for day_type in ('weekday', 'saturday_holiday'):
+                  route = destination['routes']['nagoya'][day_type]
+                  assert route['lastDeparture'] == '23:57', (code, route)
+                  assert 'lastArrival' not in route, (code, route)
+                  assert route['routeSummary'] == 'JR関西本線 普通 直通', (code, route)
+                  assert route['trainTerminal'] == '四日市', (code, route)
+                  assert route['transfers'] == 0, (code, route)
+                  assert route['status'] == 'verified', (code, route)
+
+          print('Generated JR Kansai JR-CJ00-JR-CJ02 validation: OK')
           PY
 
-      - name: Inspect official station numbering
+      - name: Record station-numbering verification policy
         shell: bash
         run: |
           set -euo pipefail
 
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          text = Path('/tmp/jr-station-numbering.txt').read_text(encoding='utf-8')
-          compact = re.sub(r'\s+', ' ', text)
-
-          print('==== JR Central railway-map CJ excerpts ====')
-          lines = text.splitlines()
-          for index, line in enumerate(lines):
-              if 'CJ' in line or 'Kansai Line' in line or 'Nagoya' in line or 'Hatta' in line or 'Haruta' in line:
-                  for excerpt in lines[max(0, index - 1):min(len(lines), index + 2)]:
-                      print(excerpt)
-                  print('---')
-
-          # The current official railway map is machine-readable enough to
-          # validate the three Nagoya-city Kansai Line station-number anchors.
-          for code in ('CJ00', 'CJ01', 'CJ02'):
-              assert code in compact, f'missing station number: {code}'
-          for station in ('Nagoya', 'Hatta', 'Haruta'):
-              assert station in compact, f'missing station name: {station}'
-
-          print('JR Central CJ00/CJ01/CJ02 station-number inspection: OK')
-          PY
+          cat <<'EOF'
+          JR Central station numbering source policy:
+          - current official railway-map PDF downloaded successfully
+          - current map is retained as a CI artifact
+          - its station-number graphics are not reliably extractable with pdftotext
+          - CJ00 Nagoya / CJ01 Hatta / CJ02 Haruta are reviewed static metadata
+          - CI does not make a false text-extraction claim for the map
+          EOF
 
       - name: Upload official PoC artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jr-kansai-nagoya-poc
           path: |
+            /tmp/jr-kansai-nagoya.pdf
             /tmp/jr-kansai-nagoya.txt
+            /tmp/jr-station-numbering.pdf
             /tmp/jr-station-numbering.txt
+            /tmp/jr-kansai-nagoya-last-trains.json
           if-no-files-found: error
           retention-days: 7
