@@ -735,3 +735,65 @@ test("JR Chuo JR-CF06 uses the 00:05 Kozoji local boundary", () => {
   assert.equal(result.scenarios[0].routeSummary, "JR中央本線 普通 直通");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+test("JR Tokaido boundaries use namespaced JR-CA62-JR-CA68 codes", () => {
+  const expected = {
+    "JR-CA68": ["CA68", "名古屋"],
+    "JR-CA67": ["CA67", "尾頭橋"],
+    "JR-CA66": ["CA66", "金山"],
+    "JR-CA65": ["CA65", "熱田"],
+    "JR-CA64": ["CA64", "笠寺"],
+    "JR-CA63": ["CA63", "大高"],
+    "JR-CA62": ["CA62", "南大高"]
+  };
+
+  assert.deepEqual(dataset.destinations["JR-CA68"].routes, {});
+  assert.ok(dataset.origins.nagoya.stationCodes.includes("JR-CA68"));
+
+  for (const [code, [officialCode, name]] of Object.entries(expected)) {
+    const destination = dataset.destinations[code];
+    assert.equal(destination.operator, "jr-central", code);
+    assert.equal(destination.officialStationCode, officialCode, code);
+    assert.equal(destination.name, name, code);
+
+    if (code === "JR-CA68") continue;
+
+    for (const dayType of ["weekday", "saturday_holiday"]) {
+      const route = destination.routes.nagoya[dayType];
+      assert.equal(route.lastDeparture, "23:59", code);
+      assert.equal(route.lastArrival, null, code);
+      assert.equal(route.trainTerminal, "岡崎", code);
+      assert.equal(route.routeSummary, "JR東海道本線 普通 直通", code);
+      assert.equal(route.transfers, 0, code);
+      assert.equal(route.status, "verified", code);
+    }
+  }
+});
+
+test("JR Tokaido destinations only need Nagoya walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "JR-CA62"), ["nagoya"]);
+});
+
+test("JR Tokaido JR-CA62 uses the 23:59 Okazaki local boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:20:00+09:00",
+    dayType: "weekday",
+    destinationCode: "JR-CA62",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 31 }
+    }
+  });
+
+  assert.equal(result.destination.name, "南大高");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:59");
+  assert.equal(result.scenarios[0].lastArrival, null);
+  assert.equal(result.scenarios[0].localLastTrainArrivalTime, null);
+  assert.equal(result.scenarios[0].routeSummary, "JR東海道本線 普通 直通");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});

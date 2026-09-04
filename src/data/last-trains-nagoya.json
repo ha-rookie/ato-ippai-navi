@@ -98,6 +98,12 @@
       "publisher": "東海旅客鉄道",
       "revision": "2026-03-14",
       "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/chuo_Nagoya_A_w_d.pdf"
+    },
+    {
+      "id": "jr-central-tokaido-official-timetable",
+      "publisher": "東海旅客鉄道",
+      "revision": "2026-03-14",
+      "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_w_u.pdf"
     }
   ],
   "origins": {
@@ -153,7 +159,8 @@
         "AN01",
         "KT-E01",
         "JR-CJ00",
-        "JR-CF01"
+        "JR-CF01",
+        "JR-CA68"
       ],
       "walkDestination": "名古屋駅 愛知県名古屋市",
       "enabled": true
@@ -5854,6 +5861,233 @@
             "status": "verified",
             "sourceIds": [
               "jr-central-chuo-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CA68": {
+      "operator": "jr-central",
+      "officialStationCode": "CA68",
+      "name": "名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA68"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "JR-CA67": {
+      "operator": "jr-central",
+      "officialStationCode": "CA67",
+      "name": "尾頭橋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA67"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CA66": {
+      "operator": "jr-central",
+      "officialStationCode": "CA66",
+      "name": "金山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA66"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CA65": {
+      "operator": "jr-central",
+      "officialStationCode": "CA65",
+      "name": "熱田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA65"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CA64": {
+      "operator": "jr-central",
+      "officialStationCode": "CA64",
+      "name": "笠寺",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA64"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CA63": {
+      "operator": "jr-central",
+      "officialStationCode": "CA63",
+      "name": "大高",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA63"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CA62": {
+      "operator": "jr-central",
+      "officialStationCode": "CA62",
+      "name": "南大高",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CA62"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": null,
+            "routeSummary": "JR東海道本線 普通 直通",
+            "trainTerminal": "岡崎",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-tokaido-official-timetable"
             ]
           }
         }
