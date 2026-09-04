@@ -1,0 +1,130 @@
+name: Smoke JR Chuo Production
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy Worker to Cloudflare']
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Wait for expected production build
+        if: github.event_name == 'workflow_run'
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+          EXPECTED_BUILD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 15); do
+            echo "JR Chuo build readiness attempt $attempt/15"
+            if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
+              cat /tmp/health.json
+              if EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          with open('/tmp/health.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          if data.get('buildSha') != os.environ['EXPECTED_BUILD_SHA']:
+              sys.exit(1)
+          if data.get('ok') is not True:
+              sys.exit(1)
+
+          print(f"Expected Worker build is visible: {data['buildSha']}")
+          PY
+              then
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+
+          echo 'Expected production build was not visible within 30 seconds.'
+          exit 1
+
+      - name: Verify JR-CF06 last-train boundary
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "JR-CF06",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          ready=0
+          for attempt in $(seq 1 5); do
+            echo "JR Chuo JR-CF06 smoke attempt $attempt/5"
+            status=$(curl -sS \
+              -o /tmp/response.json \
+              -w '%{http_code}' \
+              -H 'content-type: application/json' \
+              --data @/tmp/request.json \
+              "$BASE_URL/api/last-train-boundary")
+
+            echo "HTTP status: $status"
+            cat /tmp/response.json
+
+            if [ "$status" = '200' ]; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo 'JR-CF06 boundary API did not return 200.'
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/response.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          scenarios = data['scenarios']
+
+          assert data['routeFound'] is True, data
+          assert data['dataSource'] == 'internal_last_train_json', data
+          assert data['destination']['code'] == 'JR-CF06', data
+          assert data['destination']['name'] == '新守山', data
+          assert set(data['walkOptions']) == {'nagoya'}, data['walkOptions']
+
+          assert scenarios[0]['canReachDestination'] is True, scenarios
+          assert scenarios[0]['recommendedOriginId'] == 'nagoya', scenarios
+          assert scenarios[0]['lastDeparture'] == '00:05', scenarios
+          assert scenarios[0]['lastArrival'] is None, scenarios
+          assert scenarios[0]['localLastTrainArrivalTime'] is None, scenarios
+          assert scenarios[0]['routeSummary'] == 'JR中央本線 普通 直通', scenarios
+          assert scenarios[1]['canReachDestination'] is False, scenarios
+
+          print('JR Chuo JR-CF06 production smoke: OK')
+          PY
