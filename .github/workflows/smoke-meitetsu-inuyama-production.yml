@@ -1,0 +1,95 @@
+name: Smoke Meitetsu Inuyama Production
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Worker to Cloudflare"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify IY03 production boundary
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/iy03-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:15:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "IY03",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          ready=0
+          for attempt in $(seq 1 10); do
+            echo "IY03 production smoke attempt $attempt/10"
+            status=$(curl -sS \
+              -o /tmp/iy03-boundary.json \
+              -w '%{http_code}' \
+              -H 'content-type: application/json' \
+              --data @/tmp/iy03-boundary-request.json \
+              "$BASE_URL/api/last-train-boundary")
+
+            echo "HTTP status: $status"
+            cat /tmp/iy03-boundary.json || true
+
+            if [ "$status" = "200" ]; then
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open('/tmp/iy03-boundary.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          scenarios = data.get('scenarios', [])
+          valid = (
+              data.get('routeFound') is True
+              and data.get('destination', {}).get('code') == 'IY03'
+              and data.get('destination', {}).get('name') == '上小田井'
+              and set(data.get('walkOptions', {})) == {'nagoya'}
+              and len(scenarios) == 2
+              and scenarios[0].get('canReachDestination') is True
+              and scenarios[0].get('recommendedOriginId') == 'nagoya'
+              and scenarios[0].get('lastDeparture') == '23:59'
+              and scenarios[0].get('lastArrival') == '00:06'
+              and scenarios[1].get('canReachDestination') is False
+          )
+          if not valid:
+              sys.exit(1)
+          PY
+              then
+                ready=1
+                break
+              fi
+            fi
+
+            sleep 3
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo 'IY03 production boundary did not become ready.'
+            exit 1
+          fi
+
+          echo 'Meitetsu Inuyama IY03 production smoke: OK'
