@@ -67,15 +67,24 @@ def find_node_candidates(source: str, station_name: str) -> list[str]:
 
 def assert_origin_timetable(path: Path) -> None:
     text = plain(decode(path))
-    required = ["名鉄名古屋", "NH36", "東岡崎", "鳴海", "金山"]
-    for token in required:
-        if token not in text:
-            raise AssertionError(f"origin timetable missing {token}: {path}")
+    if "名鉄名古屋" not in text or "NH36" not in text or "名古屋本線" not in text:
+        print(text[:5000], file=sys.stderr)
+        raise AssertionError(f"unexpected NH36 timetable page: {path}")
 
-    # Current official timetable guard rails. If these move, stop and review.
-    for token in ("23", "57", "00", "01", "06"):
-        if token not in text:
-            raise AssertionError(f"late-night anchor missing {token}: {path}")
+    # The official timetable represents destinations with abbreviations in the
+    # row body, so do not require full destination names here. Guard the known
+    # late-night structure instead: 23:57 candidate and 00:01/00:06 services.
+    late_patterns = (
+        r"23\s+.*?57",
+        r"00\s+.*?01.*?06",
+    )
+    for pattern in late_patterns:
+        if not re.search(pattern, text):
+            print("==== NH36 timetable tail ====", file=sys.stderr)
+            print(text[-7000:], file=sys.stderr)
+            raise AssertionError(
+                f"late-night structure missing /{pattern}/ in {path}"
+            )
 
 
 def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, str]:
@@ -85,7 +94,6 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, st
         print(text[:3000], file=sys.stderr)
         raise AssertionError(f"unexpected direct timetable page: {path}")
 
-    # Rendered/plain order is: HH:MM 発 HH:MM 着 ... line(class) terminal.
     pattern = re.compile(
         r"(?P<dep>\d{2}:\d{2})\s*発\s*"
         r"(?P<arr>\d{2}:\d{2})\s*着.*?"
@@ -94,7 +102,7 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, st
     matches = list(pattern.finditer(text))
     if not matches:
         print(f"==== direct plain tail: {path} ====", file=sys.stderr)
-        print(text[-5000:], file=sys.stderr)
+        print(text[-7000:], file=sys.stderr)
         raise AssertionError(f"no direct service rows parsed: {path}")
 
     last = matches[-1]
@@ -115,16 +123,14 @@ def main() -> None:
     top = decode(top_path)
     top_text = plain(top)
 
-    # The search top currently renders station candidates dynamically in some
-    # sessions. Do not make its static HTML a production dependency. Keep it as
-    # a diagnostic source and learn which opaque node IDs, if any, are exposed.
+    # The search top renders station candidates dynamically. Treat static HTML
+    # only as diagnostic data, not as a source of truth for node IDs.
     discovery: dict[str, dict[str, object]] = {}
     for code, name in STATIONS.items():
-        candidates = find_node_candidates(top, name)
         discovery[code] = {
             "name": name,
             "namePresentInStaticTop": name in top_text,
-            "nodeCandidates": candidates,
+            "nodeCandidates": find_node_candidates(top, name),
             "knownNodeId": KNOWN_NODE_IDS.get(code),
         }
 
@@ -132,9 +138,6 @@ def main() -> None:
         json.dumps(discovery, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-
-    print("Static Top diagnostics:")
-    print(json.dumps(discovery, ensure_ascii=False, indent=2))
 
     assert_origin_timetable(origin_path)
 
