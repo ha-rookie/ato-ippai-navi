@@ -24,7 +24,7 @@ function memoryStorage() {
 }
 
 const DESTINATION_ERROR_PATTERN =
-  /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, NH24-NH38, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68/;
+  /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, NH24-NH38, TA01-TA05, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68/;
 
 test("destination station accepts supported subway line codes", () => {
   assert.equal(normalizeDestinationStation("h1"), "H01");
@@ -159,4 +159,18 @@ test("Meitetsu Main destination is stored and restored locally", () => {
   const storage = memoryStorage();
   assert.equal(saveDestinationStation("nh34", storage), "NH34");
   assert.equal(loadDestinationStation(storage), "NH34");
+});
+
+
+test("destination station accepts Meitetsu Tokoname TA01-TA05 codes", () => {
+  assert.equal(normalizeDestinationStation("ta1"), "TA01");
+  assert.equal(normalizeDestinationStation("TA05"), "TA05");
+  assert.throws(() => normalizeDestinationStation("TA00"), /TA01-TA05/);
+  assert.throws(() => normalizeDestinationStation("TA06"), /TA01-TA05/);
+});
+
+test("Meitetsu Tokoname destination is stored and restored locally", () => {
+  const storage = memoryStorage();
+  assert.equal(saveDestinationStation("ta3", storage), "TA03");
+  assert.equal(loadDestinationStation(storage), "TA03");
 });

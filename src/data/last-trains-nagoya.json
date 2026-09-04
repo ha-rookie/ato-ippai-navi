@@ -110,6 +110,12 @@
       "publisher": "名古屋鉄道",
       "checkedAt": "2026-09-04",
       "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
+    },
+    {
+      "id": "meitetsu-tokoname-official-direct-timetable",
+      "publisher": "名古屋鉄道",
+      "checkedAt": "2026-09-05",
+      "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
     }
   ],
   "origins": {
@@ -6638,6 +6644,201 @@
             "status": "verified",
             "sourceIds": [
               "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "TA01": {
+      "operator": "meitetsu",
+      "line": "tokoname",
+      "officialStationCode": "TA01",
+      "name": "豊田本町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "TA01"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "23:54",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "23:54",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "TA02": {
+      "operator": "meitetsu",
+      "line": "tokoname",
+      "officialStationCode": "TA02",
+      "name": "道徳",
+      "city": "名古屋市",
+      "stationCodes": [
+        "TA02"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "23:55",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "23:55",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "TA03": {
+      "operator": "meitetsu",
+      "line": "tokoname",
+      "officialStationCode": "TA03",
+      "name": "大江",
+      "city": "名古屋市",
+      "stationCodes": [
+        "TA03"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": "00:10",
+            "routeSummary": "名鉄名古屋本線→常滑線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "知多半田",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": "00:10",
+            "routeSummary": "名鉄名古屋本線→常滑線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "知多半田",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "TA04": {
+      "operator": "meitetsu",
+      "line": "tokoname",
+      "officialStationCode": "TA04",
+      "name": "大同町",
+      "city": "名古屋市",
+      "stationCodes": [
+        "TA04"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "00:00",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "00:00",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "TA05": {
+      "operator": "meitetsu",
+      "line": "tokoname",
+      "officialStationCode": "TA05",
+      "name": "柴田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "TA05"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "00:01",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:43",
+            "lastArrival": "00:01",
+            "routeSummary": "名鉄名古屋本線→常滑線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "太田川",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-tokoname-official-direct-timetable"
             ]
           }
         }

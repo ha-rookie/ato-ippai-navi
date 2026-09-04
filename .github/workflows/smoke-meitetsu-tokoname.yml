@@ -1,0 +1,90 @@
+name: Smoke Meitetsu Tokoname Production
+
+on:
+  workflow_run:
+    workflows: ["Deploy Worker to Cloudflare"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify deployed build and TA03 boundary
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+          EXPECTED_BUILD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl -fsS "$BASE_URL/health" -o /tmp/health.json
+          cat /tmp/health.json
+
+          EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
+          import json
+          import os
+
+          with open('/tmp/health.json', encoding='utf-8') as f:
+              health = json.load(f)
+
+          assert health.get('ok') is True, health
+          assert health.get('service') == 'ato-ippai-api-poc', health
+          assert health.get('buildSha') == os.environ['EXPECTED_BUILD_SHA'], health
+          print('Meitetsu Tokoname smoke build SHA: OK')
+          PY
+
+          cat > /tmp/ta03-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "TA03",
+            "offsetMinutes": [0, 30],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          curl -fsS \
+            -H "content-type: application/json" \
+            --data @/tmp/ta03-boundary-request.json \
+            "$BASE_URL/api/last-train-boundary" \
+            -o /tmp/ta03-boundary.json
+
+          cat /tmp/ta03-boundary.json
+
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/ta03-boundary.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          scenarios = data['scenarios']
+
+          assert data['routeFound'] is True, data
+          assert data['dataSource'] == 'internal_last_train_json', data
+          assert data['destination']['code'] == 'TA03', data
+          assert data['destination']['name'] == '大江', data
+          assert set(data['walkOptions']) == {'nagoya'}, data['walkOptions']
+
+          assert scenarios[0]['canReachDestination'] is True, scenarios
+          assert scenarios[0]['recommendedOriginId'] == 'nagoya', scenarios
+          assert scenarios[0]['lastDeparture'] == '23:59', scenarios
+          assert scenarios[0]['lastArrival'] == '00:10', scenarios
+          assert scenarios[0]['routeSummary'] == '名鉄名古屋本線→常滑線 急行 直通', scenarios
+
+          assert scenarios[1]['canReachDestination'] is False, scenarios
+
+          print('Meitetsu Tokoname TA03 production smoke: OK')
+          PY

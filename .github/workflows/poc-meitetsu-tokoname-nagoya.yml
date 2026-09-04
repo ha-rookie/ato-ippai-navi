@@ -1,4 +1,4 @@
-name: PoC Meitetsu Tokoname Nagoya
+name: Verify Meitetsu Tokoname Nagoya
 
 on:
   workflow_dispatch:
@@ -7,12 +7,13 @@ on:
     paths:
       - '.github/workflows/poc-meitetsu-tokoname-nagoya.yml'
       - 'scripts/poc-meitetsu-tokoname-nagoya.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -28,13 +29,10 @@ jobs:
           from zoneinfo import ZoneInfo
 
           today = datetime.now(ZoneInfo('Asia/Tokyo')).date()
-
           weekday = today
           while weekday.weekday() >= 5:
               weekday += timedelta(days=1)
-
           saturday = today + timedelta(days=(5 - today.weekday()) % 7)
-
           print(f'MEITETSU_WEEKDAY_DATE={weekday.isoformat()}')
           print(f'MEITETSU_HOLIDAY_DATE={saturday.isoformat()}')
           PY
@@ -43,7 +41,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
           COOKIE_JAR=/tmp/meitetsu-tokoname-cookies.txt
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
@@ -82,16 +79,16 @@ jobs:
               "/tmp/meitetsu-tokoname-${code}-saturday_holiday.html"
           done
 
-      - name: Generate TA01-TA05 direct last-train diagnostics
+      - name: Generate official TA01-TA05 boundaries
         run: python3 scripts/poc-meitetsu-tokoname-nagoya.py
 
-      - name: Validate generated PoC
+      - name: Compare official boundaries with production JSON
         shell: bash
         run: |
           python3 - <<'PY'
           import json
 
-          expected = {
+          nodes = {
               'TA01': ('豊田本町', '00008244'),
               'TA02': ('道徳', '00006970'),
               'TA03': ('大江', '00005590'),
@@ -100,60 +97,68 @@ jobs:
           }
 
           with open('/tmp/meitetsu-tokoname-last-trains.json', encoding='utf-8') as f:
-              data = json.load(f)
+              official = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
 
-          assert data['origin'] == {
+          assert official['origin'] == {
               'code': 'NH36', 'name': '名鉄名古屋', 'nodeId': '00004372'
           }
-          assert set(data['destinations']) == set(expected)
 
-          for code, (name, node_id) in expected.items():
-              destination = data['destinations'][code]
-              assert destination['name'] == name, code
-              assert destination['officialStationCode'] == code, code
-              assert destination['officialNodeId'] == node_id, code
+          for code, (name, node_id) in nodes.items():
+              generated = official['destinations'][code]
+              stored = production['destinations'][code]
+              assert generated['name'] == name, code
+              assert generated['officialNodeId'] == node_id, code
+              assert stored['name'] == name, code
+              assert stored['operator'] == 'meitetsu', code
+              assert stored['line'] == 'tokoname', code
+              assert stored['officialStationCode'] == code, code
 
               for day_type in ('weekday', 'saturday_holiday'):
-                  route = destination['routes'][day_type]
-                  assert route['lastDeparture'], (code, day_type)
-                  assert route['lastArrival'], (code, day_type)
-                  assert route['routeNames'], (code, day_type)
-                  assert route['trainClasses'], (code, day_type)
-                  assert route['trainTerminal'], (code, day_type)
-                  assert route['parser'] == 'time-detail-html-generic-route'
+                  g = generated['routes'][day_type]
+                  p = stored['routes']['nagoya'][day_type]
+                  assert len(g['routeNames']) == 1, (code, day_type, g['routeNames'])
+                  assert g['routeNames'][0].startswith('名古屋本線('), (code, day_type, g)
+                  assert len(g['trainClasses']) == 1, (code, day_type, g['trainClasses'])
+                  train_class = g['trainClasses'][0]
+                  assert p['lastDeparture'] == g['lastDeparture'], (code, day_type)
+                  assert p['lastArrival'] == g['lastArrival'], (code, day_type)
+                  assert p['trainClass'] == train_class, (code, day_type)
+                  assert p['trainTerminal'] == g['trainTerminal'], (code, day_type)
+                  assert p['routeSummary'] == f'名鉄名古屋本線→常滑線 {train_class} 直通', (code, day_type)
+                  assert p['transfers'] == 0, (code, day_type)
+                  assert p['status'] == 'verified', (code, day_type)
+                  assert p['sourceIds'] == ['meitetsu-tokoname-official-direct-timetable'], (code, day_type)
 
-          print('Meitetsu Tokoname generated PoC validation: OK')
+          print('Meitetsu Tokoname official-source production comparison: OK')
           PY
 
-      - name: Show route structure and boundary summary
+      - name: Show boundary summary
         if: always()
         shell: bash
         run: |
           if [ -f /tmp/meitetsu-tokoname-last-trains.json ]; then
             python3 - <<'PY'
           import json
-
           with open('/tmp/meitetsu-tokoname-last-trains.json', encoding='utf-8') as f:
               data = json.load(f)
-
           for code, destination in data['destinations'].items():
-              print(f'[{code}] {destination["name"]}')
-              for day_type in ('weekday', 'saturday_holiday'):
-                  route = destination['routes'][day_type]
-                  print(
-                      f'  {day_type}: {route["lastDeparture"]}->{route["lastArrival"]} '
-                      f'routes={route["routeNames"]} classes={route["trainClasses"]} '
-                      f'terminal={route["trainTerminal"]}'
-                  )
-                  print(f'    text={route["plainText"]}')
+              w = destination['routes']['weekday']
+              h = destination['routes']['saturday_holiday']
+              print(
+                  f'{code} {destination["name"]}: '
+                  f'weekday {w["lastDeparture"]}->{w["lastArrival"]} {w["trainClasses"]} {w["trainTerminal"]} / '
+                  f'holiday {h["lastDeparture"]}->{h["lastArrival"]} {h["trainClasses"]} {h["trainTerminal"]}'
+              )
           PY
           fi
 
-      - name: Upload PoC artifacts
+      - name: Upload verification artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: meitetsu-tokoname-nagoya-poc
+          name: meitetsu-tokoname-nagoya-official
           if-no-files-found: warn
           path: |
             /tmp/meitetsu-tokoname-top.html
