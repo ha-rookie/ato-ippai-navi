@@ -1,0 +1,171 @@
+name: PoC Meitetsu Main Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meitetsu-main-nagoya.yml'
+      - 'scripts/poc-meitetsu-main-nagoya.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Meitetsu sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+          COOKIE_JAR=/tmp/meitetsu-cookies.txt
+          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
+
+          fetch() {
+            local url="$1"
+            local output="$2"
+            echo "GET $url"
+            curl --fail --silent --show-error --location --compressed \
+              --retry 2 --retry-delay 1 \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer 'https://www.meitetsu.co.jp/' \
+              --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
+              "$url" -o "$output"
+            test -s "$output"
+          }
+
+          # Browser-like session bootstrap and secondary origin diagnostic.
+          fetch \
+            "$BASE/map/Top?window=transfer" \
+            /tmp/meitetsu-direct-top.html
+
+          fetch \
+            "$BASE/diagram/TrainDiagram?direction=up&linkId=00000885&rule=c&startId=00004372" \
+            /tmp/meitetsu-nagoya-main-east.html
+
+          declare -A NODES=(
+            [NH24]=00006039
+            [NH25]=00008842
+            [NH26]=00002805
+            [NH27]=00008608
+            [NH28]=00008474
+            [NH29]=00008447
+            [NH30]=00002879
+            [NH31]=00002182
+            [NH32]=00008437
+            [NH33]=00004438
+            [NH34]=00001879
+            [NH35]=00000095
+            [NH37]=00000654
+            [NH38]=00006826
+          )
+
+          declare -A DATES=(
+            [weekday]=2026-09-04
+            [saturday_holiday]=2026-09-05
+          )
+
+          for code in NH24 NH25 NH26 NH27 NH28 NH29 NH30 NH31 NH32 NH33 NH34 NH35 NH37 NH38; do
+            for day_type in weekday saturday_holiday; do
+              fetch \
+                "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=${NODES[$code]}&snode=00004372" \
+                "/tmp/meitetsu-direct-${code}-${day_type}.html"
+            done
+          done
+
+      - name: Generate NH24-NH38 direct last-train boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/poc-meitetsu-main-nagoya.py
+
+      - name: Validate generated PoC
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/meitetsu-main-last-trains.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          expected = {
+              'NH24': '中京競馬場前', 'NH25': '有松', 'NH26': '左京山',
+              'NH27': '鳴海', 'NH28': '本星崎', 'NH29': '本笠寺',
+              'NH30': '桜', 'NH31': '呼続', 'NH32': '堀田',
+              'NH33': '神宮前', 'NH34': '金山', 'NH35': '山王',
+              'NH36': '名鉄名古屋', 'NH37': '栄生', 'NH38': '東枇杷島',
+          }
+          assert set(data['destinations']) == set(expected)
+          assert data['destinations']['NH36']['walkHome'] is True
+          assert data['destinations']['NH36']['routes'] == {}
+
+          for code, name in expected.items():
+              destination = data['destinations'][code]
+              assert destination['name'] == name, code
+              assert destination['officialStationCode'] == code, code
+              assert len(destination['officialNodeId']) == 8, code
+              if code == 'NH36':
+                  continue
+              for day_type in ('weekday', 'saturday_holiday'):
+                  route = destination['routes'][day_type]
+                  assert route['lastDeparture'], (code, day_type)
+                  assert route['lastArrival'], (code, day_type)
+                  assert route['trainClass'], (code, day_type)
+                  assert route['trainTerminal'], (code, day_type)
+
+          # Representative safety guards proven by official direct pages.
+          assert data['destinations']['NH27']['routes']['weekday']['lastDeparture'] == '00:01'
+          assert data['destinations']['NH27']['routes']['weekday']['lastArrival'] == '00:21'
+          assert data['destinations']['NH27']['routes']['weekday']['trainTerminal'] == '鳴海'
+          print('Meitetsu Main Line NH24-NH38 generated PoC validation: OK')
+          PY
+
+      - name: Show boundary summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/meitetsu-main-last-trains.json ]; then
+            python3 - <<'PY'
+          import json
+          with open('/tmp/meitetsu-main-last-trains.json', encoding='utf-8') as f:
+              data = json.load(f)
+          for code, destination in data['destinations'].items():
+              if code == 'NH36':
+                  print(f"{code} {destination['name']}: walk-home")
+                  continue
+              weekday = destination['routes']['weekday']
+              holiday = destination['routes']['saturday_holiday']
+              print(
+                  f"{code} {destination['name']}: "
+                  f"weekday {weekday['lastDeparture']}->{weekday['lastArrival']} "
+                  f"{weekday['trainClass']} {weekday['trainTerminal']} / "
+                  f"holiday {holiday['lastDeparture']}->{holiday['lastArrival']} "
+                  f"{holiday['trainClass']} {holiday['trainTerminal']}"
+              )
+          PY
+          fi
+
+      - name: Upload PoC artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meitetsu-main-nagoya-poc
+          if-no-files-found: warn
+          path: |
+            /tmp/meitetsu-direct-top.html
+            /tmp/meitetsu-nagoya-main-east.html
+            /tmp/meitetsu-direct-*.html
+            /tmp/meitetsu-main-node-discovery.json
+            /tmp/meitetsu-main-origin-diagnostics.json
+            /tmp/meitetsu-main-last-trains.json
+            /tmp/meitetsu-direct-*-diagnostics.json
