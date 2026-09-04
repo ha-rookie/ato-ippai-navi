@@ -23,6 +23,9 @@ function memoryStorage() {
   };
 }
 
+const DESTINATION_ERROR_PATTERN =
+  /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, or JR-CF01-JR-CF06/;
+
 test("destination station accepts supported subway line codes", () => {
   assert.equal(normalizeDestinationStation("h1"), "H01");
   assert.equal(normalizeDestinationStation("H22"), "H22");
@@ -45,46 +48,24 @@ test("destination station accepts supported subway line codes", () => {
   assert.equal(normalizeDestinationStation("jr-cj0"), "JR-CJ00");
   assert.equal(normalizeDestinationStation("JR-CJ2"), "JR-CJ02");
 
-  assert.throws(
-    () => normalizeDestinationStation("H23"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("T21"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("M29"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("E08"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("S22"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("K02"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("ST13"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("AN12"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("KT-E08"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
-  assert.throws(
-    () => normalizeDestinationStation("KT01"),
-    /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, or JR-CJ00-JR-CJ02/
-  );
+  for (const invalid of [
+    "H23",
+    "T21",
+    "M29",
+    "E08",
+    "S22",
+    "K02",
+    "ST13",
+    "AN12",
+    "KT-E08",
+    "KT01"
+  ]) {
+    assert.throws(
+      () => normalizeDestinationStation(invalid),
+      DESTINATION_ERROR_PATTERN
+    );
+  }
+
   assert.throws(
     () => normalizeDestinationStation("JR-CJ03"),
     /JR-CJ00-JR-CJ02/
@@ -136,7 +117,6 @@ test("invalid stored destination is ignored", () => {
 
   assert.equal(loadDestinationStation(storage), null);
 });
-
 
 test("destination station accepts JR Chuo namespaced station codes", () => {
   assert.equal(normalizeDestinationStation("jr-cf1"), "JR-CF01");
