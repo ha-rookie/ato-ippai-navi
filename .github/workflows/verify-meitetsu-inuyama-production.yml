@@ -98,10 +98,14 @@ jobs:
               generated = official['destinations'][code]
               stored = production['destinations'][code]
 
+              # Node IDs are acquisition metadata, not runtime destination data.
+              # Fail closed by checking the official-source generator mapping itself.
+              assert generated['officialNodeId'] == node_id, code
+              assert generated['officialStationCode'] == code, code
+
               assert stored['operator'] == 'meitetsu', code
               assert stored['line'] == 'inuyama', code
               assert stored['officialStationCode'] == code, code
-              assert stored['officialNodeId'] == node_id, code
               assert stored['name'] == generated['name'], code
               assert stored['routes'].keys() == {'nagoya'}, code
 
