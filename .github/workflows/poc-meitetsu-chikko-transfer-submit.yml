@@ -1,0 +1,106 @@
+name: PoC Meitetsu Chikko Transfer Submit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meitetsu-chikko-transfer-submit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Submit exact official transfer-search form
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+          COOKIE=/tmp/meitetsu-chikko-submit-cookies.txt
+          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
+
+          curl --fail --silent --show-error --location --compressed \
+            --user-agent "$UA" \
+            --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+            --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+            --referer 'https://www.meitetsu.co.jp/' \
+            --cookie "$COOKIE" --cookie-jar "$COOKIE" \
+            "$BASE/map/Top?window=transfer" -o /tmp/top.html
+
+          for spec in 'weekday 2026/9 07 19 47' 'holiday 2026/9 05 17 23'; do
+            read -r label month day hour minute <<< "$spec"
+            output="/tmp/solver-${label}.html"
+            headers="/tmp/solver-${label}.headers"
+
+            set +e
+            status=$(curl --silent --show-error --location --compressed \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer "$BASE/transfer/TransferSearchSelect" \
+              --cookie "$COOKIE" --cookie-jar "$COOKIE" \
+              --dump-header "$headers" \
+              --get "$BASE/transfer/TransferSearchSelect?" \
+              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)' \
+              --data-urlencode 'orvName=' \
+              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)' \
+              --data-urlencode 'dnvName=' \
+              --data-urlencode "month=$month" \
+              --data-urlencode "day=$day" \
+              --data-urlencode "hour=$hour" \
+              --data-urlencode "minute=$minute" \
+              --data-urlencode 'basis=0' \
+              --data-urlencode 'sort=2' \
+              --data-urlencode 'unuse=' \
+              --data-urlencode 'wspeed=standard' \
+              --data-urlencode 'method=1' \
+              --output "$output" \
+              --write-out '%{http_code}')
+            rc=$?
+            set -e
+
+            echo "$label curl_rc=$rc http=$status"
+            echo '--- headers ---'
+            cat "$headers" || true
+            echo '--- body summary ---'
+            python3 - "$output" <<'PY'
+          import html, re, sys
+          from pathlib import Path
+          p=Path(sys.argv[1])
+          if not p.exists():
+              print('no body file')
+              raise SystemExit(0)
+          raw=p.read_bytes()
+          text=None
+          for enc in ('utf-8','cp932','shift_jis'):
+              try:
+                  text=raw.decode(enc); break
+              except UnicodeDecodeError: pass
+          if text is None: text=raw.decode('utf-8','replace')
+          plain=re.sub(r'<[^>]+>',' ',text)
+          plain=re.sub(r'\s+',' ',html.unescape(plain)).strip()
+          print(plain[:5000])
+          print('contains 名鉄名古屋', '名鉄名古屋' in plain)
+          print('contains 東名古屋港', '東名古屋港' in plain)
+          print('contains 大江', '大江' in plain)
+          print('contains 乗換:1回', '乗換:1回' in plain or '乗換：1回' in plain)
+          print('contains 到着', '到着' in plain)
+          print('title', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:3])
+          PY
+          done
+
+      - name: Upload submit diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meitetsu-chikko-transfer-submit
+          path: |
+            /tmp/solver-*.html
+            /tmp/solver-*.headers
