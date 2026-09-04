@@ -72,7 +72,7 @@ def assert_origin_timetable(path: Path) -> None:
         if token not in text:
             raise AssertionError(f"origin timetable missing {token}: {path}")
 
-    # Current official timetable guard rails.  If these move, stop and review.
+    # Current official timetable guard rails. If these move, stop and review.
     for token in ("23", "57", "00", "01", "06"):
         if token not in text:
             raise AssertionError(f"late-night anchor missing {token}: {path}")
@@ -81,10 +81,11 @@ def assert_origin_timetable(path: Path) -> None:
 def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, str]:
     text = plain(decode(path))
     if origin not in text or destination not in text or "乗換なし時刻表" not in text:
+        print(f"==== unexpected direct page head: {path} ====", file=sys.stderr)
+        print(text[:3000], file=sys.stderr)
         raise AssertionError(f"unexpected direct timetable page: {path}")
 
-    # Extract all direct services from rendered/plain text.  The final match is
-    # the candidate final train for the requested service day.
+    # Rendered/plain order is: HH:MM 発 HH:MM 着 ... line(class) terminal.
     pattern = re.compile(
         r"(?P<dep>\d{2}:\d{2})\s*発\s*"
         r"(?P<arr>\d{2}:\d{2})\s*着.*?"
@@ -92,7 +93,6 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, st
     )
     matches = list(pattern.finditer(text))
     if not matches:
-        # Emit useful tail in Actions logs instead of silently guessing.
         print(f"==== direct plain tail: {path} ====", file=sys.stderr)
         print(text[-5000:], file=sys.stderr)
         raise AssertionError(f"no direct service rows parsed: {path}")
@@ -114,26 +114,27 @@ def main() -> None:
 
     top = decode(top_path)
     top_text = plain(top)
-    for code, name in STATIONS.items():
-        if name not in top_text:
-            raise AssertionError(f"station missing from official direct-timetable top: {code} {name}")
 
+    # The search top currently renders station candidates dynamically in some
+    # sessions. Do not make its static HTML a production dependency. Keep it as
+    # a diagnostic source and learn which opaque node IDs, if any, are exposed.
     discovery: dict[str, dict[str, object]] = {}
     for code, name in STATIONS.items():
         candidates = find_node_candidates(top, name)
-        discovery[code] = {"name": name, "nodeCandidates": candidates}
-        known = KNOWN_NODE_IDS.get(code)
-        if known and known not in candidates:
-            print(
-                f"NOTE: {code} known node {known} not discovered near station name; "
-                f"candidates={candidates}",
-                file=sys.stderr,
-            )
+        discovery[code] = {
+            "name": name,
+            "namePresentInStaticTop": name in top_text,
+            "nodeCandidates": candidates,
+            "knownNodeId": KNOWN_NODE_IDS.get(code),
+        }
 
     Path("/tmp/meitetsu-main-node-discovery.json").write_text(
         json.dumps(discovery, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    print("Static Top diagnostics:")
+    print(json.dumps(discovery, ensure_ascii=False, indent=2))
 
     assert_origin_timetable(origin_path)
 
