@@ -104,6 +104,12 @@
       "publisher": "東海旅客鉄道",
       "revision": "2026-03-14",
       "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_w_u.pdf"
+    },
+    {
+      "id": "meitetsu-main-official-direct-timetable",
+      "publisher": "名古屋鉄道",
+      "checkedAt": "2026-09-04",
+      "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
     }
   ],
   "origins": {
@@ -160,7 +166,8 @@
         "KT-E01",
         "JR-CJ00",
         "JR-CF01",
-        "JR-CA68"
+        "JR-CA68",
+        "NH36"
       ],
       "walkDestination": "名古屋駅 愛知県名古屋市",
       "enabled": true
@@ -6088,6 +6095,549 @@
             "status": "verified",
             "sourceIds": [
               "jr-central-tokaido-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH24": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH24",
+      "name": "中京競馬場前",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH24"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:49",
+            "lastArrival": "00:08",
+            "routeSummary": "名鉄名古屋本線 準急 直通",
+            "trainClass": "準急",
+            "trainTerminal": "豊明",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:49",
+            "lastArrival": "00:08",
+            "routeSummary": "名鉄名古屋本線 準急 直通",
+            "trainClass": "準急",
+            "trainTerminal": "豊明",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH25": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH25",
+      "name": "有松",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH25"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:49",
+            "lastArrival": "00:06",
+            "routeSummary": "名鉄名古屋本線 準急 直通",
+            "trainClass": "準急",
+            "trainTerminal": "豊明",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:49",
+            "lastArrival": "00:06",
+            "routeSummary": "名鉄名古屋本線 準急 直通",
+            "trainClass": "準急",
+            "trainTerminal": "豊明",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH26": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH26",
+      "name": "左京山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH26"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:21",
+            "lastArrival": "23:50",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "新安城",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:21",
+            "lastArrival": "23:50",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "新安城",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH27": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH27",
+      "name": "鳴海",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH27"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:21",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:21",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH28": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH28",
+      "name": "本星崎",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH28"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:18",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:18",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH29": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH29",
+      "name": "本笠寺",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH29"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:16",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:16",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH30": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH30",
+      "name": "桜",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH30"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:15",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:15",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH31": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH31",
+      "name": "呼続",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH31"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:13",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:13",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH32": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH32",
+      "name": "堀田",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH32"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:11",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:11",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH33": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH33",
+      "name": "神宮前",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH33"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:09",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:09",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH34": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH34",
+      "name": "金山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH34"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:06",
+            "lastArrival": "00:10",
+            "routeSummary": "名鉄名古屋本線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "金山（愛知県）",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:06",
+            "lastArrival": "00:10",
+            "routeSummary": "名鉄名古屋本線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "金山（愛知県）",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH35": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH35",
+      "name": "山王",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH35"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:03",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:03",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "鳴海",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH36": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH36",
+      "name": "名鉄名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH36"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "NH37": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH37",
+      "name": "栄生",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH37"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:03",
+            "routeSummary": "名鉄名古屋本線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "津島",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:01",
+            "lastArrival": "00:03",
+            "routeSummary": "名鉄名古屋本線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "津島",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "NH38": {
+      "operator": "meitetsu",
+      "officialStationCode": "NH38",
+      "name": "東枇杷島",
+      "city": "名古屋市",
+      "stationCodes": [
+        "NH38"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:50",
+            "lastArrival": "23:54",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "須ケ口",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:50",
+            "lastArrival": "23:54",
+            "routeSummary": "名鉄名古屋本線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "須ケ口",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-main-official-direct-timetable"
             ]
           }
         }
