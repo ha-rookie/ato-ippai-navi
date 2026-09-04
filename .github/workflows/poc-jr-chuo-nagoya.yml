@@ -60,6 +60,18 @@ jobs:
           test -s /tmp/jr-chuo-nagoya-weekday.txt
           test -s /tmp/jr-chuo-nagoya-holiday.txt
 
+      - name: Inspect late-night text layout
+        shell: bash
+        run: |
+          echo '--- weekday late-night extract ---'
+          grep -n -E '高蔵寺|^[[:space:]]*0([[:space:]]|$)' /tmp/jr-chuo-nagoya-weekday.txt | tail -30 || true
+          echo '--- weekday tail ---'
+          tail -45 /tmp/jr-chuo-nagoya-weekday.txt
+          echo '--- holiday late-night extract ---'
+          grep -n -E '高蔵寺|^[[:space:]]*0([[:space:]]|$)' /tmp/jr-chuo-nagoya-holiday.txt | tail -30 || true
+          echo '--- holiday tail ---'
+          tail -45 /tmp/jr-chuo-nagoya-holiday.txt
+
       - name: Generate JR-CF01-JR-CF06 boundaries
         shell: bash
         run: |
@@ -140,6 +152,7 @@ jobs:
           EOF
 
       - name: Upload official PoC artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jr-chuo-nagoya-poc
