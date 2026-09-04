@@ -108,10 +108,12 @@ def verify_timetable(path: Path, expected_day_label: str) -> None:
             f"Unexpected after-midnight departure in {path}: {hour0_timetable_column!r}"
         )
 
-    # Verify city-station sequence inside the official stop-guide area.
+    # The left timetable can also contain station names as train destinations
+    # (for example Kasadera). Use the final occurrence of each name after the
+    # stop-guide heading so the comparison targets the right-side station list.
     stop_guide = text.split("停車駅のご案内", 1)[1]
     names = [name for _internal, _official, name in STATIONS] + ["共和"]
-    positions = [stop_guide.find(name) for name in names]
+    positions = [stop_guide.rfind(name) for name in names]
     if any(position < 0 for position in positions):
         raise RuntimeError(
             f"Nagoya-city Tokaido station list missing/changed in {path}: {positions}"
