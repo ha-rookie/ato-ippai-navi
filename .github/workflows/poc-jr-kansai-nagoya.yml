@@ -1,0 +1,117 @@
+name: PoC JR Kansai Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-jr-kansai-nagoya.yml'
+      - 'scripts/generate-jr-kansai-nagoya-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official JR Central sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TIMETABLE_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/kansai_Nagoya_B_wh_d.pdf'
+          NUMBERING_URL='https://global.jr-central.co.jp/en/company/other_information/2018/_pdf/2018_13.pdf'
+
+          curl -fsSL "$TIMETABLE_URL" -o /tmp/jr-kansai-nagoya.pdf
+          curl -fsSL "$NUMBERING_URL" -o /tmp/jr-station-numbering.pdf
+
+          test -s /tmp/jr-kansai-nagoya.pdf
+          test -s /tmp/jr-station-numbering.pdf
+
+      - name: Convert official PDFs to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/jr-kansai-nagoya.pdf /tmp/jr-kansai-nagoya.txt
+          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt
+
+          test -s /tmp/jr-kansai-nagoya.txt
+          test -s /tmp/jr-station-numbering.txt
+
+      - name: Inspect Nagoya late-night timetable
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path('/tmp/jr-kansai-nagoya.txt').read_text(encoding='utf-8')
+          normalized = re.sub(r'[ \t]+', ' ', text)
+
+          required = ['関西線時刻表', '名古屋', '八田', '春田', '四日市', '普通']
+          for token in required:
+              assert token in text, f'missing timetable token: {token}'
+
+          print('==== JR Kansai Nagoya lines containing 23 / 57 / 四日市 ====')
+          for line in text.splitlines():
+              if re.search(r'(^|\s)23(\s|$)', line) or '57' in line or '四日市' in line:
+                  print(line)
+
+          # Weak first-pass anchor. The exact pdftotext layout is intentionally
+          # inspected in this PoC before writing the fail-closed generator.
+          assert '57' in normalized
+          assert '四日市' in normalized
+          assert '普通' in normalized
+
+          print('JR Kansai Nagoya timetable first-pass inspection: OK')
+          PY
+
+      - name: Inspect official station numbering
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          text = Path('/tmp/jr-station-numbering.txt').read_text(encoding='utf-8')
+
+          print('==== JR Central station-numbering CJ excerpts ====')
+          lines = text.splitlines()
+          for index, line in enumerate(lines):
+              if 'CJ' in line or 'Kansai' in line or 'Nagoya' in line or 'Hatta' in line or 'Haruta' in line:
+                  start = max(0, index - 1)
+                  end = min(len(lines), index + 2)
+                  for excerpt in lines[start:end]:
+                      print(excerpt)
+                  print('---')
+
+          assert 'CJ' in text
+          assert 'Nagoya' in text
+          print('JR Central station-numbering first-pass inspection: OK')
+          PY
+
+      - name: Upload official PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-kansai-nagoya-poc
+          path: |
+            /tmp/jr-kansai-nagoya.txt
+            /tmp/jr-station-numbering.txt
+          if-no-files-found: error
+          retention-days: 7
