@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -26,8 +27,8 @@ STATIONS = {
 }
 
 DAY_TYPES = {
-    "weekday": "2026-09-04",
-    "saturday_holiday": "2026-09-05",
+    "weekday": os.environ.get("MEITETSU_WEEKDAY_DATE", "2026-09-04"),
+    "saturday_holiday": os.environ.get("MEITETSU_HOLIDAY_DATE", "2026-09-05"),
 }
 
 
@@ -257,7 +258,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Meitetsu Main Line NH24-NH38 destination-specific PoC: OK")
+    print("Meitetsu Main Line NH24-NH38 destination-specific verification: OK")
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 
