@@ -116,6 +116,12 @@
       "publisher": "名古屋鉄道",
       "checkedAt": "2026-09-05",
       "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
+    },
+    {
+      "id": "meitetsu-inuyama-official-direct-timetable",
+      "publisher": "名古屋鉄道",
+      "checkedAt": "2026-09-05",
+      "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
     }
   ],
   "origins": {
@@ -6839,6 +6845,84 @@
             "status": "verified",
             "sourceIds": [
               "meitetsu-tokoname-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "IY02": {
+      "operator": "meitetsu",
+      "line": "inuyama",
+      "officialStationCode": "IY02",
+      "name": "中小田井",
+      "city": "名古屋市",
+      "stationCodes": [
+        "IY02"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:41",
+            "lastArrival": "23:49",
+            "routeSummary": "名鉄名古屋本線→犬山線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "犬山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-inuyama-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:41",
+            "lastArrival": "23:49",
+            "routeSummary": "名鉄名古屋本線→犬山線 普通 直通",
+            "trainClass": "普通",
+            "trainTerminal": "犬山",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-inuyama-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "IY03": {
+      "operator": "meitetsu",
+      "line": "inuyama",
+      "officialStationCode": "IY03",
+      "name": "上小田井",
+      "city": "名古屋市",
+      "stationCodes": [
+        "IY03"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "23:59",
+            "lastArrival": "00:06",
+            "routeSummary": "名鉄名古屋本線→犬山線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "新鵜沼",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-inuyama-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:59",
+            "lastArrival": "00:06",
+            "routeSummary": "名鉄名古屋本線→犬山線 急行 直通",
+            "trainClass": "急行",
+            "trainTerminal": "新鵜沼",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-inuyama-official-direct-timetable"
             ]
           }
         }

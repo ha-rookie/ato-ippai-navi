@@ -947,3 +947,74 @@ test("Meitetsu Tokoname TA03 keeps the 23:59 Chita-Handa express boundary", () =
   assert.equal(result.scenarios[0].routeSummary, "名鉄名古屋本線→常滑線 急行 直通");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+
+test("Meitetsu Inuyama boundaries cover IY02-IY03 from Nagoya hub", () => {
+  const expected = {
+    IY02: ["中小田井", "23:41", "23:49", "普通", "犬山"],
+    IY03: ["上小田井", "23:59", "00:06", "急行", "新鵜沼"]
+  };
+
+  for (const [code, [name, departure, arrival, trainClass, terminal]] of Object.entries(expected)) {
+    const destination = dataset.destinations[code];
+    assert.equal(destination.operator, "meitetsu", code);
+    assert.equal(destination.line, "inuyama", code);
+    assert.equal(destination.officialStationCode, code, code);
+    assert.equal(destination.name, name, code);
+
+    for (const dayType of ["weekday", "saturday_holiday"]) {
+      const route = destination.routes.nagoya[dayType];
+      assert.equal(route.lastDeparture, departure, `${code}/${dayType}`);
+      assert.equal(route.lastArrival, arrival, `${code}/${dayType}`);
+      assert.equal(route.trainClass, trainClass, `${code}/${dayType}`);
+      assert.equal(route.trainTerminal, terminal, `${code}/${dayType}`);
+      assert.equal(route.routeSummary, `名鉄名古屋本線→犬山線 ${trainClass} 直通`, `${code}/${dayType}`);
+      assert.equal(route.transfers, 0, `${code}/${dayType}`);
+      assert.equal(route.status, "verified", `${code}/${dayType}`);
+    }
+  }
+});
+
+test("Meitetsu Inuyama destinations only need Nagoya walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "IY02"), ["nagoya"]);
+  assert.deepEqual(eligibleOriginIds(dataset, "IY03"), ["nagoya"]);
+});
+
+test("Meitetsu Inuyama IY02 keeps the early 23:41 Inuyama local boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:10:00+09:00",
+    dayType: "weekday",
+    destinationCode: "IY02",
+    offsetMinutes: [0, 30],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: { nagoya: { walkMinutes: 8 } }
+  });
+  assert.equal(result.destination.name, "中小田井");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:41");
+  assert.equal(result.scenarios[0].lastArrival, "23:49");
+  assert.equal(result.scenarios[0].routeSummary, "名鉄名古屋本線→犬山線 普通 直通");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+test("Meitetsu Inuyama IY03 keeps the 23:59 Shin-Unuma express boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:30:00+09:00",
+    dayType: "weekday",
+    destinationCode: "IY03",
+    offsetMinutes: [0, 30],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: { nagoya: { walkMinutes: 8 } }
+  });
+  assert.equal(result.destination.name, "上小田井");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:59");
+  assert.equal(result.scenarios[0].lastArrival, "00:06");
+  assert.equal(result.scenarios[0].routeSummary, "名鉄名古屋本線→犬山線 急行 直通");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
