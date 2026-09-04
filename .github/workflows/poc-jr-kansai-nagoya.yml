@@ -1,0 +1,140 @@
+name: PoC JR Kansai Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-jr-kansai-nagoya.yml'
+      - 'scripts/generate-jr-kansai-nagoya-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official JR Central sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TIMETABLE_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/kansai_Nagoya_B_wh_d.pdf'
+          NUMBERING_URL='https://global.jr-central.co.jp/en/info/railwaymap/_pdf/railwaymap.pdf'
+
+          curl -fsSL "$TIMETABLE_URL" -o /tmp/jr-kansai-nagoya.pdf
+          curl -fsSL "$NUMBERING_URL" -o /tmp/jr-station-numbering.pdf
+
+          test -s /tmp/jr-kansai-nagoya.pdf
+          test -s /tmp/jr-station-numbering.pdf
+          pdfinfo /tmp/jr-kansai-nagoya.pdf | grep -q '^Pages:'
+          pdfinfo /tmp/jr-station-numbering.pdf | grep -q '^Pages:'
+
+      - name: Convert official timetable PDF to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/jr-kansai-nagoya.pdf /tmp/jr-kansai-nagoya.txt
+          test -s /tmp/jr-kansai-nagoya.txt
+
+          # The current official railway-map PDF renders station numbers as
+          # graphics and is not reliably machine-readable with pdftotext.
+          # Keep the source PDF as an artifact; CJ00/CJ01/CJ02 are reviewed
+          # static metadata rather than pretending the CI can parse them.
+          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt || true
+
+      - name: Generate JR-CJ00-JR-CJ02 boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-jr-kansai-nagoya-last-trains.py \
+            --timetable /tmp/jr-kansai-nagoya.txt \
+            --output /tmp/jr-kansai-nagoya-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated JR Kansai boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/jr-kansai-nagoya-last-trains.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          expected = {
+              'JR-CJ00': ('CJ00', '名古屋'),
+              'JR-CJ01': ('CJ01', '八田'),
+              'JR-CJ02': ('CJ02', '春田'),
+          }
+
+          assert data['operator'] == {
+              'id': 'jr-central',
+              'name': '東海旅客鉄道',
+          }
+          assert data['line']['code'] == 'CJ'
+          assert data['line']['revision'] == '2026-03-14'
+          assert set(data['destinations']) == set(expected)
+          assert data['destinations']['JR-CJ00']['routes'] == {}
+
+          for code, (official, name) in expected.items():
+              destination = data['destinations'][code]
+              assert destination['operator'] == 'jr-central', code
+              assert destination['officialStationCode'] == official, code
+              assert destination['name'] == name, code
+              assert destination['stationCodes'] == [code], code
+
+              if code == 'JR-CJ00':
+                  continue
+
+              for day_type in ('weekday', 'saturday_holiday'):
+                  route = destination['routes']['nagoya'][day_type]
+                  assert route['lastDeparture'] == '23:57', (code, route)
+                  assert 'lastArrival' not in route, (code, route)
+                  assert route['routeSummary'] == 'JR関西本線 普通 直通', (code, route)
+                  assert route['trainTerminal'] == '四日市', (code, route)
+                  assert route['transfers'] == 0, (code, route)
+                  assert route['status'] == 'verified', (code, route)
+
+          print('Generated JR Kansai JR-CJ00-JR-CJ02 validation: OK')
+          PY
+
+      - name: Record station-numbering verification policy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat <<'EOF'
+          JR Central station numbering source policy:
+          - current official railway-map PDF downloaded successfully
+          - current map is retained as a CI artifact
+          - its station-number graphics are not reliably extractable with pdftotext
+          - CJ00 Nagoya / CJ01 Hatta / CJ02 Haruta are reviewed static metadata
+          - CI does not make a false text-extraction claim for the map
+          EOF
+
+      - name: Upload official PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-kansai-nagoya-poc
+          path: |
+            /tmp/jr-kansai-nagoya.pdf
+            /tmp/jr-kansai-nagoya.txt
+            /tmp/jr-station-numbering.pdf
+            /tmp/jr-station-numbering.txt
+            /tmp/jr-kansai-nagoya-last-trains.json
+          if-no-files-found: error
+          retention-days: 7
