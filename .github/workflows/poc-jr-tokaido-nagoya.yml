@@ -1,0 +1,157 @@
+name: PoC JR Tokaido Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-jr-tokaido-nagoya.yml'
+      - 'scripts/generate-jr-tokaido-nagoya-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official JR Central sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEEKDAY_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_w_u.pdf'
+          HOLIDAY_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_h_u.pdf'
+          NUMBERING_URL='https://global.jr-central.co.jp/en/info/railwaymap/_pdf/railwaymap.pdf'
+
+          curl -fsSL "$WEEKDAY_URL" -o /tmp/jr-tokaido-nagoya-weekday.pdf
+          curl -fsSL "$HOLIDAY_URL" -o /tmp/jr-tokaido-nagoya-holiday.pdf
+          curl -fsSL "$NUMBERING_URL" -o /tmp/jr-station-numbering.pdf
+
+          for file in \
+            /tmp/jr-tokaido-nagoya-weekday.pdf \
+            /tmp/jr-tokaido-nagoya-holiday.pdf \
+            /tmp/jr-station-numbering.pdf
+          do
+            test -s "$file"
+            pdfinfo "$file" | grep -q '^Pages:'
+          done
+
+      - name: Convert official PDFs to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/jr-tokaido-nagoya-weekday.pdf /tmp/jr-tokaido-nagoya-weekday.txt
+          pdftotext -layout /tmp/jr-tokaido-nagoya-holiday.pdf /tmp/jr-tokaido-nagoya-holiday.txt
+          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt || true
+
+          test -s /tmp/jr-tokaido-nagoya-weekday.txt
+          test -s /tmp/jr-tokaido-nagoya-holiday.txt
+
+      - name: Generate JR-CA62-JR-CA68 boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-jr-tokaido-nagoya-last-trains.py \
+            --weekday /tmp/jr-tokaido-nagoya-weekday.txt \
+            --holiday /tmp/jr-tokaido-nagoya-holiday.txt \
+            --output /tmp/jr-tokaido-nagoya-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated JR Tokaido boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/jr-tokaido-nagoya-last-trains.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          expected = {
+              'JR-CA68': ('CA68', '名古屋'),
+              'JR-CA67': ('CA67', '尾頭橋'),
+              'JR-CA66': ('CA66', '金山'),
+              'JR-CA65': ('CA65', '熱田'),
+              'JR-CA64': ('CA64', '笠寺'),
+              'JR-CA63': ('CA63', '大高'),
+              'JR-CA62': ('CA62', '南大高'),
+          }
+
+          assert data['operator'] == {
+              'id': 'jr-central',
+              'name': '東海旅客鉄道',
+          }
+          assert data['line'] == {
+              'code': 'CA',
+              'name': '東海道本線',
+              'revision': '2026-03-14',
+          }
+          assert data['origin']['id'] == 'nagoya'
+          assert data['origin']['stationCode'] == 'JR-CA68'
+          assert set(data['destinations']) == set(expected)
+          assert data['destinations']['JR-CA68']['routes'] == {}
+
+          for code, (official, name) in expected.items():
+              destination = data['destinations'][code]
+              assert destination['operator'] == 'jr-central', code
+              assert destination['officialStationCode'] == official, code
+              assert destination['name'] == name, code
+              assert destination['stationCodes'] == [code], code
+
+              if code == 'JR-CA68':
+                  continue
+
+              for day_type in ('weekday', 'saturday_holiday'):
+                  route = destination['routes']['nagoya'][day_type]
+                  assert route['lastDeparture'] == '23:59', (code, route)
+                  assert route['lastArrival'] is None, (code, route)
+                  assert route['routeSummary'] == 'JR東海道本線 普通 直通', (code, route)
+                  assert route['trainTerminal'] == '岡崎', (code, route)
+                  assert route['transfers'] == 0, (code, route)
+                  assert route['status'] == 'verified', (code, route)
+                  assert route['sourceIds'] == ['jr-central-tokaido-official-timetable']
+
+          print('Generated JR Tokaido JR-CA62-JR-CA68 validation: OK')
+          PY
+
+      - name: Record station-numbering verification policy
+        shell: bash
+        run: |
+          cat <<'EOF'
+          JR Central Tokaido station numbering source policy:
+          - current official railway-map PDF downloaded successfully
+          - current map is retained as a CI artifact
+          - station-number graphics are not reliably extractable with pdftotext
+          - CA62 Minami-Odaka through CA68 Nagoya are reviewed static metadata
+          - CA61 Kyowa and CA69 Biwajima are outside the Nagoya-city scope
+          - CI does not make a false text-extraction claim for the map
+          EOF
+
+      - name: Upload official PoC artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-tokaido-nagoya-poc
+          path: |
+            /tmp/jr-tokaido-nagoya-weekday.pdf
+            /tmp/jr-tokaido-nagoya-weekday.txt
+            /tmp/jr-tokaido-nagoya-holiday.pdf
+            /tmp/jr-tokaido-nagoya-holiday.txt
+            /tmp/jr-station-numbering.pdf
+            /tmp/jr-station-numbering.txt
+            /tmp/jr-tokaido-nagoya-last-trains.json
+          if-no-files-found: error
+          retention-days: 7
