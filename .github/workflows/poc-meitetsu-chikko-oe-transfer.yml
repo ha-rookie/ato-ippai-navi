@@ -36,7 +36,7 @@ jobs:
           print(f'MEITETSU_HOLIDAY_DATE={saturday.isoformat()}')
           PY
 
-      - name: Download official Meitetsu sources
+      - name: Download official Meitetsu timetable sources
         shell: bash
         run: |
           set -euo pipefail
@@ -62,7 +62,7 @@ jobs:
 
           fetch "$BASE/map/Top?window=transfer" /tmp/meitetsu-chikko-top.html
 
-          # Static Oe -> Higashi-Nagoyako timetable. Used to detect irregular-service notices.
+          # Static Oe -> Higashi-Nagoyako timetable. Used only to detect irregular-service notices.
           fetch \
             "$BASE/diagram/TrainDiagram?direction=down&linkId=00000875&startId=00005590" \
             /tmp/meitetsu-chikko-oe-timetable.html
@@ -73,18 +73,81 @@ jobs:
           )
 
           for day_type in weekday saturday_holiday; do
-            # Whole journey. This is intentionally inspected first because CH01 requires Oe transfer.
+            # DepArrTimeList is a no-transfer timetable and is kept as a diagnostic for NH36 -> CH01.
             fetch \
               "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00006856&snode=00004372" \
               "/tmp/meitetsu-chikko-through-${day_type}.html"
 
-            # Transfer leg only.
+            # Transfer leg: Oe -> Higashi-Nagoyako.
             fetch \
               "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00006856&snode=00005590" \
               "/tmp/meitetsu-chikko-shuttle-${day_type}.html"
+
+            # Feeder leg: Meitetsu Nagoya -> Oe.
+            fetch \
+              "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00005590&snode=00004372" \
+              "/tmp/meitetsu-chikko-feeder-${day_type}.html"
           done
 
-      - name: Inspect transfer HTML structure
+      - name: Inspect timetable legs and candidate connections
+        run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
+
+      - name: Query official transfer solver at last shuttle arrival
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+          COOKIE_JAR=/tmp/meitetsu-chikko-cookies.txt
+          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
+
+          for day_type in weekday saturday_holiday; do
+            if [ "$day_type" = weekday ]; then
+              service_date="$MEITETSU_WEEKDAY_DATE"
+            else
+              service_date="$MEITETSU_HOLIDAY_DATE"
+            fi
+
+            read -r hour minute < <(DAY_TYPE="$day_type" python3 - <<'PY'
+          import json, os
+          with open('/tmp/meitetsu-chikko-transfer-poc.json', encoding='utf-8') as f:
+              data = json.load(f)
+          arrival = data['days'][os.environ['DAY_TYPE']]['lastShuttle']['arrival']
+          hour, minute = arrival.split(':')
+          print(hour, minute)
+          PY
+            )
+
+            year_month="${service_date:0:7}"
+            day="${service_date:8:2}"
+            output="/tmp/meitetsu-chikko-solver-${day_type}.html"
+
+            echo "TransferSearchSelect date=$service_date arrival=$hour:$minute"
+            curl --fail --silent --show-error --location --compressed \
+              --retry 2 --retry-delay 1 \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer "$BASE/map/Top?window=transfer" \
+              --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
+              --get "$BASE/transfer/TransferSearchSelect" \
+              --data-urlencode 'basis=1' \
+              --data-urlencode "day=$day" \
+              --data-urlencode 'dnvName=東名古屋港(CH01)' \
+              --data-urlencode "hour=$hour" \
+              --data-urlencode 'method=0' \
+              --data-urlencode "minute=$minute" \
+              --data-urlencode "month=$year_month" \
+              --data-urlencode 'orvName=名鉄名古屋(NH36)' \
+              --data-urlencode 'retFlg=on' \
+              --data-urlencode 'sort=2' \
+              --data-urlencode 'utrexprs=' \
+              --data-urlencode 'wspeed=standard' \
+              -o "$output"
+            test -s "$output"
+          done
+
+      - name: Re-inspect with transfer solver results
         run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
 
       - name: Validate station identity and source shape
@@ -107,16 +170,20 @@ jobs:
           }
           assert data['staticTimetable']['identityOk'] is True
           assert data['staticTimetable']['containsIrregularNotice'] is True
+          assert data['staticTimetable']['containsOperationDateNotice'] is True
 
           for day_type in ('weekday', 'saturday_holiday'):
               day = data['days'][day_type]
               assert day['shuttleServiceCount'] >= 1, day_type
+              assert day['feederServiceCount'] >= 1, day_type
               last = day['lastShuttle']
               assert last['departure'], day_type
               assert last['arrival'], day_type
               assert any(name.startswith('築港線(') for name in last['routeNames']), (day_type, last)
+              assert day['lastFeederBeforeShuttle'] is not None, day_type
               assert day['throughSearch']['identity']['originPresent'] is True
               assert day['throughSearch']['identity']['destinationPresent'] is True
+              assert day['solver'] is not None, day_type
 
           print('Meitetsu Chikko CH01 source-shape validation: OK')
           PY
@@ -131,16 +198,22 @@ jobs:
           with open('/tmp/meitetsu-chikko-transfer-poc.json', encoding='utf-8') as f:
               data = json.load(f)
           print(json.dumps({
-              'staticTimetable': data['staticTimetable'],
+              'staticTimetable': {
+                  'identityOk': data['staticTimetable']['identityOk'],
+                  'containsIrregularNotice': data['staticTimetable']['containsIrregularNotice'],
+                  'containsOperationDateNotice': data['staticTimetable']['containsOperationDateNotice'],
+              },
               'days': {
                   day_type: {
                       'lastShuttle': day['lastShuttle'],
+                      'lastFeederBeforeShuttle': day['lastFeederBeforeShuttle'],
+                      'feederCandidates': day['feederCandidates'],
                       'throughSearch': {
                           'identity': day['throughSearch']['identity'],
                           'timeDetailBlockCount': day['throughSearch']['timeDetailBlockCount'],
                           'parsedRowCount': day['throughSearch']['parsedRowCount'],
-                          'lastRows': day['throughSearch']['rows'][-5:],
-                      }
+                      },
+                      'solver': day['solver'],
                   }
                   for day_type, day in data['days'].items()
               }
