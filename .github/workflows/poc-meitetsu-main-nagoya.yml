@@ -1,4 +1,4 @@
-name: PoC Meitetsu Main Nagoya
+name: Verify Meitetsu Main Nagoya
 
 on:
   workflow_dispatch:
@@ -7,12 +7,13 @@ on:
     paths:
       - '.github/workflows/poc-meitetsu-main-nagoya.yml'
       - 'scripts/poc-meitetsu-main-nagoya.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -20,10 +21,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Resolve representative service dates
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          today = datetime.now(ZoneInfo("Asia/Tokyo")).date()
+
+          weekday = today
+          while weekday.weekday() >= 5:
+              weekday += timedelta(days=1)
+
+          saturday = today + timedelta(days=(5 - today.weekday()) % 7)
+
+          print(f"MEITETSU_WEEKDAY_DATE={weekday.isoformat()}")
+          print(f"MEITETSU_HOLIDAY_DATE={saturday.isoformat()}")
+          PY
+
       - name: Download official Meitetsu sources
         shell: bash
         run: |
           set -euo pipefail
+
+          echo "weekday=$MEITETSU_WEEKDAY_DATE holiday=$MEITETSU_HOLIDAY_DATE"
 
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
           COOKIE_JAR=/tmp/meitetsu-cookies.txt
@@ -44,11 +66,12 @@ jobs:
             test -s "$output"
           }
 
-          # Browser-like session bootstrap and secondary origin diagnostic.
           fetch \
             "$BASE/map/Top?window=transfer" \
             /tmp/meitetsu-direct-top.html
 
+          # NH36 timetable is a secondary diagnostic. On GitHub runners this
+          # endpoint can return the route selector instead of timetable rows.
           fetch \
             "$BASE/diagram/TrainDiagram?direction=up&linkId=00000885&rule=c&startId=00004372" \
             /tmp/meitetsu-nagoya-main-east.html
@@ -70,26 +93,22 @@ jobs:
             [NH38]=00006826
           )
 
-          declare -A DATES=(
-            [weekday]=2026-09-04
-            [saturday_holiday]=2026-09-05
-          )
-
           for code in NH24 NH25 NH26 NH27 NH28 NH29 NH30 NH31 NH32 NH33 NH34 NH35 NH37 NH38; do
-            for day_type in weekday saturday_holiday; do
-              fetch \
-                "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=${NODES[$code]}&snode=00004372" \
-                "/tmp/meitetsu-direct-${code}-${day_type}.html"
-            done
+            fetch \
+              "$BASE/transfer/DepArrTimeList?date=$MEITETSU_WEEKDAY_DATE&gnode=${NODES[$code]}&snode=00004372" \
+              "/tmp/meitetsu-direct-${code}-weekday.html"
+            fetch \
+              "$BASE/transfer/DepArrTimeList?date=$MEITETSU_HOLIDAY_DATE&gnode=${NODES[$code]}&snode=00004372" \
+              "/tmp/meitetsu-direct-${code}-saturday_holiday.html"
           done
 
-      - name: Generate NH24-NH38 direct last-train boundaries
+      - name: Generate official NH24-NH38 boundaries
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/poc-meitetsu-main-nagoya.py
 
-      - name: Validate generated PoC
+      - name: Validate official extraction
         shell: bash
         run: |
           python3 - <<'PY'
@@ -98,22 +117,36 @@ jobs:
           with open('/tmp/meitetsu-main-last-trains.json', encoding='utf-8') as f:
               data = json.load(f)
 
-          expected = {
-              'NH24': '中京競馬場前', 'NH25': '有松', 'NH26': '左京山',
-              'NH27': '鳴海', 'NH28': '本星崎', 'NH29': '本笠寺',
-              'NH30': '桜', 'NH31': '呼続', 'NH32': '堀田',
-              'NH33': '神宮前', 'NH34': '金山', 'NH35': '山王',
-              'NH36': '名鉄名古屋', 'NH37': '栄生', 'NH38': '東枇杷島',
+          expected_nodes = {
+              'NH24': ('中京競馬場前', '00006039'),
+              'NH25': ('有松', '00008842'),
+              'NH26': ('左京山', '00002805'),
+              'NH27': ('鳴海', '00008608'),
+              'NH28': ('本星崎', '00008474'),
+              'NH29': ('本笠寺', '00008447'),
+              'NH30': ('桜', '00002879'),
+              'NH31': ('呼続', '00002182'),
+              'NH32': ('堀田', '00008437'),
+              'NH33': ('神宮前', '00004438'),
+              'NH34': ('金山', '00001879'),
+              'NH35': ('山王', '00000095'),
+              'NH36': ('名鉄名古屋', '00004372'),
+              'NH37': ('栄生', '00000654'),
+              'NH38': ('東枇杷島', '00006826'),
           }
-          assert set(data['destinations']) == set(expected)
+
+          assert set(data['destinations']) == set(expected_nodes)
+          assert data['origin'] == {
+              'code': 'NH36', 'name': '名鉄名古屋', 'nodeId': '00004372'
+          }
           assert data['destinations']['NH36']['walkHome'] is True
           assert data['destinations']['NH36']['routes'] == {}
 
-          for code, name in expected.items():
+          for code, (name, node_id) in expected_nodes.items():
               destination = data['destinations'][code]
               assert destination['name'] == name, code
               assert destination['officialStationCode'] == code, code
-              assert len(destination['officialNodeId']) == 8, code
+              assert destination['officialNodeId'] == node_id, code
               if code == 'NH36':
                   continue
               for day_type in ('weekday', 'saturday_holiday'):
@@ -122,12 +155,60 @@ jobs:
                   assert route['lastArrival'], (code, day_type)
                   assert route['trainClass'], (code, day_type)
                   assert route['trainTerminal'], (code, day_type)
+                  assert route['parser'] == 'time-detail-html', (code, day_type)
 
-          # Representative safety guards proven by official direct pages.
-          assert data['destinations']['NH27']['routes']['weekday']['lastDeparture'] == '00:01'
-          assert data['destinations']['NH27']['routes']['weekday']['lastArrival'] == '00:21'
-          assert data['destinations']['NH27']['routes']['weekday']['trainTerminal'] == '鳴海'
-          print('Meitetsu Main Line NH24-NH38 generated PoC validation: OK')
+          print('Meitetsu Main official extraction validation: OK')
+          PY
+
+      - name: Compare official boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          SOURCE_ID = 'meitetsu-main-official-direct-timetable'
+
+          with open('/tmp/meitetsu-main-last-trains.json', encoding='utf-8') as f:
+              official = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
+
+          source_ids = {item['id'] for item in production['sources']}
+          assert SOURCE_ID in source_ids
+          assert 'NH36' in production['origins']['nagoya']['stationCodes']
+
+          for code, extracted in official['destinations'].items():
+              prod = production['destinations'].get(code)
+              assert prod is not None, f'missing production destination: {code}'
+              assert prod['operator'] == 'meitetsu', code
+              assert prod['officialStationCode'] == code, code
+              assert prod['name'] == extracted['name'], code
+              assert prod['enabled'] is True, code
+
+              if code == 'NH36':
+                  assert prod['routes'] == {}, code
+                  continue
+
+              assert set(prod['routes']) == {'nagoya'}, code
+              for day_type in ('weekday', 'saturday_holiday'):
+                  live = extracted['routes'][day_type]
+                  saved = prod['routes']['nagoya'][day_type]
+
+                  for field in (
+                      'lastDeparture', 'lastArrival', 'trainClass', 'trainTerminal'
+                  ):
+                      assert saved[field] == live[field], (
+                          code, day_type, field, saved[field], live[field]
+                      )
+
+                  assert saved['routeSummary'] == (
+                      f"名鉄名古屋本線 {live['trainClass']} 直通"
+                  ), (code, day_type)
+                  assert saved['transfers'] == 0, (code, day_type)
+                  assert saved['status'] == 'verified', (code, day_type)
+                  assert saved['sourceIds'] == [SOURCE_ID], (code, day_type)
+
+          print('Meitetsu Main production JSON matches official timetable: OK')
           PY
 
       - name: Show boundary summary
@@ -139,6 +220,7 @@ jobs:
           import json
           with open('/tmp/meitetsu-main-last-trains.json', encoding='utf-8') as f:
               data = json.load(f)
+          print('service dates:', data['serviceDates'])
           for code, destination in data['destinations'].items():
               if code == 'NH36':
                   print(f"{code} {destination['name']}: walk-home")
@@ -155,11 +237,11 @@ jobs:
           PY
           fi
 
-      - name: Upload PoC artifacts
+      - name: Upload verification artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: meitetsu-main-nagoya-poc
+          name: meitetsu-main-nagoya-official
           if-no-files-found: warn
           path: |
             /tmp/meitetsu-direct-top.html

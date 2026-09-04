@@ -797,3 +797,98 @@ test("JR Tokaido JR-CA62 uses the 23:59 Okazaki local boundary", () => {
   assert.equal(result.scenarios[0].routeSummary, "JR東海道本線 普通 直通");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+
+test("Meitetsu Main boundaries cover NH24-NH38 from Nagoya hub", () => {
+  const expected = {
+    NH24: ["中京競馬場前", "23:49", "00:08", "準急", "豊明"],
+    NH25: ["有松", "23:49", "00:06", "準急", "豊明"],
+    NH26: ["左京山", "23:21", "23:50", "普通", "新安城"],
+    NH27: ["鳴海", "00:01", "00:21", "普通", "鳴海"],
+    NH28: ["本星崎", "00:01", "00:18", "普通", "鳴海"],
+    NH29: ["本笠寺", "00:01", "00:16", "普通", "鳴海"],
+    NH30: ["桜", "00:01", "00:15", "普通", "鳴海"],
+    NH31: ["呼続", "00:01", "00:13", "普通", "鳴海"],
+    NH32: ["堀田", "00:01", "00:11", "普通", "鳴海"],
+    NH33: ["神宮前", "00:01", "00:09", "普通", "鳴海"],
+    NH34: ["金山", "00:06", "00:10", "急行", "金山（愛知県）"],
+    NH35: ["山王", "00:01", "00:03", "普通", "鳴海"],
+    NH37: ["栄生", "00:01", "00:03", "急行", "津島"],
+    NH38: ["東枇杷島", "23:50", "23:54", "普通", "須ケ口"]
+  };
+
+  assert.equal(
+    Object.keys(dataset.destinations).filter((code) => /^NH\d{2}$/.test(code)).length,
+    15
+  );
+  assert.deepEqual(dataset.destinations.NH36.routes, {});
+  assert.ok(dataset.origins.nagoya.stationCodes.includes("NH36"));
+
+  for (const [code, [name, departure, arrival, trainClass, terminal]] of Object.entries(expected)) {
+    const destination = dataset.destinations[code];
+    assert.equal(destination.operator, "meitetsu", code);
+    assert.equal(destination.officialStationCode, code, code);
+    assert.equal(destination.name, name, code);
+
+    for (const dayType of ["weekday", "saturday_holiday"]) {
+      const route = destination.routes.nagoya[dayType];
+      assert.equal(route.lastDeparture, departure, `${code}/${dayType}`);
+      assert.equal(route.lastArrival, arrival, `${code}/${dayType}`);
+      assert.equal(route.trainClass, trainClass, `${code}/${dayType}`);
+      assert.equal(route.trainTerminal, terminal, `${code}/${dayType}`);
+      assert.equal(route.routeSummary, `名鉄名古屋本線 ${trainClass} 直通`, `${code}/${dayType}`);
+      assert.equal(route.transfers, 0, `${code}/${dayType}`);
+      assert.equal(route.status, "verified", `${code}/${dayType}`);
+    }
+  }
+});
+
+test("Meitetsu Main destinations only need Nagoya walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "NH26"), ["nagoya"]);
+  assert.deepEqual(eligibleOriginIds(dataset, "NH34"), ["nagoya"]);
+});
+
+test("Meitetsu Main NH26 keeps the early 23:21 Shin-Anjo local boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:00:00+09:00",
+    dayType: "weekday",
+    destinationCode: "NH26",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 8 }
+    }
+  });
+
+  assert.equal(result.destination.name, "左京山");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:21");
+  assert.equal(result.scenarios[0].lastArrival, "23:50");
+  assert.equal(result.scenarios[0].routeSummary, "名鉄名古屋本線 普通 直通");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+
+test("Meitetsu Main NH34 keeps the 00:06 Kanayama express boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:35:00+09:00",
+    dayType: "weekday",
+    destinationCode: "NH34",
+    offsetMinutes: [0, 30],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 8 }
+    }
+  });
+
+  assert.equal(result.destination.name, "金山");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "00:06");
+  assert.equal(result.scenarios[0].lastArrival, "00:10");
+  assert.equal(result.scenarios[0].routeSummary, "名鉄名古屋本線 急行 直通");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
