@@ -44,17 +44,14 @@ jobs:
             test -s "$output"
           }
 
-          # Establish an ordinary browser-like session on the official search top.
           fetch \
             "$BASE/map/Top?window=transfer" \
             /tmp/meitetsu-direct-top.html
 
-          # NH36 Meitetsu Nagoya -> Higashi-Okazaki/Toyohashi direction.
           fetch \
             "$BASE/diagram/TrainDiagram?direction=up&linkId=00000885&rule=c&startId=00004372" \
             /tmp/meitetsu-nagoya-main-east.html
 
-          # Representative destination-specific direct timetables.
           fetch \
             "$BASE/transfer/DepArrTimeList?date=2026-09-04&gnode=00006039&snode=00004372" \
             /tmp/meitetsu-direct-NH24.html
@@ -69,16 +66,22 @@ jobs:
           set -euo pipefail
           python3 scripts/poc-meitetsu-main-nagoya.py
 
-      - name: Show node discovery
+      - name: Show diagnostics
         if: always()
         shell: bash
         run: |
-          if [ -f /tmp/meitetsu-main-node-discovery.json ]; then
-            cat /tmp/meitetsu-main-node-discovery.json
-          fi
-          if [ -f /tmp/meitetsu-main-sample-boundaries.json ]; then
-            cat /tmp/meitetsu-main-sample-boundaries.json
-          fi
+          for path in \
+            /tmp/meitetsu-main-node-discovery.json \
+            /tmp/meitetsu-main-origin-diagnostics.json \
+            /tmp/meitetsu-main-sample-boundaries.json \
+            /tmp/meitetsu-direct-NH24-diagnostics.json \
+            /tmp/meitetsu-direct-NH27-diagnostics.json
+          do
+            if [ -f "$path" ]; then
+              echo "==== $path ===="
+              cat "$path"
+            fi
+          done
 
       - name: Upload PoC artifacts
         if: always()
@@ -92,4 +95,7 @@ jobs:
             /tmp/meitetsu-direct-NH24.html
             /tmp/meitetsu-direct-NH27.html
             /tmp/meitetsu-main-node-discovery.json
+            /tmp/meitetsu-main-origin-diagnostics.json
             /tmp/meitetsu-main-sample-boundaries.json
+            /tmp/meitetsu-direct-NH24-diagnostics.json
+            /tmp/meitetsu-direct-NH27-diagnostics.json
