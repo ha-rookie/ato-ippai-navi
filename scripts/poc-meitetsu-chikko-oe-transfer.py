@@ -106,15 +106,22 @@ def service_minutes(clock: str) -> int:
     return value + (24 * 60 if hour < 4 else 0)
 
 
-def direct_services(path: Path) -> list[dict[str, object]]:
-    parsed = parse_rows(path, TRANSFER["name"], DESTINATION["name"])
+def direct_services(
+    path: Path,
+    origin: str,
+    destination: str,
+    required_route_prefix: str | None = None,
+) -> list[dict[str, object]]:
+    parsed = parse_rows(path, origin, destination)
     services: list[dict[str, object]] = []
     for row in parsed["rows"]:
         clocks = row["clockTimes"]
         if len(clocks) < 2:
             continue
         route_names = row["routeNames"]
-        if not any(name.startswith("築港線(") for name in route_names):
+        if required_route_prefix and not any(
+            name.startswith(required_route_prefix) for name in route_names
+        ):
             continue
         services.append(
             {
@@ -140,6 +147,26 @@ def inspect_static_timetable(path: Path) -> dict[str, object]:
     }
 
 
+def inspect_solver(path: Path) -> dict[str, object]:
+    text = plain(decode(path))
+    clocks = re.findall(r"(?<!\d)(\d{1,2}:\d{2})(?!\d)", text)
+    normalized: list[str] = []
+    for value in clocks:
+        value = value.zfill(5)
+        if value not in normalized:
+            normalized.append(value)
+    return {
+        "originPresent": ORIGIN["name"] in text,
+        "transferPresent": TRANSFER["name"] in text,
+        "destinationPresent": DESTINATION["name"] in text,
+        "routeFound": "到達可能な経路が見つかりませんでした" not in text,
+        "transferOnePresent": "乗換:1回" in text or "乗換：1回" in text,
+        "clocks": normalized,
+        "plainHead": text[:6000],
+        "plainTail": text[-6000:],
+    }
+
+
 def main() -> None:
     result: dict[str, object] = {
         "origin": ORIGIN,
@@ -152,17 +179,50 @@ def main() -> None:
     for day_type in DAY_TYPES:
         through_path = Path(f"/tmp/meitetsu-chikko-through-{day_type}.html")
         shuttle_path = Path(f"/tmp/meitetsu-chikko-shuttle-{day_type}.html")
+        feeder_path = Path(f"/tmp/meitetsu-chikko-feeder-{day_type}.html")
 
         through = parse_rows(through_path, ORIGIN["name"], DESTINATION["name"])
-        shuttles = direct_services(shuttle_path)
+        shuttles = direct_services(
+            shuttle_path,
+            TRANSFER["name"],
+            DESTINATION["name"],
+            "築港線(",
+        )
+        feeders = direct_services(
+            feeder_path,
+            ORIGIN["name"],
+            TRANSFER["name"],
+        )
         if not shuttles:
             raise AssertionError(f"no Oe -> Higashi-Nagoyako shuttle rows: {day_type}")
+        if not feeders:
+            raise AssertionError(f"no Nagoya -> Oe feeder rows: {day_type}")
+
+        last_shuttle = shuttles[-1]
+        shuttle_departure_minutes = service_minutes(str(last_shuttle["departure"]))
+        feeder_candidates: list[dict[str, object]] = []
+        for feeder in feeders:
+            margin = shuttle_departure_minutes - service_minutes(str(feeder["arrival"]))
+            if margin < 0:
+                continue
+            feeder_candidates.append({**feeder, "rawTransferMarginMinutes": margin})
+
+        feeder_candidates.sort(
+            key=lambda row: service_minutes(str(row["departure"]))
+        )
+
+        solver_path = Path(f"/tmp/meitetsu-chikko-solver-{day_type}.html")
+        solver = inspect_solver(solver_path) if solver_path.exists() else None
 
         result["days"][day_type] = {
             "throughSearch": through,
             "shuttleServiceCount": len(shuttles),
-            "lastShuttle": shuttles[-1],
+            "lastShuttle": last_shuttle,
             "shuttleServices": shuttles,
+            "feederServiceCount": len(feeders),
+            "lastFeederBeforeShuttle": feeder_candidates[-1] if feeder_candidates else None,
+            "feederCandidates": feeder_candidates[-5:],
+            "solver": solver,
         }
 
     Path("/tmp/meitetsu-chikko-transfer-poc.json").write_text(
@@ -178,16 +238,15 @@ def main() -> None:
             f"{day_type}: Oe shuttle last parsed {last['departure']}->{last['arrival']} "
             f"routes={last['routeNames']} terminals={last['terminals']}"
         )
+        feeder = day["lastFeederBeforeShuttle"]
+        print(f"{day_type}: latest feeder candidate before shuttle={feeder}")
         through = day["throughSearch"]
         print(
-            f"{day_type}: NH36->CH01 time-detail blocks={through['timeDetailBlockCount']} "
+            f"{day_type}: NH36->CH01 DepArrTimeList blocks={through['timeDetailBlockCount']} "
             f"rows={through['parsedRowCount']} directMarker={through['identity']['directTimetableMarkerPresent']}"
         )
-        for row in through["rows"][-5:]:
-            print(
-                f"  row {row['rowIndex']}: clocks={row['clockTimes']} "
-                f"routes={row['routeNames']} terminals={row['terminals']} text={row['plainText']}"
-            )
+        if day["solver"]:
+            print(f"{day_type}: transfer solver diagnostic={day['solver']}")
 
 
 if __name__ == "__main__":
