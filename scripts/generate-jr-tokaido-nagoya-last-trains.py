@@ -22,6 +22,7 @@ SOURCE_ID = "jr-central-tokaido-official-timetable"
 LAST_DEPARTURE = "23:59"
 TRAIN_TERMINAL = "岡崎"
 ROUTE_SUMMARY = "JR東海道本線 普通 直通"
+STOP_GUIDE_COLUMN_START = 110
 
 # Nagoya-city scope from Nagoya toward Toyohashi/Okazaki.
 # CA61 Kyowa is outside Nagoya city; CA69 Biwajima is also outside the city.
@@ -40,17 +41,23 @@ def normalized_block(lines: list[str]) -> str:
     return re.sub(r"\s+", " ", "\n".join(lines)).strip()
 
 
-def exact_token_position(text: str, token: str) -> int:
-    """Return the first whitespace-delimited token position, or -1.
+def exact_right_column_line(lines: list[str], token: str) -> int:
+    """Return the first right-side stop-guide line containing an exact token.
 
-    Japanese station names can contain one another (for example 大高 inside
-    南大高), so plain `find`/`rfind` is unsafe for stop-guide validation.
-    `pdftotext -layout` separates station labels from neighboring columns with
-    whitespace, allowing an exact-token match without OCR.
+    The official PDF places the timetable on the left and the stop guide on
+    the right. Station names such as 笠寺 can also appear on the left as train
+    destinations, and 大高 is a substring of 南大高. Restricting the match to
+    the right-hand column and using whitespace token boundaries avoids both
+    false positives without OCR.
     """
 
-    match = re.search(rf"(?<!\S){re.escape(token)}(?=\s|$)", text)
-    return -1 if match is None else match.start()
+    pattern = re.compile(rf"(?<!\S){re.escape(token)}(?=\s|$)")
+    for index, line in enumerate(lines):
+        if len(line) <= STOP_GUIDE_COLUMN_START:
+            continue
+        if pattern.search(line[STOP_GUIDE_COLUMN_START:]):
+            return index
+    return -1
 
 
 def verify_timetable(path: Path, expected_day_label: str) -> None:
@@ -121,18 +128,19 @@ def verify_timetable(path: Path, expected_day_label: str) -> None:
             f"Unexpected after-midnight departure in {path}: {hour0_timetable_column!r}"
         )
 
-    # Validate the city-station sequence in the official stop guide. Use exact
-    # whitespace-delimited labels so 大高 does not accidentally match 南大高.
-    stop_guide = text.split("停車駅のご案内", 1)[1]
+    # Validate the city-station sequence only in the right-side official stop
+    # guide. This avoids left-side destination labels corrupting the order.
     names = [name for _internal, _official, name in STATIONS] + ["共和"]
-    positions = [exact_token_position(stop_guide, name) for name in names]
-    if any(position < 0 for position in positions):
+    line_positions = [exact_right_column_line(lines, name) for name in names]
+    if any(position < 0 for position in line_positions):
         raise RuntimeError(
-            f"Nagoya-city Tokaido station list missing/changed in {path}: {positions}"
+            f"Nagoya-city Tokaido stop-guide station missing/changed in {path}: "
+            f"{line_positions}"
         )
-    if positions != sorted(positions):
+    if line_positions != sorted(line_positions):
         raise RuntimeError(
-            f"Nagoya-city Tokaido station order changed in {path}: {positions}"
+            f"Nagoya-city Tokaido stop-guide order changed in {path}: "
+            f"{line_positions}"
         )
 
 
