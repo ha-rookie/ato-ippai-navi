@@ -26,35 +26,42 @@ jobs:
           set -euo pipefail
 
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+          COOKIE_JAR=/tmp/meitetsu-cookies.txt
+          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 
-          # Official direct-timetable station selector.  Used to verify the
-          # NH24-NH38 station set and inspect opaque station node IDs.
-          curl -fsSL \
-            "$BASE/map/Top?window=depArrTimeList" \
-            -o /tmp/meitetsu-direct-top.html
+          fetch() {
+            local url="$1"
+            local output="$2"
+            echo "GET $url"
+            curl --fail --silent --show-error --location --compressed \
+              --retry 2 --retry-delay 1 \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer 'https://www.meitetsu.co.jp/' \
+              --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
+              "$url" -o "$output"
+            test -s "$output"
+          }
+
+          # Establish an ordinary browser-like session on the official search top.
+          fetch \
+            "$BASE/map/Top?window=transfer" \
+            /tmp/meitetsu-direct-top.html
 
           # NH36 Meitetsu Nagoya -> Higashi-Okazaki/Toyohashi direction.
-          curl -fsSL \
+          fetch \
             "$BASE/diagram/TrainDiagram?direction=up&linkId=00000885&rule=c&startId=00004372" \
-            -o /tmp/meitetsu-nagoya-main-east.html
+            /tmp/meitetsu-nagoya-main-east.html
 
           # Representative destination-specific direct timetables.
-          curl -fsSL \
+          fetch \
             "$BASE/transfer/DepArrTimeList?date=2026-09-04&gnode=00006039&snode=00004372" \
-            -o /tmp/meitetsu-direct-NH24.html
+            /tmp/meitetsu-direct-NH24.html
 
-          curl -fsSL \
+          fetch \
             "$BASE/transfer/DepArrTimeList?date=2026-09-04&gnode=00008608&snode=00004372" \
-            -o /tmp/meitetsu-direct-NH27.html
-
-          for path in \
-            /tmp/meitetsu-direct-top.html \
-            /tmp/meitetsu-nagoya-main-east.html \
-            /tmp/meitetsu-direct-NH24.html \
             /tmp/meitetsu-direct-NH27.html
-          do
-            test -s "$path"
-          done
 
       - name: Inspect official HTML and sample final direct trains
         shell: bash
