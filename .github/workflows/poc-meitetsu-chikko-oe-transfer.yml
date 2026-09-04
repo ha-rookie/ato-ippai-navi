@@ -92,7 +92,7 @@ jobs:
       - name: Inspect timetable legs and candidate connections
         run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
 
-      - name: Query official transfer solver at last shuttle arrival
+      - name: Query official transfer solver for arrival by last shuttle
         shell: bash
         run: |
           set -euo pipefail
@@ -118,31 +118,36 @@ jobs:
           PY
             )
 
-            year_month="${service_date:0:7}"
+            year="${service_date:0:4}"
+            month_num=$((10#${service_date:5:2}))
+            month="${year}/${month_num}"
             day="${service_date:8:2}"
             output="/tmp/meitetsu-chikko-solver-${day_type}.html"
 
-            echo "TransferSearchSelect date=$service_date arrival=$hour:$minute"
+            # Mirror the actual TransferSearchSelect form contract discovered from official HTML:
+            # node-valued selects + basis=0 (arrival), sort=2, method=1 (train only).
+            echo "TransferSearchSelect result date=$service_date arrive-by=$hour:$minute"
             curl --fail --silent --show-error --location --compressed \
               --retry 2 --retry-delay 1 \
               --user-agent "$UA" \
               --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
               --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-              --referer "$BASE/map/Top?window=transfer" \
+              --referer "$BASE/transfer/TransferSearchSelect" \
               --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
               --get "$BASE/transfer/TransferSearchSelect" \
-              --data-urlencode 'basis=1' \
+              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)' \
+              --data-urlencode 'orvName=' \
+              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)' \
+              --data-urlencode 'dnvName=' \
+              --data-urlencode "month=$month" \
               --data-urlencode "day=$day" \
-              --data-urlencode 'dnvName=東名古屋港(CH01)' \
               --data-urlencode "hour=$hour" \
-              --data-urlencode 'method=0' \
               --data-urlencode "minute=$minute" \
-              --data-urlencode "month=$year_month" \
-              --data-urlencode 'orvName=名鉄名古屋(NH36)' \
-              --data-urlencode 'retFlg=on' \
+              --data-urlencode 'basis=0' \
               --data-urlencode 'sort=2' \
-              --data-urlencode 'utrexprs=' \
+              --data-urlencode 'unuse=' \
               --data-urlencode 'wspeed=standard' \
+              --data-urlencode 'method=1' \
               -o "$output"
             test -s "$output"
           done
