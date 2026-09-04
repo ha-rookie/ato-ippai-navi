@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/poc-jr-chuo-nagoya.yml'
       - 'scripts/generate-jr-chuo-nagoya-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -124,6 +125,32 @@ jobs:
                   assert route['sourceIds'] == ['jr-central-chuo-official-timetable']
 
           print('Generated JR Chuo JR-CF01-JR-CF06 validation: OK')
+          PY
+
+      - name: Compare generated boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/jr-chuo-nagoya-last-trains.json', encoding='utf-8') as f:
+              generated = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
+
+          assert 'JR-CF01' in production['origins']['nagoya']['stationCodes']
+
+          for code, generated_destination in generated['destinations'].items():
+              production_destination = production['destinations'][code]
+              assert production_destination['operator'] == generated_destination['operator'], code
+              assert production_destination['officialStationCode'] == generated_destination['officialStationCode'], code
+              assert production_destination['name'] == generated_destination['name'], code
+              assert production_destination['stationCodes'] == generated_destination['stationCodes'], code
+              assert production_destination['routes'] == generated_destination['routes'], code
+
+          source_ids = {source['id'] for source in production['sources']}
+          assert 'jr-central-chuo-official-timetable' in source_ids
+          print('JR Chuo generated-vs-production comparison: OK')
           PY
 
       - name: Record station-numbering verification policy
