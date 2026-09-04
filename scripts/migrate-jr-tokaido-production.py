@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+DATA = Path("src/data/last-trains-nagoya.json")
+data = json.loads(DATA.read_text(encoding="utf-8"))
+
+source_id = "jr-central-tokaido-official-timetable"
+if not any(source.get("id") == source_id for source in data["sources"]):
+    data["sources"].append({
+        "id": source_id,
+        "publisher": "東海旅客鉄道",
+        "revision": "2026-03-14",
+        "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/tokaido_Nagoya_A_w_u.pdf",
+    })
+
+if "JR-CA68" not in data["origins"]["nagoya"]["stationCodes"]:
+    data["origins"]["nagoya"]["stationCodes"].append("JR-CA68")
+
+stations = [
+    ("JR-CA68", "CA68", "名古屋"),
+    ("JR-CA67", "CA67", "尾頭橋"),
+    ("JR-CA66", "CA66", "金山"),
+    ("JR-CA65", "CA65", "熱田"),
+    ("JR-CA64", "CA64", "笠寺"),
+    ("JR-CA63", "CA63", "大高"),
+    ("JR-CA62", "CA62", "南大高"),
+]
+
+
+def route() -> dict:
+    return {
+        "lastDeparture": "23:59",
+        "lastArrival": None,
+        "routeSummary": "JR東海道本線 普通 直通",
+        "trainTerminal": "岡崎",
+        "transfers": 0,
+        "status": "verified",
+        "sourceIds": [source_id],
+    }
+
+
+for internal, official, name in stations:
+    destination = {
+        "operator": "jr-central",
+        "officialStationCode": official,
+        "name": name,
+        "city": "名古屋市",
+        "stationCodes": [internal],
+        "enabled": True,
+        "routes": {},
+    }
+    if internal != "JR-CA68":
+        destination["routes"]["nagoya"] = {
+            "weekday": route(),
+            "saturday_holiday": route(),
+        }
+    data["destinations"][internal] = destination
+
+DATA.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+settings = Path("public/js/settings.js")
+text = settings.read_text(encoding="utf-8")
+text = text.replace(
+    'JR-CJ00-JR-CJ02, or JR-CF01-JR-CF06";',
+    'JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68";',
+)
+text = text.replace(
+    'const jrMatch = /^JR-(CJ|CF)(\\d{1,2})$/.exec(code);',
+    'const jrMatch = /^JR-(CJ|CF|CA)(\\d{1,2})$/.exec(code);',
+)
+text = text.replace(
+    '(line === "CF" && number >= 1 && number <= 6);',
+    '(line === "CF" && number >= 1 && number <= 6) ||\n      (line === "CA" && number >= 62 && number <= 68);',
+)
+if "JR-CA62-JR-CA68" not in text or "CJ|CF|CA" not in text:
+    raise RuntimeError("settings.js JR Tokaido migration did not apply")
+settings.write_text(text, encoding="utf-8")
+
+index = Path("public/index.html")
+html = index.read_text(encoding="utf-8")
+if "JR東海道本線（名古屋から直通）" not in html:
+    optgroup = """        <optgroup label="JR東海道本線（名古屋から直通）">
+          <option value="JR-CA68" data-name="名古屋">CA68 名古屋</option>
+          <option value="JR-CA67" data-name="尾頭橋">CA67 尾頭橋</option>
+          <option value="JR-CA66" data-name="金山">CA66 金山</option>
+          <option value="JR-CA65" data-name="熱田">CA65 熱田</option>
+          <option value="JR-CA64" data-name="笠寺">CA64 笠寺</option>
+          <option value="JR-CA63" data-name="大高">CA63 大高</option>
+          <option value="JR-CA62" data-name="南大高">CA62 南大高</option>
+        </optgroup>
+"""
+    html = html.replace("        </select>", optgroup + "        </select>", 1)
+html = html.replace(
+    "・JR中央本線（名古屋市内）に対応しています。自宅住所は登録しません。",
+    "・JR中央本線（名古屋市内）・JR東海道本線（名古屋市内）に対応しています。自宅住所は登録しません。",
+)
+if "JR-CA62" not in html:
+    raise RuntimeError("index.html JR Tokaido optgroup migration did not apply")
+index.write_text(html, encoding="utf-8")
+
+settings_test = Path("test/settings.test.js")
+text = settings_test.read_text(encoding="utf-8")
+text = text.replace(
+    "JR-CJ00-JR-CJ02, or JR-CF01-JR-CF06/;",
+    "JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68/;",
+)
+if "destination station accepts JR Tokaido namespaced station codes" not in text:
+    text += """
+
+test("destination station accepts JR Tokaido namespaced station codes", () => {
+  assert.equal(normalizeDestinationStation("jr-ca62"), "JR-CA62");
+  assert.equal(normalizeDestinationStation("JR-CA68"), "JR-CA68");
+  assert.throws(() => normalizeDestinationStation("JR-CA61"));
+  assert.throws(() => normalizeDestinationStation("JR-CA69"));
+  assert.throws(() => normalizeDestinationStation("CA62"));
+});
+
+test("JR Tokaido destination is stored and restored locally", () => {
+  const storage = memoryStorage();
+  assert.equal(saveDestinationStation("jr-ca62", storage), "JR-CA62");
+  assert.equal(loadDestinationStation(storage), "JR-CA62");
+});
+"""
+settings_test.write_text(text, encoding="utf-8")
+
+last_train_test = Path("test/last-train.test.js")
+text = last_train_test.read_text(encoding="utf-8")
+if "JR Tokaido boundaries use namespaced JR-CA62-JR-CA68 codes" not in text:
+    text += """
+
+test("JR Tokaido boundaries use namespaced JR-CA62-JR-CA68 codes", () => {
+  const expected = {
+    "JR-CA68": ["CA68", "名古屋"],
+    "JR-CA67": ["CA67", "尾頭橋"],
+    "JR-CA66": ["CA66", "金山"],
+    "JR-CA65": ["CA65", "熱田"],
+    "JR-CA64": ["CA64", "笠寺"],
+    "JR-CA63": ["CA63", "大高"],
+    "JR-CA62": ["CA62", "南大高"]
+  };
+
+  assert.deepEqual(dataset.destinations["JR-CA68"].routes, {});
+  assert.ok(dataset.origins.nagoya.stationCodes.includes("JR-CA68"));
+
+  for (const [code, [officialCode, name]] of Object.entries(expected)) {
+    const destination = dataset.destinations[code];
+    assert.equal(destination.operator, "jr-central", code);
+    assert.equal(destination.officialStationCode, officialCode, code);
+    assert.equal(destination.name, name, code);
+
+    if (code === "JR-CA68") continue;
+
+    for (const dayType of ["weekday", "saturday_holiday"]) {
+      const route = destination.routes.nagoya[dayType];
+      assert.equal(route.lastDeparture, "23:59", code);
+      assert.equal(route.lastArrival, null, code);
+      assert.equal(route.trainTerminal, "岡崎", code);
+      assert.equal(route.routeSummary, "JR東海道本線 普通 直通", code);
+      assert.equal(route.transfers, 0, code);
+      assert.equal(route.status, "verified", code);
+    }
+  }
+});
+
+test("JR Tokaido destinations only need Nagoya walk hub", () => {
+  assert.deepEqual(eligibleOriginIds(dataset, "JR-CA62"), ["nagoya"]);
+});
+
+test("JR Tokaido JR-CA62 uses the 23:59 Okazaki local boundary", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:20:00+09:00",
+    dayType: "weekday",
+    destinationCode: "JR-CA62",
+    offsetMinutes: [0, 15],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: {
+      nagoya: { walkMinutes: 31 }
+    }
+  });
+
+  assert.equal(result.destination.name, "南大高");
+  assert.equal(result.scenarios[0].canReachDestination, true);
+  assert.equal(result.scenarios[0].recommendedOriginId, "nagoya");
+  assert.equal(result.scenarios[0].lastDeparture, "23:59");
+  assert.equal(result.scenarios[0].lastArrival, null);
+  assert.equal(result.scenarios[0].localLastTrainArrivalTime, null);
+  assert.equal(result.scenarios[0].routeSummary, "JR東海道本線 普通 直通");
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
+"""
+last_train_test.write_text(text, encoding="utf-8")
+
+poc = Path(".github/workflows/poc-jr-tokaido-nagoya.yml")
+text = poc.read_text(encoding="utf-8")
+if "      - 'src/data/last-trains-nagoya.json'" not in text:
+    text = text.replace(
+        "      - 'scripts/generate-jr-tokaido-nagoya-last-trains.py'\n",
+        "      - 'scripts/generate-jr-tokaido-nagoya-last-trains.py'\n      - 'src/data/last-trains-nagoya.json'\n",
+    )
+if "Compare generated boundaries with production JSON" not in text:
+    marker = "      - name: Record station-numbering verification policy\n"
+    compare = """      - name: Compare generated boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/jr-tokaido-nagoya-last-trains.json', encoding='utf-8') as f:
+              generated = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
+
+          assert 'JR-CA68' in production['origins']['nagoya']['stationCodes']
+
+          for code, generated_destination in generated['destinations'].items():
+              production_destination = production['destinations'][code]
+              assert production_destination['operator'] == generated_destination['operator'], code
+              assert production_destination['officialStationCode'] == generated_destination['officialStationCode'], code
+              assert production_destination['name'] == generated_destination['name'], code
+              assert production_destination['stationCodes'] == generated_destination['stationCodes'], code
+              assert production_destination['routes'] == generated_destination['routes'], code
+
+          source_ids = {source['id'] for source in production['sources']}
+          assert 'jr-central-tokaido-official-timetable' in source_ids
+          print('JR Tokaido generated-vs-production comparison: OK')
+          PY
+
+"""
+    text = text.replace(marker, compare + marker, 1)
+poc.write_text(text, encoding="utf-8")
+
+Path("docs/jr-tokaido.md").write_text("""# JR東海道本線（名古屋市内）終電境界
+
+## 対象
+
+既存 `nagoya` 徒歩hubからJR東海・東海道本線へ直接乗車するPhase 1方式。
+
+- JR-CA68 / CA68 名古屋（walk-home）
+- JR-CA67 / CA67 尾頭橋
+- JR-CA66 / CA66 金山
+- JR-CA65 / CA65 熱田
+- JR-CA64 / CA64 笠寺
+- JR-CA63 / CA63 大高
+- JR-CA62 / CA62 南大高
+
+CA61共和・CA69枇杷島は名古屋市外のため対象外。
+
+## 公式ソース
+
+JR東海 名古屋駅 東海道線 豊橋・武豊方面 2026-03ダイヤ。
+
+- 平日: `tokaido_Nagoya_A_w_u.pdf`
+- 土曜・休日: `tokaido_Nagoya_A_h_u.pdf`
+- 駅番号: JR東海公式 station-numbering railway map
+
+CIで公式PDFを取得して `pdftotext -layout` し、23時台最終ブロックと0時台空欄、右側停車駅案内を検証する。
+
+## verified boundary
+
+| 目的 | 名古屋発 | 列車 | lastArrival |
+| --- | --- | --- | --- |
+| CA68 名古屋 | 徒歩帰宅 | - | - |
+| CA62〜CA67 | 23:59 | 普通 岡崎行 | null |
+
+平日・土曜休日とも同じ。
+
+各駅の正確な最終到着時刻はこのソースから取得していないため、`lastArrival` は推測せず `null` とする。
+
+## fail-closed
+
+以下が変わった場合はofficial-source CIを失敗させる。
+
+- 23:59岡崎行・普通という列車属性
+- 0時台に列車が追加
+- 名古屋→尾頭橋→金山→熱田→笠寺→大高→南大高→共和の停車駅案内
+- 公式PDF構造または必須トークン
+
+ランタイムには全時刻表を持たず、目的駅ごとの終電境界のみをproduction JSONへ保持する。
+""", encoding="utf-8")
+
+Path(".github/workflows/smoke-jr-tokaido.yml").write_text("""name: Smoke JR Tokaido Production
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy Worker to Cloudflare']
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Wait for expected production build
+        if: github.event_name == 'workflow_run'
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+          EXPECTED_BUILD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 15); do
+            echo "JR Tokaido build readiness attempt $attempt/15"
+            if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
+              cat /tmp/health.json
+              if EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
+          import json
+          import os
+          import sys
+          with open('/tmp/health.json', encoding='utf-8') as f:
+              data = json.load(f)
+          if data.get('buildSha') != os.environ['EXPECTED_BUILD_SHA']:
+              sys.exit(1)
+          if data.get('ok') is not True:
+              sys.exit(1)
+          print(f"Expected Worker build is visible: {data['buildSha']}")
+          PY
+              then
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          echo 'Expected production build was not visible within 30 seconds.'
+          exit 1
+
+      - name: Verify JR-CA62 last-train boundary
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/request.json <<'JSON'
+          {
+            "origin": {"latitude": 35.1715, "longitude": 136.9057},
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "JR-CA62",
+            "offsetMinutes": [0, 15],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          ready=0
+          for attempt in $(seq 1 5); do
+            echo "JR Tokaido JR-CA62 smoke attempt $attempt/5"
+            status=$(curl -sS -o /tmp/response.json -w '%{http_code}' \
+              -H 'content-type: application/json' --data @/tmp/request.json \
+              "$BASE_URL/api/last-train-boundary")
+            echo "HTTP status: $status"
+            cat /tmp/response.json
+            if [ "$status" = '200' ]; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo 'JR-CA62 boundary API did not return 200.'
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          with open('/tmp/response.json', encoding='utf-8') as f:
+              data = json.load(f)
+          scenarios = data['scenarios']
+          assert data['routeFound'] is True, data
+          assert data['dataSource'] == 'internal_last_train_json', data
+          assert data['destination']['code'] == 'JR-CA62', data
+          assert data['destination']['name'] == '南大高', data
+          assert set(data['walkOptions']) == {'nagoya'}, data['walkOptions']
+          assert scenarios[0]['canReachDestination'] is True, scenarios
+          assert scenarios[0]['recommendedOriginId'] == 'nagoya', scenarios
+          assert scenarios[0]['lastDeparture'] == '23:59', scenarios
+          assert scenarios[0]['lastArrival'] is None, scenarios
+          assert scenarios[0]['localLastTrainArrivalTime'] is None, scenarios
+          assert scenarios[0]['routeSummary'] == 'JR東海道本線 普通 直通', scenarios
+          assert scenarios[1]['canReachDestination'] is False, scenarios
+          print('JR Tokaido JR-CA62 production smoke: OK')
+          PY
+""", encoding="utf-8")
+
+print("JR Tokaido production files staged")
