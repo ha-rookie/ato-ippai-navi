@@ -92,6 +92,12 @@
       "publisher": "東海旅客鉄道",
       "revision": "2026-03-14",
       "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/kansai_Nagoya_B_wh_d.pdf"
+    },
+    {
+      "id": "jr-central-chuo-official-timetable",
+      "publisher": "東海旅客鉄道",
+      "revision": "2026-03-14",
+      "url": "https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/chuo_Nagoya_A_w_d.pdf"
     }
   ],
   "origins": {
@@ -146,7 +152,8 @@
         "S02",
         "AN01",
         "KT-E01",
-        "JR-CJ00"
+        "JR-CJ00",
+        "JR-CF01"
       ],
       "walkDestination": "名古屋駅 愛知県名古屋市",
       "enabled": true
@@ -5656,6 +5663,197 @@
             "status": "verified",
             "sourceIds": [
               "jr-central-kansai-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CF01": {
+      "operator": "jr-central",
+      "officialStationCode": "CF01",
+      "name": "名古屋",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CF01"
+      ],
+      "enabled": true,
+      "routes": {}
+    },
+    "JR-CF02": {
+      "operator": "jr-central",
+      "officialStationCode": "CF02",
+      "name": "金山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CF02"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CF03": {
+      "operator": "jr-central",
+      "officialStationCode": "CF03",
+      "name": "鶴舞",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CF03"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CF04": {
+      "operator": "jr-central",
+      "officialStationCode": "CF04",
+      "name": "千種",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CF04"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CF05": {
+      "operator": "jr-central",
+      "officialStationCode": "CF05",
+      "name": "大曽根",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CF05"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "JR-CF06": {
+      "operator": "jr-central",
+      "officialStationCode": "CF06",
+      "name": "新守山",
+      "city": "名古屋市",
+      "stationCodes": [
+        "JR-CF06"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "00:05",
+            "lastArrival": null,
+            "routeSummary": "JR中央本線 普通 直通",
+            "trainTerminal": "高蔵寺",
+            "transfers": 0,
+            "status": "verified",
+            "sourceIds": [
+              "jr-central-chuo-official-timetable"
             ]
           }
         }
