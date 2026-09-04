@@ -12,7 +12,6 @@ on:
       - 'public/js/settings.js'
       - 'test/last-train.test.js'
       - 'test/settings.test.js'
-      - '.github/workflows/deploy-worker.yml'
 
 permissions:
   contents: write
@@ -33,22 +32,23 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Commit generated production changes
+      - name: Commit generated non-workflow production changes
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'No generated changes to commit.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
             src/data/last-trains-nagoya.json \
             public/index.html \
             public/js/settings.js \
             test/last-train.test.js \
-            test/settings.test.js \
-            .github/workflows/deploy-worker.yml
+            test/settings.test.js
+
+          if git diff --cached --quiet; then
+            echo 'No generated non-workflow changes to commit.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'feat: add Meitetsu Main production boundaries'
           git push origin HEAD:feat/meitetsu-main-production
