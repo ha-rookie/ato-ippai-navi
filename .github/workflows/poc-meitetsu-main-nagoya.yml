@@ -1,0 +1,88 @@
+name: PoC Meitetsu Main Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-meitetsu-main-nagoya.yml'
+      - 'scripts/poc-meitetsu-main-nagoya.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download official Meitetsu sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+
+          # Official direct-timetable station selector.  Used to verify the
+          # NH24-NH38 station set and inspect opaque station node IDs.
+          curl -fsSL \
+            "$BASE/map/Top?window=depArrTimeList" \
+            -o /tmp/meitetsu-direct-top.html
+
+          # NH36 Meitetsu Nagoya -> Higashi-Okazaki/Toyohashi direction.
+          curl -fsSL \
+            "$BASE/diagram/TrainDiagram?direction=up&linkId=00000885&rule=c&startId=00004372" \
+            -o /tmp/meitetsu-nagoya-main-east.html
+
+          # Representative destination-specific direct timetables.
+          curl -fsSL \
+            "$BASE/transfer/DepArrTimeList?date=2026-09-04&gnode=00006039&snode=00004372" \
+            -o /tmp/meitetsu-direct-NH24.html
+
+          curl -fsSL \
+            "$BASE/transfer/DepArrTimeList?date=2026-09-04&gnode=00008608&snode=00004372" \
+            -o /tmp/meitetsu-direct-NH27.html
+
+          for path in \
+            /tmp/meitetsu-direct-top.html \
+            /tmp/meitetsu-nagoya-main-east.html \
+            /tmp/meitetsu-direct-NH24.html \
+            /tmp/meitetsu-direct-NH27.html
+          do
+            test -s "$path"
+          done
+
+      - name: Inspect official HTML and sample final direct trains
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/poc-meitetsu-main-nagoya.py
+
+      - name: Show node discovery
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/meitetsu-main-node-discovery.json ]; then
+            cat /tmp/meitetsu-main-node-discovery.json
+          fi
+          if [ -f /tmp/meitetsu-main-sample-boundaries.json ]; then
+            cat /tmp/meitetsu-main-sample-boundaries.json
+          fi
+
+      - name: Upload PoC artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meitetsu-main-nagoya-poc
+          if-no-files-found: warn
+          path: |
+            /tmp/meitetsu-direct-top.html
+            /tmp/meitetsu-nagoya-main-east.html
+            /tmp/meitetsu-direct-NH24.html
+            /tmp/meitetsu-direct-NH27.html
+            /tmp/meitetsu-main-node-discovery.json
+            /tmp/meitetsu-main-sample-boundaries.json
