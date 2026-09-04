@@ -45,6 +45,7 @@ def verify_timetable(path: Path) -> None:
         "春田",
         "普通",
         "四日市",
+        "停車駅のご案内",
     ]
 
     for token in required_tokens:
@@ -78,18 +79,31 @@ def verify_timetable(path: Path) -> None:
                 "Verified late-night minute sequence changed: expected 11 25 40 57"
             )
 
-    # Guard against a newly-added after-midnight service. The published
-    # Nagoya timetable currently has no hour-0 departure row after the
-    # 23:57 service. If one appears, the boundary must be reviewed.
-    if any(re.search(r"^\s*0\s+\d", line) for line in lines):
+    # After the 23:57 service the current official PDF has only the empty
+    # hour-0 headings for the two day-type columns. A future real minute in
+    # that row must fail closed and force a boundary review.
+    zero_hour_rows = [
+        line for line in lines
+        if re.search(r"^\s*0(?:\s|$)", line)
+    ]
+    if len(zero_hour_rows) != 1:
         raise RuntimeError(
-            "After-midnight departure row detected; review last-train boundary"
+            f"Expected one empty hour-0 row, got {len(zero_hour_rows)}"
         )
 
-    # Ordinary trains serve every station in this Nagoya-city segment. Keep
-    # station-order verification explicit so a future source-layout change
-    # fails closed rather than silently changing scope.
-    positions = [text.find(name) for _internal, _official, name in STATIONS]
+    zero_numbers = re.findall(r"\d+", zero_hour_rows[0])
+    if not zero_numbers or any(number != "0" for number in zero_numbers):
+        raise RuntimeError(
+            "After-midnight departure detected; review last-train boundary"
+        )
+
+    # Verify the Nagoya-city station segment against the explicit stop-guide
+    # portion of the official timetable rather than matching header text.
+    stop_guide = text.split("停車駅のご案内", 1)[1]
+    positions = [
+        stop_guide.find(name)
+        for _internal, _official, name in STATIONS
+    ]
     if any(position < 0 for position in positions):
         raise RuntimeError(f"Nagoya-city station list missing: {positions}")
     if positions != sorted(positions):
