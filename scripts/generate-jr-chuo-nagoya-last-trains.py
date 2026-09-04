@@ -62,35 +62,37 @@ def verify_timetable(path: Path, expected_day_label: str) -> None:
                 f"Official Chuo timetable token changed/missing in {path}: {token}"
             )
 
-    # The current official PDF has one hour-0 departure row: 0:05 Kozoji.
-    # If another after-midnight departure is added to that row, the numeric
-    # shape changes and this PoC must fail closed for review.
+    # pdftotext places the hour/minute on one line and the train type,
+    # terminal and platform on the following lines:
+    #   0 5
+    #     普通
+    #         高蔵寺
+    #         8
+    # Treat that exact late-night block shape as the verified boundary.
     zero_rows = [
         line
         for line in lines
-        if re.search(r"^\s*0\s+5\s+高蔵寺(?:\s|$)", line)
+        if re.fullmatch(r"\s*0\s+5\s*", line)
     ]
     if len(zero_rows) != 1:
         raise RuntimeError(
-            f"Expected exactly one 0:05 Kozoji row in {path}, got {len(zero_rows)}"
-        )
-
-    zero_row_numbers = re.findall(r"\d+", zero_rows[0])
-    if zero_row_numbers != ["0", "5"]:
-        raise RuntimeError(
-            f"After-midnight row changed in {path}: {zero_rows[0]!r}"
+            f"Expected exactly one 0:05 row in {path}, got {len(zero_rows)}"
         )
 
     zero_index = lines.index(zero_rows[0])
-    zero_context = "\n".join(lines[zero_index : min(len(lines), zero_index + 8)])
+    zero_context = "\n".join(lines[zero_index : min(len(lines), zero_index + 6)])
     if "高蔵寺" not in zero_context or "普通" not in zero_context:
         raise RuntimeError(
-            f"0:05 service is no longer a Kozoji local in {path}"
+            f"0:05 service is no longer a Kozoji local in {path}: {zero_context!r}"
         )
 
     # There must not be a second hour-0 timetable row hidden elsewhere.
+    # This deliberately ignores values such as "21 0" because the hour must
+    # begin the line after optional whitespace.
     other_zero_rows = [
-        line for line in lines if re.search(r"^\s*0\s+\d+", line)
+        line
+        for line in lines
+        if re.match(r"^\s*0\s+\d+(?:\s|$)", line)
     ]
     if len(other_zero_rows) != 1 or other_zero_rows[0] != zero_rows[0]:
         raise RuntimeError(
