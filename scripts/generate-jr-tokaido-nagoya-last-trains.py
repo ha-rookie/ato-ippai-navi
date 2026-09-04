@@ -78,11 +78,16 @@ def verify_timetable(path: Path, expected_day_label: str) -> None:
         raise RuntimeError(f"Hour-23 timetable block missing in {path}")
 
     hour23_index = hour23_indexes[-1]
+
+    # The stop-guide occupies the right-hand side of the same PDF page, so the
+    # hour-0 line can look like `0        Araimachi` after pdftotext. Identify
+    # the hour marker from the left timetable column only instead of requiring
+    # the entire physical line to contain just `0`.
     hour0_index = next(
         (
             index
             for index in range(hour23_index + 1, len(lines))
-            if re.fullmatch(r"\s*0\s*", lines[index])
+            if re.match(r"^\s*0(?:\s{8,}|$)", lines[index])
         ),
         None,
     )
@@ -95,12 +100,12 @@ def verify_timetable(path: Path, expected_day_label: str) -> None:
             f"Expected final 23:59 Okazaki local missing/changed in {path}: {block!r}"
         )
 
-    # The official 0-hour row is intentionally empty. If it gains a departure,
-    # fail closed so the boundary is reviewed rather than silently becoming stale.
-    following = lines[hour0_index + 1 : min(len(lines), hour0_index + 8)]
-    if any(re.search(r"^\s*\d{1,2}(?:\s|$)", line) for line in following):
+    # Validate that the timetable side of the hour-0 row contains no minute.
+    # Text to the far right belongs to the station stop guide and is ignored.
+    hour0_timetable_column = lines[hour0_index][:80]
+    if not re.fullmatch(r"\s*0\s*", hour0_timetable_column):
         raise RuntimeError(
-            f"Unexpected after-midnight departure detected in {path}: {following}"
+            f"Unexpected after-midnight departure in {path}: {hour0_timetable_column!r}"
         )
 
     # Verify city-station sequence inside the official stop-guide area.
