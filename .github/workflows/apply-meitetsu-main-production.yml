@@ -1,0 +1,54 @@
+name: Apply Meitetsu Main Production
+
+on:
+  push:
+    branches:
+      - feat/meitetsu-main-production
+    paths:
+      - 'scripts/apply-meitetsu-main-production.py'
+      - '.github/workflows/apply-meitetsu-main-production.yml'
+      - 'src/data/last-trains-nagoya.json'
+      - 'public/index.html'
+      - 'public/js/settings.js'
+      - 'test/last-train.test.js'
+      - 'test/settings.test.js'
+      - '.github/workflows/deploy-worker.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/meitetsu-main-production
+
+      - name: Apply deterministic migration
+        run: python3 scripts/apply-meitetsu-main-production.py
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Commit generated production changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No generated changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/data/last-trains-nagoya.json \
+            public/index.html \
+            public/js/settings.js \
+            test/last-train.test.js \
+            test/settings.test.js \
+            .github/workflows/deploy-worker.yml
+          git commit -m 'feat: add Meitetsu Main production boundaries'
+          git push origin HEAD:feat/meitetsu-main-production
