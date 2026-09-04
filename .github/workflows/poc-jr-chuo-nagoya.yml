@@ -1,0 +1,155 @@
+name: PoC JR Chuo Nagoya
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-jr-chuo-nagoya.yml'
+      - 'scripts/generate-jr-chuo-nagoya-last-trains.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF text tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+
+      - name: Download official JR Central sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEEKDAY_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/chuo_Nagoya_A_w_d.pdf'
+          HOLIDAY_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/chuo_Nagoya_A_h_d.pdf'
+          NUMBERING_URL='https://global.jr-central.co.jp/en/info/railwaymap/_pdf/railwaymap.pdf'
+
+          curl -fsSL "$WEEKDAY_URL" -o /tmp/jr-chuo-nagoya-weekday.pdf
+          curl -fsSL "$HOLIDAY_URL" -o /tmp/jr-chuo-nagoya-holiday.pdf
+          curl -fsSL "$NUMBERING_URL" -o /tmp/jr-station-numbering.pdf
+
+          for file in \
+            /tmp/jr-chuo-nagoya-weekday.pdf \
+            /tmp/jr-chuo-nagoya-holiday.pdf \
+            /tmp/jr-station-numbering.pdf
+          do
+            test -s "$file"
+            pdfinfo "$file" | grep -q '^Pages:'
+          done
+
+      - name: Convert official PDFs to layout text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pdftotext -layout /tmp/jr-chuo-nagoya-weekday.pdf /tmp/jr-chuo-nagoya-weekday.txt
+          pdftotext -layout /tmp/jr-chuo-nagoya-holiday.pdf /tmp/jr-chuo-nagoya-holiday.txt
+          pdftotext -layout /tmp/jr-station-numbering.pdf /tmp/jr-station-numbering.txt || true
+
+          test -s /tmp/jr-chuo-nagoya-weekday.txt
+          test -s /tmp/jr-chuo-nagoya-holiday.txt
+
+      - name: Generate JR-CF01-JR-CF06 boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/generate-jr-chuo-nagoya-last-trains.py \
+            --weekday /tmp/jr-chuo-nagoya-weekday.txt \
+            --holiday /tmp/jr-chuo-nagoya-holiday.txt \
+            --output /tmp/jr-chuo-nagoya-last-trains.json \
+            --revision 2026-03-14
+
+      - name: Validate generated JR Chuo boundaries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/jr-chuo-nagoya-last-trains.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          expected = {
+              'JR-CF01': ('CF01', '名古屋'),
+              'JR-CF02': ('CF02', '金山'),
+              'JR-CF03': ('CF03', '鶴舞'),
+              'JR-CF04': ('CF04', '千種'),
+              'JR-CF05': ('CF05', '大曽根'),
+              'JR-CF06': ('CF06', '新守山'),
+          }
+
+          assert data['operator'] == {
+              'id': 'jr-central',
+              'name': '東海旅客鉄道',
+          }
+          assert data['line'] == {
+              'code': 'CF',
+              'name': '中央本線',
+              'revision': '2026-03-14',
+          }
+          assert data['origin']['id'] == 'nagoya'
+          assert data['origin']['stationCode'] == 'JR-CF01'
+          assert set(data['destinations']) == set(expected)
+          assert data['destinations']['JR-CF01']['routes'] == {}
+
+          for code, (official, name) in expected.items():
+              destination = data['destinations'][code]
+              assert destination['operator'] == 'jr-central', code
+              assert destination['officialStationCode'] == official, code
+              assert destination['name'] == name, code
+              assert destination['stationCodes'] == [code], code
+
+              if code == 'JR-CF01':
+                  continue
+
+              for day_type in ('weekday', 'saturday_holiday'):
+                  route = destination['routes']['nagoya'][day_type]
+                  assert route['lastDeparture'] == '00:05', (code, route)
+                  assert route['lastArrival'] is None, (code, route)
+                  assert route['routeSummary'] == 'JR中央本線 普通 直通', (code, route)
+                  assert route['trainTerminal'] == '高蔵寺', (code, route)
+                  assert route['transfers'] == 0, (code, route)
+                  assert route['status'] == 'verified', (code, route)
+                  assert route['sourceIds'] == ['jr-central-chuo-official-timetable']
+
+          print('Generated JR Chuo JR-CF01-JR-CF06 validation: OK')
+          PY
+
+      - name: Record station-numbering verification policy
+        shell: bash
+        run: |
+          cat <<'EOF'
+          JR Central Chuo station numbering source policy:
+          - current official railway-map PDF downloaded successfully
+          - current map is retained as a CI artifact
+          - station-number graphics are not reliably extractable with pdftotext
+          - CF01 Nagoya through CF06 Shin-Moriyama are reviewed static metadata
+          - CF07 Kachigawa is outside the Nagoya-city scope
+          - CI does not make a false text-extraction claim for the map
+          EOF
+
+      - name: Upload official PoC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-chuo-nagoya-poc
+          path: |
+            /tmp/jr-chuo-nagoya-weekday.pdf
+            /tmp/jr-chuo-nagoya-weekday.txt
+            /tmp/jr-chuo-nagoya-holiday.pdf
+            /tmp/jr-chuo-nagoya-holiday.txt
+            /tmp/jr-station-numbering.pdf
+            /tmp/jr-station-numbering.txt
+            /tmp/jr-chuo-nagoya-last-trains.json
+          if-no-files-found: error
+          retention-days: 7
