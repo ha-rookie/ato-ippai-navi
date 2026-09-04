@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
 
           TIMETABLE_URL='https://railway.jr-central.co.jp/time-schedule/srch/_pdf/data/202603/kansai_Nagoya_B_wh_d.pdf'
-          NUMBERING_URL='https://global.jr-central.co.jp/en/company/other_information/2018/_pdf/2018_13.pdf'
+          NUMBERING_URL='https://global.jr-central.co.jp/en/info/railwaymap/_pdf/railwaymap.pdf'
 
           curl -fsSL "$TIMETABLE_URL" -o /tmp/jr-kansai-nagoya.pdf
           curl -fsSL "$NUMBERING_URL" -o /tmp/jr-station-numbering.pdf
@@ -62,23 +62,31 @@ jobs:
 
           text = Path('/tmp/jr-kansai-nagoya.txt').read_text(encoding='utf-8')
           normalized = re.sub(r'[ \t]+', ' ', text)
+          lines = text.splitlines()
 
           required = ['関西線時刻表', '名古屋', '八田', '春田', '四日市', '普通']
           for token in required:
               assert token in text, f'missing timetable token: {token}'
 
-          print('==== JR Kansai Nagoya lines containing 23 / 57 / 四日市 ====')
-          for line in text.splitlines():
-              if re.search(r'(^|\s)23(\s|$)', line) or '57' in line or '四日市' in line:
-                  print(line)
+          print('==== JR Kansai Nagoya 23:00 block ====')
+          anchors = [
+              index for index, line in enumerate(lines)
+              if re.search(r'^\s*23\s+11\b', line)
+          ]
+          assert anchors, '23:00 row anchor not found'
 
-          # Weak first-pass anchor. The exact pdftotext layout is intentionally
-          # inspected in this PoC before writing the fail-closed generator.
-          assert '57' in normalized
+          for anchor in anchors:
+              for line in lines[max(0, anchor - 3):min(len(lines), anchor + 10)]:
+                  print(line)
+              print('---')
+
+          # Current official 2026-03 PDF has the same late-night boundary
+          # on weekdays and Saturdays/Sundays/holidays: 23:57 local to Yokkaichi.
+          assert normalized.count('11 25 40 57') >= 2, 'late-night minute row changed'
           assert '四日市' in normalized
           assert '普通' in normalized
 
-          print('JR Kansai Nagoya timetable first-pass inspection: OK')
+          print('JR Kansai Nagoya late-night structure inspection: OK')
           PY
 
       - name: Inspect official station numbering
@@ -88,22 +96,27 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           text = Path('/tmp/jr-station-numbering.txt').read_text(encoding='utf-8')
+          compact = re.sub(r'\s+', ' ', text)
 
-          print('==== JR Central station-numbering CJ excerpts ====')
+          print('==== JR Central railway-map CJ excerpts ====')
           lines = text.splitlines()
           for index, line in enumerate(lines):
-              if 'CJ' in line or 'Kansai' in line or 'Nagoya' in line or 'Hatta' in line or 'Haruta' in line:
-                  start = max(0, index - 1)
-                  end = min(len(lines), index + 2)
-                  for excerpt in lines[start:end]:
+              if 'CJ' in line or 'Kansai Line' in line or 'Nagoya' in line or 'Hatta' in line or 'Haruta' in line:
+                  for excerpt in lines[max(0, index - 1):min(len(lines), index + 2)]:
                       print(excerpt)
                   print('---')
 
-          assert 'CJ' in text
-          assert 'Nagoya' in text
-          print('JR Central station-numbering first-pass inspection: OK')
+          # The current official railway map is machine-readable enough to
+          # validate the three Nagoya-city Kansai Line station-number anchors.
+          for code in ('CJ00', 'CJ01', 'CJ02'):
+              assert code in compact, f'missing station number: {code}'
+          for station in ('Nagoya', 'Hatta', 'Haruta'):
+              assert station in compact, f'missing station name: {station}'
+
+          print('JR Central CJ00/CJ01/CJ02 station-number inspection: OK')
           PY
 
       - name: Upload official PoC artifacts
