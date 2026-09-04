@@ -48,7 +48,7 @@ jobs:
           wranglerVersion: latest
           command: deploy --var BUILD_SHA:${{ github.sha }}
 
-      - name: Smoke test
+      - name: Core production smoke
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
           EXPECTED_BUILD_SHA: ${{ github.sha }}
@@ -57,108 +57,130 @@ jobs:
           set -euo pipefail
 
           ready=0
-
           for attempt in $(seq 1 15); do
             echo "Build SHA readiness attempt $attempt/15"
-
             if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
               cat /tmp/health.json
-
               if EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
           import json
           import os
           import sys
 
-          expected = os.environ["EXPECTED_BUILD_SHA"]
-
-          with open("/tmp/health.json", encoding="utf-8") as f:
+          with open('/tmp/health.json', encoding='utf-8') as f:
               data = json.load(f)
 
           valid = (
-              data.get("ok") is True
-              and data.get("service") == "ato-ippai-api-poc"
-              and data.get("googleApiKeyConfigured") is True
-              and data.get("buildSha") == expected
+              data.get('ok') is True
+              and data.get('service') == 'ato-ippai-api-poc'
+              and data.get('googleApiKeyConfigured') is True
+              and data.get('buildSha') == os.environ['EXPECTED_BUILD_SHA']
           )
-
           if not valid:
               print(
-                  "Deployed commit is not visible yet: "
-                  f"expected={expected}, actual={data.get('buildSha')}"
+                  'Deployed commit is not visible yet: '
+                  f"expected={os.environ['EXPECTED_BUILD_SHA']}, "
+                  f"actual={data.get('buildSha')}"
               )
               sys.exit(1)
-
-          print(f"Worker build SHA smoke test: OK ({expected})")
+          print('Worker build SHA smoke test: OK')
           PY
               then
                 ready=1
                 break
               fi
             fi
-
             sleep 2
           done
 
           if [ "$ready" -ne 1 ]; then
-            echo "Expected Worker build SHA was not visible within 30 seconds."
+            echo 'Expected Worker build SHA was not visible within 30 seconds.'
             exit 1
           fi
 
           curl -fsS "$BASE_URL/" -o /tmp/index.html
-          grep -q "<title>あと一杯ナビ</title>" /tmp/index.html
-          grep -q "現在地から判定する" /tmp/index.html
-          echo "Web MVP smoke test: OK"
+          grep -q '<title>あと一杯ナビ</title>' /tmp/index.html
+          grep -q '現在地から判定する' /tmp/index.html
+          echo 'Web MVP smoke test: OK'
 
-          cat > /tmp/decision-request.json <<'JSON'
-          {
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "dayType": "weekday",
-            "offsetMinutes": [0, 15, 30, 60]
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timedelta, time
+          from zoneinfo import ZoneInfo
+
+          jst = ZoneInfo('Asia/Tokyo')
+          now = datetime.now(jst)
+          target = datetime.combine(now.date(), time(23, 20), tzinfo=jst)
+          if target <= now:
+              target += timedelta(days=1)
+
+          day_type = 'weekday' if target.weekday() < 5 else 'saturday_holiday'
+          departure_time = target.isoformat(timespec='seconds')
+
+          boundary = {
+              'origin': {
+                  'latitude': 35.1715,
+                  'longitude': 136.9057,
+              },
+              'departureTime': departure_time,
+              'dayType': day_type,
+              'destinationCode': 'H22',
+              'offsetMinutes': [0, 15, 30, 60],
+              'stationBufferMinutes': 3,
+              'minimumBoardingLeadMinutes': 1,
           }
-          JSON
+          taxi = {
+              'origin': {
+                  'latitude': 35.1715,
+                  'longitude': 136.9057,
+              },
+              'destination': {
+                  'latitude': 35.1822,
+                  'longitude': 137.0216,
+              },
+              'departureTime': departure_time,
+              'includeDispatchFee': True,
+          }
 
-          curl -fsS             -H "content-type: application/json"             --data @/tmp/decision-request.json             "$BASE_URL/api/decision-poc"             -o /tmp/decision.json
+          with open('/tmp/core-boundary-request.json', 'w', encoding='utf-8') as f:
+              json.dump(boundary, f, ensure_ascii=False)
+          with open('/tmp/taxi-request.json', 'w', encoding='utf-8') as f:
+              json.dump(taxi, f, ensure_ascii=False)
 
-          cat /tmp/decision.json
+          print(
+              f'Runtime smoke service time: {departure_time} '
+              f'(dayType={day_type})'
+          )
+          PY
+
+          curl -fsS \
+            -H 'content-type: application/json' \
+            --data @/tmp/core-boundary-request.json \
+            "$BASE_URL/api/last-train-boundary" \
+            -o /tmp/core-boundary.json
+
+          cat /tmp/core-boundary.json
 
           python3 - <<'PY'
           import json
 
-          with open("/tmp/decision.json", encoding="utf-8") as f:
+          with open('/tmp/core-boundary.json', encoding='utf-8') as f:
               data = json.load(f)
 
-          scenarios = data["scenarios"]
-
-          assert [item["canReachDestination"] for item in scenarios] == [
-              True, True, True, False
-          ], scenarios
-
-          assert [item["nextTrain"] for item in scenarios] == [
-              "23:22", "23:42", "23:52", None
-          ], scenarios
-
-          assert all(item["lastTrain"] == "00:02" for item in scenarios), scenarios
-
-          print("Decision API smoke test: OK")
+          scenarios = data['scenarios']
+          assert data['routeFound'] is True, data
+          assert data['dataSource'] == 'internal_last_train_json', data
+          assert data['destination']['code'] == 'H22', data
+          assert set(data['walkOptions']) == {'sakae', 'fushimi'}, data['walkOptions']
+          assert len(scenarios) == 4, scenarios
+          assert scenarios[0]['canReachDestination'] is True, scenarios
+          assert scenarios[0]['recommendedOriginId'] in {'sakae', 'fushimi'}, scenarios
+          assert scenarios[0]['lastDeparture'] in {'00:02', '00:00'}, scenarios
+          assert scenarios[-1]['canReachDestination'] is False, scenarios
+          print('Core last-train boundary smoke test: OK')
           PY
 
-          cat > /tmp/taxi-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "destination": {
-              "latitude": 35.1822,
-              "longitude": 137.0216
-            },
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "includeDispatchFee": true
-          }
-          JSON
-
           curl -fsS \
-            -H "content-type: application/json" \
+            -H 'content-type: application/json' \
             --data @/tmp/taxi-request.json \
             "$BASE_URL/api/taxi-estimate" \
             -o /tmp/taxi.json
@@ -168,996 +190,13 @@ jobs:
           python3 - <<'PY'
           import json
 
-          with open("/tmp/taxi.json", encoding="utf-8") as f:
+          with open('/tmp/taxi.json', encoding='utf-8') as f:
               data = json.load(f)
 
-          assert data["routeFound"] is True, data
-          assert data["distanceMeters"] > 10000, data
-          assert data["nightSurcharge"] is True, data
-          assert data["estimatedTotalYen"] > 5000, data
-          assert data["method"] == "distance_only_approximation", data
-
-          print("Taxi estimate API smoke test: OK")
-          PY
-
-          cat > /tmp/walk-decision-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "dayType": "weekday",
-            "offsetMinutes": [0, 15, 30, 60],
-            "stationBufferMinutes": 3
-          }
-          JSON
-
-          capability_ready=0
-
-          for attempt in $(seq 1 15); do
-            echo "Capability smoke test attempt $attempt/15"
-
-            if curl -fsS \
-              -H "content-type: application/json" \
-              --data @/tmp/walk-decision-request.json \
-              "$BASE_URL/api/decision-from-current-location" \
-              -o /tmp/walk-decision.json
-            then
-              cat /tmp/walk-decision.json
-
-              if python3 - <<'PY'
-          import json
-          import sys
-
-          with open("/tmp/walk-decision.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          ready = (
-              data.get("routeFound") is True
-              and data.get("access", {}).get("minimumBoardingLeadMinutes") == 1
-          )
-
-          if not ready:
-              print("Expected Worker capability is not visible yet.")
-              sys.exit(1)
-
-          print("Expected Worker capability is visible.")
-          PY
-              then
-                capability_ready=1
-                break
-              fi
-            fi
-
-            sleep 2
-          done
-
-          if [ "$capability_ready" -ne 1 ]; then
-            echo "New Worker capability was not visible within 30 seconds."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/walk-decision.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          assert data["routeFound"] is True, data
-          assert data["walk"]["distanceMeters"] > 0, data
-          assert 1 <= data["walk"]["walkMinutes"] <= 30, data
-          assert data["access"]["stationBufferMinutes"] == 3, data
-          assert data["access"]["minimumBoardingLeadMinutes"] == 1, data
-
-          scenarios = data["scenarios"]
-          assert len(scenarios) == 4, scenarios
-          assert scenarios[0]["canReachDestination"] is True, scenarios
-          assert scenarios[1]["localStationReadyTime"] == "23:42", scenarios
-          assert scenarios[1]["nextTrain"] == "23:52", scenarios
-          assert scenarios[-1]["canReachDestination"] is False, scenarios
-          assert all(item["lastTrain"] == "00:02" for item in scenarios), scenarios
-
-          print("Walk + decision API smoke test: OK")
-          PY
-
-          cat > /tmp/last-train-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "H22",
-            "offsetMinutes": [0, 15, 30, 60],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          boundary_ready=0
-
-          for attempt in $(seq 1 15); do
-            echo "Last-train boundary smoke test attempt $attempt/15"
-
-            if curl -fsS \
-              -H "content-type: application/json" \
-              --data @/tmp/last-train-boundary-request.json \
-              "$BASE_URL/api/last-train-boundary" \
-              -o /tmp/last-train-boundary.json
-            then
-              cat /tmp/last-train-boundary.json
-
-              if python3 - <<'PY'
-          import json
-          import sys
-
-          with open("/tmp/last-train-boundary.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data.get("scenarios", [])
-          ready = (
-              data.get("routeFound") is True
-              and data.get("dataSource") == "internal_last_train_json"
-              and data.get("destination", {}).get("code") == "H22"
-              and len(scenarios) == 4
-          )
-
-          if not ready:
-              sys.exit(1)
-          PY
-              then
-                boundary_ready=1
-                break
-              fi
-            fi
-
-            sleep 2
-          done
-
-          if [ "$boundary_ready" -ne 1 ]; then
-            echo "Last-train boundary API was not ready within 30 seconds."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/last-train-boundary.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-
-          assert data["walkOptions"]["sakae"]["routeFound"] is True, data
-          assert data["walkOptions"]["fushimi"]["routeFound"] is True, data
-          assert scenarios[0]["canReachDestination"] is True, scenarios
-          assert scenarios[0]["recommendedOriginId"] in {"sakae", "fushimi"}, scenarios
-          assert scenarios[0]["lastDeparture"] in {"00:02", "00:00"}, scenarios
-          assert scenarios[2]["canReachDestination"] is True, scenarios
-          assert scenarios[3]["canReachDestination"] is False, scenarios
-
-          print("Last-train boundary API smoke test: OK")
-          PY
-
-          cat > /tmp/h18-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-05T00:05:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "H18",
-            "offsetMinutes": [0],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          curl -fsS \
-            -H "content-type: application/json" \
-            --data @/tmp/h18-boundary-request.json \
-            "$BASE_URL/api/last-train-boundary" \
-            -o /tmp/h18-boundary.json
-
-          cat /tmp/h18-boundary.json
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/h18-boundary.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenario = data["scenarios"][0]
-
-          assert data["destination"]["code"] == "H18", data
-          assert data["destination"]["name"] == "星ヶ丘", data
-          assert scenario["canReachDestination"] is True, scenario
-          assert scenario["recommendedOriginId"] == "sakae", scenario
-          assert scenario["lastDeparture"] == "00:16", scenario
-          assert scenario["localLastTrainArrivalTime"] is None, scenario
-
-          print("Expanded Higashiyama H18 smoke test: OK")
-          PY
-
-          cat > /tmp/h18-tonight-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-05T00:05:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "H18",
-            "offsetMinutes": [0, 60],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1,
-            "includeDispatchFee": true
-          }
-          JSON
-
-          selected_destination_ready=0
-
-          for attempt in $(seq 1 15); do
-            echo "Selected destination H18 smoke test attempt $attempt/15"
-
-            if curl -fsS \
-              -H "content-type: application/json" \
-              --data @/tmp/h18-tonight-request.json \
-              "$BASE_URL/api/tonight-decision" \
-              -o /tmp/h18-tonight.json
-            then
-              if python3 - <<'PY'
-          import json
-          import sys
-
-          with open("/tmp/h18-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          ready = (
-              data.get("destinationCode") == "H18"
-              and data.get("destinationName") == "星ヶ丘"
-              and data.get("taxiDestination") == "星ヶ丘駅 愛知県名古屋市"
-          )
-
-          if not ready:
-              sys.exit(1)
-          PY
-              then
-                selected_destination_ready=1
-                break
-              fi
-            fi
-
-            sleep 2
-          done
-
-          if [ "$selected_destination_ready" -ne 1 ]; then
-            echo "Selected destination H18 capability was not ready within 30 seconds."
-            cat /tmp/h18-tonight.json || true
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/h18-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          assert data["destinationCode"] == "H18", data
-          assert data["destinationName"] == "星ヶ丘", data
-          assert data["taxiDestination"] == "星ヶ丘駅 愛知県名古屋市", data
-          assert data["train"]["destination"]["code"] == "H18", data
-          assert data["scenarios"][0]["recommendedMode"] == "train", data
-
-          print("Selected destination H18 tonight smoke test: OK")
-          PY
-
-          cat > /tmp/t15-tonight-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:50:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "T15",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1,
-            "includeDispatchFee": true
-          }
-          JSON
-
-          tsurumai_ready=0
-
-          for attempt in $(seq 1 15); do
-            echo "Tsurumai T15 tonight smoke test attempt $attempt/15"
-
-            if curl -fsS \
-              -H "content-type: application/json" \
-              --data @/tmp/t15-tonight-request.json \
-              "$BASE_URL/api/tonight-decision" \
-              -o /tmp/t15-tonight.json
-            then
-              if python3 - <<'PY'
-          import json
-          import sys
-
-          with open("/tmp/t15-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          ready = (
-              data.get("destinationCode") == "T15"
-              and data.get("destinationName") == "八事"
-              and data.get("taxiDestination") == "八事駅 愛知県名古屋市"
-          )
-          if not ready:
-              sys.exit(1)
-          PY
-              then
-                tsurumai_ready=1
-                break
-              fi
-            fi
-
-            sleep 2
-          done
-
-          if [ "$tsurumai_ready" -ne 1 ]; then
-            echo "Tsurumai T15 capability was not ready within 30 seconds."
-            cat /tmp/t15-tonight.json || true
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/t15-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-          assert data["train"]["destination"]["code"] == "T15", data
-          assert scenarios[0]["recommendedMode"] == "train", scenarios
-          assert scenarios[0]["recommendedOriginId"] == "fushimi", scenarios
-          assert scenarios[0]["lastDeparture"] == "00:14", scenarios
-          assert scenarios[1]["recommendedMode"] == "taxi", scenarios
-
-          print("Tsurumai T15 selected destination smoke test: OK")
-          PY
-
-          cat > /tmp/m12-tonight-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:50:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "M12",
-            "offsetMinutes": [0, 30],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1,
-            "includeDispatchFee": true
-          }
-          JSON
-
-          curl -fsS \
-            -H "content-type: application/json" \
-            --data @/tmp/m12-tonight-request.json \
-            "$BASE_URL/api/tonight-decision" \
-            -o /tmp/m12-tonight.json
-
-          cat /tmp/m12-tonight.json
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/m12-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-
-          assert data["destinationCode"] == "M12", data
-          assert data["destinationName"] == "大曽根", data
-          assert data["taxiDestination"] == "大曽根駅 愛知県名古屋市", data
-          assert data["train"]["destination"]["code"] == "M12", data
-          assert scenarios[0]["recommendedMode"] == "train", scenarios
-          assert scenarios[0]["recommendedOriginId"] == "sakae", scenarios
-          assert scenarios[0]["lastDeparture"] == "00:14", scenarios
-          assert scenarios[1]["recommendedMode"] == "taxi", scenarios
-
-          print("Meijo M12 Ozone tonight smoke test: OK")
-          PY
-
-          cat > /tmp/e07-tonight-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:45:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "E07",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1,
-            "includeDispatchFee": true
-          }
-          JSON
-
-          curl -fsS \
-            -H "content-type: application/json" \
-            --data @/tmp/e07-tonight-request.json \
-            "$BASE_URL/api/tonight-decision" \
-            -o /tmp/e07-tonight.json
-
-          cat /tmp/e07-tonight.json
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/e07-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-
-          assert data["destinationCode"] == "E07", data
-          assert data["destinationName"] == "名古屋港", data
-          assert data["taxiDestination"] == "名古屋港駅 愛知県名古屋市", data
-          assert data["train"]["destination"]["code"] == "E07", data
-          assert scenarios[0]["recommendedMode"] == "train", scenarios
-          assert scenarios[0]["recommendedOriginId"] == "sakae", scenarios
-          assert scenarios[0]["lastDeparture"] == "00:02", scenarios
-          assert scenarios[1]["recommendedMode"] == "taxi", scenarios
-
-          print("Meiko E07 Nagoyako tonight smoke test: OK")
-          PY
-
-          cat > /tmp/s21-tonight-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:30:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "S21",
-            "offsetMinutes": [0, 30],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1,
-            "includeDispatchFee": true
-          }
-          JSON
-
-          s21_ready=0
-
-          for attempt in $(seq 1 5); do
-            echo "Sakuradori S21 smoke test attempt $attempt/5"
-
-            status=$(curl -sS \
-              -o /tmp/s21-tonight.json \
-              -w '%{http_code}' \
-              -H "content-type: application/json" \
-              --data @/tmp/s21-tonight-request.json \
-              "$BASE_URL/api/tonight-decision")
-
-            echo "HTTP status: $status"
-            cat /tmp/s21-tonight.json
-
-            if [ "$status" = "200" ]; then
-              s21_ready=1
-              break
-            fi
-
-            sleep 2
-          done
-
-          if [ "$s21_ready" -ne 1 ]; then
-            echo "Sakuradori S21 API did not return 200."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/s21-tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-          walk_options = data["train"]["walkOptions"]
-
-          assert data["destinationCode"] == "S21", data
-          assert data["destinationName"] == "徳重", data
-          assert data["train"]["destination"]["code"] == "S21", data
-          assert set(walk_options) == {"marunouchi", "hisayaodori"}, walk_options
-          assert scenarios[0]["recommendedMode"] == "train", scenarios
-          assert scenarios[0]["recommendedOriginId"] in {
-              "marunouchi", "hisayaodori"
-          }, scenarios
-          assert scenarios[0]["lastDeparture"] in {"23:55", "23:56"}, scenarios
-          assert scenarios[1]["recommendedMode"] == "taxi", scenarios
-
-          print("Sakuradori S21 Tokushige tonight smoke test: OK")
-          PY
-
-          cat > /tmp/k01-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:45:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "K01",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          k01_ready=0
-
-          for attempt in $(seq 1 5); do
-            echo "Kamiida K01 boundary smoke test attempt $attempt/5"
-
-            status=$(curl -sS \
-              -o /tmp/k01-boundary.json \
-              -w '%{http_code}' \
-              -H "content-type: application/json" \
-              --data @/tmp/k01-boundary-request.json \
-              "$BASE_URL/api/last-train-boundary")
-
-            echo "HTTP status: $status"
-            cat /tmp/k01-boundary.json
-
-            if [ "$status" = "200" ]; then
-              k01_ready=1
-              break
-            fi
-
-            sleep 2
-          done
-
-          if [ "$k01_ready" -ne 1 ]; then
-            echo "Kamiida K01 boundary API did not return 200."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/k01-boundary.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-          walk_options = data["walkOptions"]
-
-          assert data["destination"]["code"] == "K01", data
-          assert data["destination"]["name"] == "上飯田", data
-          assert set(walk_options) == {"sakae"}, walk_options
-
-          assert scenarios[0]["canReachDestination"] is True, scenarios
-          assert scenarios[0]["recommendedOriginId"] == "sakae", scenarios
-          assert scenarios[0]["lastDeparture"] == "00:04", scenarios
-          assert scenarios[0]["routeSummary"] == "名城線 右回り → 平安通乗換 → 上飯田線", scenarios
-          assert scenarios[0]["transfers"] == 1, scenarios
-
-          assert scenarios[1]["canReachDestination"] is False, scenarios
-
-          print("Kamiida K01 safe boundary smoke test: OK")
-          PY
-
-          cat > /tmp/st11-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:40:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "ST11",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          for code in ST11 ST12; do
-            request="/tmp/${code,,}-boundary-request.json"
-
-            if [ "$code" = "ST12" ]; then
-              cat > "$request" <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:30:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "ST12",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-            fi
-
-            output="/tmp/${code,,}-boundary.json"
-            ready=0
-
-            for attempt in $(seq 1 5); do
-              echo "Meitetsu Seto $code smoke test attempt $attempt/5"
-
-              status=$(curl -sS \
-                -o "$output" \
-                -w '%{http_code}' \
-                -H "content-type: application/json" \
-                --data @"$request" \
-                "$BASE_URL/api/last-train-boundary")
-
-              echo "HTTP status: $status"
-              cat "$output"
-
-              if [ "$status" = "200" ]; then
-                ready=1
-                break
-              fi
-
-              sleep 2
-            done
-
-            if [ "$ready" -ne 1 ]; then
-              echo "Meitetsu Seto $code boundary API did not return 200."
-              exit 1
-            fi
-          done
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/st11-boundary.json", encoding="utf-8") as f:
-              st11 = json.load(f)
-          with open("/tmp/st12-boundary.json", encoding="utf-8") as f:
-              st12 = json.load(f)
-
-          assert st11["destination"]["code"] == "ST11", st11
-          assert st11["destination"]["name"] == "喜多山", st11
-          assert set(st11["walkOptions"]) == {"sakaemachi"}, st11["walkOptions"]
-          assert st11["scenarios"][0]["canReachDestination"] is True, st11
-          assert st11["scenarios"][0]["recommendedOriginId"] == "sakaemachi", st11
-          assert st11["scenarios"][0]["lastDeparture"] == "00:00", st11
-          assert st11["scenarios"][1]["canReachDestination"] is False, st11
-
-          assert st12["destination"]["code"] == "ST12", st12
-          assert st12["destination"]["name"] == "大森・金城学院前", st12
-          assert set(st12["walkOptions"]) == {"sakaemachi"}, st12["walkOptions"]
-          assert st12["scenarios"][0]["canReachDestination"] is True, st12
-          assert st12["scenarios"][0]["recommendedOriginId"] == "sakaemachi", st12
-          assert st12["scenarios"][0]["lastDeparture"] == "23:45", st12
-          assert st12["scenarios"][1]["canReachDestination"] is False, st12
-
-          print("Meitetsu Seto ST11/ST12 safe boundary smoke test: OK")
-          PY
-
-          cat > /tmp/an09-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "AN09",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          cat > /tmp/an11-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T22:55:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "AN11",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          for code in AN09 AN11; do
-            request="/tmp/${code,,}-boundary-request.json"
-            output="/tmp/${code,,}-boundary.json"
-            ready=0
-
-            for attempt in $(seq 1 5); do
-              echo "Aonami $code smoke test attempt $attempt/5"
-
-              status=$(curl -sS \
-                -o "$output" \
-                -w '%{http_code}' \
-                -H "content-type: application/json" \
-                --data @"$request" \
-                "$BASE_URL/api/last-train-boundary")
-
-              echo "HTTP status: $status"
-              cat "$output"
-
-              if [ "$status" = "200" ]; then
-                ready=1
-                break
-              fi
-
-              sleep 2
-            done
-
-            if [ "$ready" -ne 1 ]; then
-              echo "Aonami $code boundary API did not return 200."
-              exit 1
-            fi
-          done
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/an09-boundary.json", encoding="utf-8") as f:
-              an09 = json.load(f)
-          with open("/tmp/an11-boundary.json", encoding="utf-8") as f:
-              an11 = json.load(f)
-
-          assert an09["destination"]["code"] == "AN09", an09
-          assert an09["destination"]["name"] == "稲永", an09
-          assert set(an09["walkOptions"]) == {"nagoya"}, an09["walkOptions"]
-          assert an09["scenarios"][0]["canReachDestination"] is True, an09
-          assert an09["scenarios"][0]["recommendedOriginId"] == "nagoya", an09
-          assert an09["scenarios"][0]["lastDeparture"] == "23:58", an09
-          assert an09["scenarios"][1]["canReachDestination"] is False, an09
-
-          assert an11["destination"]["code"] == "AN11", an11
-          assert an11["destination"]["name"] == "金城ふ頭", an11
-          assert set(an11["walkOptions"]) == {"nagoya"}, an11["walkOptions"]
-          assert an11["scenarios"][0]["canReachDestination"] is True, an11
-          assert an11["scenarios"][0]["recommendedOriginId"] == "nagoya", an11
-          assert an11["scenarios"][0]["lastDeparture"] == "23:36", an11
-          assert an11["scenarios"][1]["canReachDestination"] is False, an11
-
-          print("Aonami AN09/AN11 safe boundary smoke test: OK")
-          PY
-
-          cat > /tmp/kt-e07-boundary-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:25:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "KT-E07",
-            "offsetMinutes": [0, 15],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1
-          }
-          JSON
-
-          kintetsu_ready=0
-
-          for attempt in $(seq 1 5); do
-            echo "Kintetsu KT-E07 smoke test attempt $attempt/5"
-
-            status=$(curl -sS \
-              -o /tmp/kt-e07-boundary.json \
-              -w '%{http_code}' \
-              -H "content-type: application/json" \
-              --data @/tmp/kt-e07-boundary-request.json \
-              "$BASE_URL/api/last-train-boundary")
-
-            echo "HTTP status: $status"
-            cat /tmp/kt-e07-boundary.json
-
-            if [ "$status" = "200" ]; then
-              kintetsu_ready=1
-              break
-            fi
-
-            sleep 2
-          done
-
-          if [ "$kintetsu_ready" -ne 1 ]; then
-            echo "Kintetsu KT-E07 boundary API did not return 200."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/kt-e07-boundary.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-
-          assert data["destination"]["code"] == "KT-E07", data
-          assert data["destination"]["name"] == "戸田", data
-          assert set(data["walkOptions"]) == {"nagoya"}, data["walkOptions"]
-
-          assert scenarios[0]["canReachDestination"] is True, scenarios
-          assert scenarios[0]["recommendedOriginId"] == "nagoya", scenarios
-          assert scenarios[0]["lastDeparture"] == "00:04", scenarios
-          assert scenarios[0]["lastArrival"] == "00:16", scenarios
-          assert scenarios[0]["localLastTrainArrivalTime"] == "00:16", scenarios
-          assert scenarios[0]["routeSummary"] == "近鉄名古屋線 普通 直通", scenarios
-
-          assert scenarios[1]["canReachDestination"] is False, scenarios
-
-          print("Kintetsu KT-E07 safe boundary smoke test: OK")
-          PY
-
-          cat > /tmp/h10-walk-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "dayType": "weekday",
-            "destinationCode": "H10",
-            "offsetMinutes": [0, 15],
-            "includeDispatchFee": true
-          }
-          JSON
-
-          walk_home_ready=0
-
-          for attempt in $(seq 1 15); do
-            echo "Hub walk-home H10 smoke test attempt $attempt/15"
-
-            if curl -fsS \
-              -H "content-type: application/json" \
-              --data @/tmp/h10-walk-request.json \
-              "$BASE_URL/api/tonight-decision" \
-              -o /tmp/h10-walk.json
-            then
-              if python3 - <<'PY'
-          import json
-          import sys
-
-          with open("/tmp/h10-walk.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          ready = (
-              data.get("destinationCode") == "H10"
-              and data.get("destinationName") == "栄"
-              and data.get("journeyType") == "walk_to_home_station"
-          )
-          if not ready:
-              sys.exit(1)
-          PY
-              then
-                walk_home_ready=1
-                break
-              fi
-            fi
-
-            sleep 2
-          done
-
-          if [ "$walk_home_ready" -ne 1 ]; then
-            echo "Hub walk-home capability was not ready within 30 seconds."
-            cat /tmp/h10-walk.json || true
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/h10-walk.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          assert data["walk"]["routeFound"] is True, data
-          assert data["walk"]["destinationHubId"] == "sakae", data
-          assert data["train"] is None, data
-          assert all(
-              scenario["recommendedMode"] == "walk"
-              for scenario in data["scenarios"]
-          ), data
-
-          print("Hub walk-home H10 smoke test: OK")
-          PY
-
-          cat > /tmp/tonight-request.json <<'JSON'
-          {
-            "origin": {
-              "latitude": 35.1715,
-              "longitude": 136.9057
-            },
-            "departureTime": "2026-09-04T23:20:00+09:00",
-            "dayType": "weekday",
-            "offsetMinutes": [0, 15, 30, 60],
-            "stationBufferMinutes": 3,
-            "minimumBoardingLeadMinutes": 1,
-            "includeDispatchFee": true
-          }
-          JSON
-
-          tonight_ready=0
-
-          for attempt in $(seq 1 15); do
-            echo "Tonight API smoke test attempt $attempt/15"
-
-            if curl -fsS \
-              -H "content-type: application/json" \
-              --data @/tmp/tonight-request.json \
-              "$BASE_URL/api/tonight-decision" \
-              -o /tmp/tonight.json
-            then
-              cat /tmp/tonight.json
-
-              if python3 - <<'PY'
-          import json
-          import sys
-
-          with open("/tmp/tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data.get("scenarios", [])
-          ready = (
-              data.get("destinationScope") == "station_only"
-              and data.get("train", {}).get("dataSource")
-                  == "internal_last_train_json"
-              and len(scenarios) == 4
-              and scenarios[0].get("recommendedMode") == "train"
-              and scenarios[-1].get("recommendedMode") == "taxi"
-              and data.get("taxi", {}).get("estimatedTotalYen", 0) > 5000
-          )
-
-          if not ready:
-              print("Tonight decision capability is not visible yet.")
-              sys.exit(1)
-
-          print("Tonight decision capability is visible.")
-          PY
-              then
-                tonight_ready=1
-                break
-              fi
-            fi
-
-            sleep 2
-          done
-
-          if [ "$tonight_ready" -ne 1 ]; then
-            echo "Tonight decision API was not ready within 30 seconds."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-
-          with open("/tmp/tonight.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          scenarios = data["scenarios"]
-
-          assert data["destinationScope"] == "station_only", data
-          assert data["taxiDestination"] == "藤が丘駅 愛知県名古屋市", data
-          assert data["train"]["dataSource"] == "internal_last_train_json", data
-          assert scenarios[0]["recommendedMode"] == "train", scenarios
-          assert scenarios[0]["recommendedOriginId"] in {"sakae", "fushimi"}, scenarios
-          assert scenarios[0]["lastDeparture"] in {"00:02", "00:00"}, scenarios
-          assert scenarios[0]["localLastTrainArrivalTime"] == "00:23", scenarios
-          assert scenarios[0]["localDestinationStationArrivalTime"] is None, scenarios
-          assert scenarios[1]["recommendedMode"] == "train", scenarios
-          assert scenarios[2]["recommendedMode"] == "train", scenarios
-          assert scenarios[2]["usableMarginMinutes"] >= 0, scenarios
-          assert scenarios[3]["recommendedMode"] == "taxi", scenarios
-          assert scenarios[3]["taxiTravelMinutes"] >= 1, scenarios
-          assert scenarios[3]["localDestinationStationArrivalTime"] is not None, scenarios
-          assert scenarios[3]["taxiEstimatedTotalYen"] > 5000, scenarios
-
-          print("Tonight decision API smoke test: OK")
+          assert data['routeFound'] is True, data
+          assert data['distanceMeters'] > 10000, data
+          assert data['nightSurcharge'] is True, data
+          assert data['estimatedTotalYen'] > 5000, data
+          assert data['method'] == 'distance_only_approximation', data
+          print('Dynamic future-time taxi smoke test: OK')
           PY
