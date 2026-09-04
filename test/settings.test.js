@@ -24,7 +24,7 @@ function memoryStorage() {
 }
 
 const DESTINATION_ERROR_PATTERN =
-  /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, or JR-CF01-JR-CF06/;
+  /H01-H22, T01-T20, M01-M28, E01-E07, S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68/;
 
 test("destination station accepts supported subway line codes", () => {
   assert.equal(normalizeDestinationStation("h1"), "H01");
@@ -130,4 +130,19 @@ test("JR Chuo destination is stored and restored locally", () => {
   const storage = memoryStorage();
   assert.equal(saveDestinationStation("jr-cf6", storage), "JR-CF06");
   assert.equal(loadDestinationStation(storage), "JR-CF06");
+});
+
+
+test("destination station accepts JR Tokaido namespaced station codes", () => {
+  assert.equal(normalizeDestinationStation("jr-ca62"), "JR-CA62");
+  assert.equal(normalizeDestinationStation("JR-CA68"), "JR-CA68");
+  assert.throws(() => normalizeDestinationStation("JR-CA61"));
+  assert.throws(() => normalizeDestinationStation("JR-CA69"));
+  assert.throws(() => normalizeDestinationStation("CA62"));
+});
+
+test("JR Tokaido destination is stored and restored locally", () => {
+  const storage = memoryStorage();
+  assert.equal(saveDestinationStation("jr-ca62", storage), "JR-CA62");
+  assert.equal(loadDestinationStation(storage), "JR-CA62");
 });

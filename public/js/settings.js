@@ -48,19 +48,20 @@ export const DESTINATION_STATION_STORAGE_KEY =
 
 const DESTINATION_STATION_ERROR =
   "destination station must be H01-H22, T01-T20, M01-M28, E01-E07, " +
-  "S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, or JR-CF01-JR-CF06";
+  "S01-S21, K01, ST01-ST12, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68";
 
 export function normalizeDestinationStation(value) {
   const code = String(value ?? "").trim().toUpperCase();
 
-  const jrMatch = /^JR-(CJ|CF)(\d{1,2})$/.exec(code);
+  const jrMatch = /^JR-(CJ|CF|CA)(\d{1,2})$/.exec(code);
 
   if (jrMatch) {
     const line = jrMatch[1];
     const number = Number(jrMatch[2]);
     const valid =
       (line === "CJ" && number >= 0 && number <= 2) ||
-      (line === "CF" && number >= 1 && number <= 6);
+      (line === "CF" && number >= 1 && number <= 6) ||
+      (line === "CA" && number >= 62 && number <= 68);
 
     if (!valid) {
       throw new Error(DESTINATION_STATION_ERROR);
