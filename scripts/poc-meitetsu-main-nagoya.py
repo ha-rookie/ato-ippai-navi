@@ -8,31 +8,26 @@ import sys
 from pathlib import Path
 
 STATIONS = {
-    "NH24": "中京競馬場前",
-    "NH25": "有松",
-    "NH26": "左京山",
-    "NH27": "鳴海",
-    "NH28": "本星崎",
-    "NH29": "本笠寺",
-    "NH30": "桜",
-    "NH31": "呼続",
-    "NH32": "堀田",
-    "NH33": "神宮前",
-    "NH34": "金山",
-    "NH35": "山王",
-    "NH36": "名鉄名古屋",
-    "NH37": "栄生",
-    "NH38": "東枇杷島",
+    "NH24": ("中京競馬場前", "00006039"),
+    "NH25": ("有松", "00008842"),
+    "NH26": ("左京山", "00002805"),
+    "NH27": ("鳴海", "00008608"),
+    "NH28": ("本星崎", "00008474"),
+    "NH29": ("本笠寺", "00008447"),
+    "NH30": ("桜", "00002879"),
+    "NH31": ("呼続", "00002182"),
+    "NH32": ("堀田", "00008437"),
+    "NH33": ("神宮前", "00004438"),
+    "NH34": ("金山", "00001879"),
+    "NH35": ("山王", "00000095"),
+    "NH36": ("名鉄名古屋", "00004372"),
+    "NH37": ("栄生", "00000654"),
+    "NH38": ("東枇杷島", "00006826"),
 }
 
-KNOWN_NODE_IDS = {
-    "NH24": "00006039",
-    "NH25": "00008842",
-    "NH26": "00002805",
-    "NH27": "00008608",
-    "NH28": "00008474",
-    "NH36": "00004372",
-    "NH38": "00006826",
+DAY_TYPES = {
+    "weekday": "2026-09-04",
+    "saturday_holiday": "2026-09-05",
 }
 
 
@@ -84,7 +79,6 @@ def inspect_origin_timetable(path: Path) -> dict[str, object]:
         "staticPageLooksLikeRouteSelector": "路線を選択してください" in text,
         "plainTextTail": text[-2500:],
     }
-
     Path("/tmp/meitetsu-main-origin-diagnostics.json").write_text(
         json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -100,7 +94,6 @@ def inspect_origin_timetable(path: Path) -> dict[str, object]:
             "keeping it as a non-blocking secondary diagnostic.",
             file=sys.stderr,
         )
-
     return diagnostic
 
 
@@ -112,7 +105,6 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, ob
         "directTimetableMarkerPresent": "乗換なし時刻表" in text,
         "looksLikeRouteSelector": "路線を選択してください" in text,
     }
-
     if not all(
         identity[key]
         for key in (
@@ -138,8 +130,8 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, ob
         re.compile(
             r"(?P<dep>\d{1,2}:\d{2}).{0,80}?"
             r"(?P<arr>\d{1,2}:\d{2}).{0,250}?"
-            r"名古屋本線.{0,80}?(?P<class>特急|快速特急|急行|準急|普通).{0,120}?"
-            r"(?P<terminal>東岡崎|豊橋|伊奈|鳴海|金山|知立|前後|神宮前)"
+            r"名古屋本線.{0,80}?(?P<class>快速特急|特急|快速急行|急行|準急|普通).{0,160}?"
+            r"(?P<terminal>[^\s]+)"
         ),
     ]
 
@@ -153,7 +145,8 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, ob
 
     if not matches:
         times = re.findall(r"\b(?:[01]?\d|2[0-9]):[0-5]\d\b", text)
-        Path(f"/tmp/{path.stem}-diagnostics.json").write_text(
+        diagnostic_path = Path(f"/tmp/{path.stem}-diagnostics.json")
+        diagnostic_path.write_text(
             json.dumps(
                 {
                     "identity": identity,
@@ -189,14 +182,13 @@ def main() -> None:
 
     top = decode(top_path)
     top_text = plain(top)
-
     discovery: dict[str, dict[str, object]] = {}
-    for code, name in STATIONS.items():
+    for code, (name, node_id) in STATIONS.items():
         discovery[code] = {
             "name": name,
             "namePresentInStaticTop": name in top_text,
             "nodeCandidates": find_node_candidates(top, name),
-            "knownNodeId": KNOWN_NODE_IDS.get(code),
+            "officialNodeId": node_id,
         }
 
     Path("/tmp/meitetsu-main-node-discovery.json").write_text(
@@ -208,22 +200,42 @@ def main() -> None:
     print("NH36 origin diagnostic:")
     print(json.dumps(origin_diagnostic, ensure_ascii=False, indent=2))
 
-    samples = {
-        "NH24": "中京競馬場前",
-        "NH27": "鳴海",
+    output: dict[str, object] = {
+        "source": "Meitetsu official DepArrTimeList",
+        "origin": {"code": "NH36", "name": "名鉄名古屋", "nodeId": "00004372"},
+        "serviceDates": DAY_TYPES,
+        "destinations": {},
     }
-    sample_output: dict[str, dict[str, object]] = {}
-    for code, name in samples.items():
-        path = Path(f"/tmp/meitetsu-direct-{code}.html")
-        sample_output[code] = parse_direct_tail(path, "名鉄名古屋", name)
 
-    Path("/tmp/meitetsu-main-sample-boundaries.json").write_text(
-        json.dumps(sample_output, ensure_ascii=False, indent=2) + "\n",
+    for code, (name, node_id) in STATIONS.items():
+        destination = {
+            "name": name,
+            "officialStationCode": code,
+            "officialNodeId": node_id,
+            "routes": {},
+        }
+        if code == "NH36":
+            destination["walkHome"] = True
+            output["destinations"][code] = destination
+            continue
+
+        for day_type in DAY_TYPES:
+            path = Path(f"/tmp/meitetsu-direct-{code}-{day_type}.html")
+            destination["routes"][day_type] = parse_direct_tail(
+                path,
+                "名鉄名古屋",
+                name,
+            )
+
+        output["destinations"][code] = destination
+
+    Path("/tmp/meitetsu-main-last-trains.json").write_text(
+        json.dumps(output, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    print("Meitetsu Main Line destination-specific official-source inspection: OK")
-    print(json.dumps(sample_output, ensure_ascii=False, indent=2))
+    print("Meitetsu Main Line NH24-NH38 destination-specific PoC: OK")
+    print(json.dumps(output, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
