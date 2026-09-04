@@ -136,3 +136,18 @@ test("invalid stored destination is ignored", () => {
 
   assert.equal(loadDestinationStation(storage), null);
 });
+
+
+test("destination station accepts JR Chuo namespaced station codes", () => {
+  assert.equal(normalizeDestinationStation("jr-cf1"), "JR-CF01");
+  assert.equal(normalizeDestinationStation("JR-CF6"), "JR-CF06");
+  assert.throws(() => normalizeDestinationStation("JR-CF00"));
+  assert.throws(() => normalizeDestinationStation("JR-CF07"));
+  assert.throws(() => normalizeDestinationStation("CF01"));
+});
+
+test("JR Chuo destination is stored and restored locally", () => {
+  const storage = memoryStorage();
+  assert.equal(saveDestinationStation("jr-cf6", storage), "JR-CF06");
+  assert.equal(loadDestinationStation(storage), "JR-CF06");
+});
