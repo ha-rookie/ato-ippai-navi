@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/poc-jr-kansai-nagoya.yml'
       - 'scripts/generate-jr-kansai-nagoya-last-trains.py'
+      - 'src/data/last-trains-nagoya.json'
 
 permissions:
   contents: read
@@ -103,13 +104,46 @@ jobs:
               for day_type in ('weekday', 'saturday_holiday'):
                   route = destination['routes']['nagoya'][day_type]
                   assert route['lastDeparture'] == '23:57', (code, route)
-                  assert 'lastArrival' not in route, (code, route)
+                  assert route['lastArrival'] is None, (code, route)
                   assert route['routeSummary'] == 'JR関西本線 普通 直通', (code, route)
                   assert route['trainTerminal'] == '四日市', (code, route)
                   assert route['transfers'] == 0, (code, route)
                   assert route['status'] == 'verified', (code, route)
 
           print('Generated JR Kansai JR-CJ00-JR-CJ02 validation: OK')
+          PY
+
+      - name: Compare generated JR Kansai boundaries with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/jr-kansai-nagoya-last-trains.json', encoding='utf-8') as f:
+              generated = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
+
+          source = next(
+              item for item in production['sources']
+              if item['id'] == 'jr-central-kansai-official-timetable'
+          )
+          assert source['publisher'] == '東海旅客鉄道', source
+          assert source['revision'] == '2026-03-14', source
+          assert 'JR-CJ00' in production['origins']['nagoya']['stationCodes']
+
+          for code in ('JR-CJ00', 'JR-CJ01', 'JR-CJ02'):
+              expected = generated['destinations'][code]
+              actual = production['destinations'][code]
+              assert actual['operator'] == expected['operator'], code
+              assert actual['officialStationCode'] == expected['officialStationCode'], code
+              assert actual['name'] == expected['name'], code
+              assert actual['stationCodes'] == expected['stationCodes'], code
+              assert actual['enabled'] is True, code
+              assert actual['city'] == '名古屋市', code
+              assert actual['routes'] == expected['routes'], code
+
+          print('JR Kansai generated vs production JSON: OK')
           PY
 
       - name: Record station-numbering verification policy
