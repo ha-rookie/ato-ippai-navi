@@ -97,8 +97,36 @@ def inspect_origin_timetable(path: Path) -> dict[str, object]:
     return diagnostic
 
 
+def extract_span(block: str, class_name: str) -> str | None:
+    match = re.search(
+        rf'<span[^>]*class="{re.escape(class_name)}"[^>]*>(.*?)</span>',
+        block,
+        flags=re.I | re.S,
+    )
+    if not match:
+        return None
+    return plain(match.group(1))
+
+
+def extract_time(block: str, wrapper_class: str) -> str | None:
+    wrapper = re.search(
+        rf'<span[^>]*class="{re.escape(wrapper_class)}"[^>]*>(.*?)</span>\s*'
+        rf'<span[^>]*class="time-sub-',
+        block,
+        flags=re.I | re.S,
+    )
+    fragment = wrapper.group(1) if wrapper else block
+    match = re.search(
+        r'<span[^>]*aria-hidden="true"[^>]*>\s*(\d{1,2}:\d{2})\s*</span>',
+        fragment,
+        flags=re.I | re.S,
+    )
+    return match.group(1).zfill(5) if match else None
+
+
 def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, object]:
-    text = plain(decode(path))
+    source = decode(path)
+    text = plain(source)
     identity = {
         "originPresent": origin in text,
         "destinationPresent": destination in text,
@@ -121,36 +149,38 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, ob
             f"unexpected direct timetable page: {path}; identity={identity}"
         )
 
-    patterns = [
-        re.compile(
-            r"(?P<dep>\d{1,2}:\d{2})\s*発\s*"
-            r"(?P<arr>\d{1,2}:\d{2})\s*着.*?"
-            r"名古屋本線\((?P<class>[^)]+)\)\s*(?P<terminal>[^\s]+)"
-        ),
-        re.compile(
-            r"(?P<dep>\d{1,2}:\d{2}).{0,80}?"
-            r"(?P<arr>\d{1,2}:\d{2}).{0,250}?"
-            r"名古屋本線.{0,80}?(?P<class>快速特急|特急|快速急行|急行|準急|普通).{0,160}?"
-            r"(?P<terminal>[^\s]+)"
-        ),
-    ]
+    blocks = re.findall(
+        r'<ul[^>]*class="time-detail"[^>]*>(.*?)</ul>',
+        source,
+        flags=re.I | re.S,
+    )
+    services: list[dict[str, str]] = []
+    for block in blocks:
+        dep = extract_time(block, "time-deptime")
+        arr = extract_time(block, "time-arrtime")
+        route_name = extract_span(block, "route-name")
+        terminal = extract_span(block, "destination")
+        if not all((dep, arr, route_name, terminal)):
+            continue
+        route_match = re.fullmatch(r"名古屋本線\(([^)]+)\)", route_name)
+        if not route_match:
+            continue
+        services.append(
+            {
+                "lastDeparture": dep,
+                "lastArrival": arr,
+                "trainClass": route_match.group(1),
+                "trainTerminal": terminal,
+            }
+        )
 
-    matches: list[re.Match[str]] = []
-    used_pattern = -1
-    for index, pattern in enumerate(patterns):
-        matches = list(pattern.finditer(text))
-        if matches:
-            used_pattern = index
-            break
-
-    if not matches:
-        times = re.findall(r"\b(?:[01]?\d|2[0-9]):[0-5]\d\b", text)
+    if not services:
         diagnostic_path = Path(f"/tmp/{path.stem}-diagnostics.json")
         diagnostic_path.write_text(
             json.dumps(
                 {
                     "identity": identity,
-                    "timesTail": times[-40:],
+                    "timeDetailBlockCount": len(blocks),
                     "plainTail": text[-7000:],
                 },
                 ensure_ascii=False,
@@ -163,15 +193,10 @@ def parse_direct_tail(path: Path, origin: str, destination: str) -> dict[str, ob
         print(text[-7000:], file=sys.stderr)
         raise AssertionError(f"no direct service rows parsed: {path}")
 
-    last = matches[-1]
-    return {
-        "lastDeparture": last.group("dep").zfill(5),
-        "lastArrival": last.group("arr").zfill(5),
-        "trainClass": last.group("class"),
-        "trainTerminal": last.group("terminal"),
-        "parserPattern": used_pattern,
-        "matchedServiceCount": len(matches),
-    }
+    last = dict(services[-1])
+    last["matchedServiceCount"] = len(services)
+    last["parser"] = "time-detail-html"
+    return last
 
 
 def main() -> None:
@@ -208,26 +233,24 @@ def main() -> None:
     }
 
     for code, (name, node_id) in STATIONS.items():
-        destination = {
+        destination_record: dict[str, object] = {
             "name": name,
             "officialStationCode": code,
             "officialNodeId": node_id,
             "routes": {},
         }
         if code == "NH36":
-            destination["walkHome"] = True
-            output["destinations"][code] = destination
+            destination_record["walkHome"] = True
+            output["destinations"][code] = destination_record
             continue
 
+        routes = destination_record["routes"]
+        assert isinstance(routes, dict)
         for day_type in DAY_TYPES:
             path = Path(f"/tmp/meitetsu-direct-{code}-{day_type}.html")
-            destination["routes"][day_type] = parse_direct_tail(
-                path,
-                "名鉄名古屋",
-                name,
-            )
+            routes[day_type] = parse_direct_tail(path, "名鉄名古屋", name)
 
-        output["destinations"][code] = destination
+        output["destinations"][code] = destination_record
 
     Path("/tmp/meitetsu-main-last-trains.json").write_text(
         json.dumps(output, ensure_ascii=False, indent=2) + "\n",
