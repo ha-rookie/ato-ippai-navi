@@ -1,0 +1,168 @@
+name: Verify Meitetsu Chikko Production
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/data/last-trains-nagoya.json'
+      - 'scripts/poc-meitetsu-chikko-oe-transfer.py'
+      - '.github/workflows/verify-meitetsu-chikko-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve representative service dates
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          today = datetime.now(ZoneInfo('Asia/Tokyo')).date()
+          weekday = today
+          while weekday.weekday() >= 5:
+              weekday += timedelta(days=1)
+          saturday = today + timedelta(days=(5 - today.weekday()) % 7)
+          print(f'MEITETSU_WEEKDAY_DATE={weekday.isoformat()}')
+          print(f'MEITETSU_HOLIDAY_DATE={saturday.isoformat()}')
+          PY
+
+      - name: Download official Meitetsu Chikko sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+          COOKIE_JAR=/tmp/meitetsu-chikko-prod-cookies.txt
+          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
+
+          fetch() {
+            local url="$1"
+            local output="$2"
+            curl --fail --silent --show-error --location --compressed \
+              --retry 2 --retry-delay 1 \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer 'https://www.meitetsu.co.jp/' \
+              --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
+              "$url" -o "$output"
+            test -s "$output"
+          }
+
+          fetch "$BASE/map/Top?window=transfer" /tmp/meitetsu-chikko-top.html
+          fetch \
+            "$BASE/diagram/TrainDiagram?direction=down&linkId=00000875&startId=00005590" \
+            /tmp/meitetsu-chikko-oe-timetable.html
+
+          declare -A DATES=(
+            [weekday]="$MEITETSU_WEEKDAY_DATE"
+            [saturday_holiday]="$MEITETSU_HOLIDAY_DATE"
+          )
+
+          for day_type in weekday saturday_holiday; do
+            fetch \
+              "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00006856&snode=00004372" \
+              "/tmp/meitetsu-chikko-through-${day_type}.html"
+            fetch \
+              "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00006856&snode=00005590" \
+              "/tmp/meitetsu-chikko-shuttle-${day_type}.html"
+            fetch \
+              "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00005590&snode=00004372" \
+              "/tmp/meitetsu-chikko-feeder-${day_type}.html"
+          done
+
+      - name: Generate official CH01 transfer boundary
+        run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
+
+      - name: Compare official boundary with production JSON
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/meitetsu-chikko-transfer-poc.json', encoding='utf-8') as f:
+              official = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
+
+          assert official['origin'] == {
+              'code': 'NH36', 'name': '名鉄名古屋', 'nodeId': '00004372'
+          }
+          assert official['transfer'] == {
+              'code': 'TA03', 'name': '大江', 'nodeId': '00005590'
+          }
+          assert official['destination'] == {
+              'code': 'CH01', 'name': '東名古屋港', 'nodeId': '00006856'
+          }
+          assert official['minimumTransferLeadMinutes'] == 3
+          assert official['staticTimetable']['identityOk'] is True
+          assert official['staticTimetable']['containsIrregularNotice'] is True
+          assert official['staticTimetable']['containsOperationDateNotice'] is True
+
+          source_ids = {item['id'] for item in production['sources']}
+          assert 'meitetsu-chikko-official-transfer-timetable' in source_ids
+
+          stored = production['destinations']['CH01']
+          assert stored['operator'] == 'meitetsu'
+          assert stored['line'] == 'chikko'
+          assert stored['officialStationCode'] == 'CH01'
+          assert stored['name'] == '東名古屋港'
+          assert stored['stationCodes'] == ['CH01']
+          assert stored['routes'].keys() == {'nagoya'}
+
+          expected = {
+              'weekday': ('19:25', '19:47', '19:36', '19:44', 8),
+              'saturday_holiday': ('16:55', '17:23', '17:06', '17:20', 14),
+          }
+
+          for day_type, values in expected.items():
+              generated = official['days'][day_type]['boundary']
+              route = stored['routes']['nagoya'][day_type]
+              dep, arrival, ready, connection, margin = values
+
+              assert official['days'][day_type]['throughSearch']['parsedRowCount'] == 0
+              assert generated['lastDeparture'] == dep
+              assert generated['lastArrival'] == arrival
+              assert generated['transferReadyTime'] == ready
+              assert generated['connectionDeparture'] == connection
+              assert generated['transferMarginMinutes'] == margin
+              assert generated['minimumTransferLeadMinutes'] == 3
+
+              assert route['lastDeparture'] == generated['lastDeparture']
+              assert route['lastArrival'] == generated['lastArrival']
+              assert route['routeSummary'] == '名鉄名古屋本線 → 大江乗換 → 築港線'
+              assert route['trainTerminal'] == '東名古屋港'
+              assert route['transferAt'] == '大江'
+              assert route['transferStationCodes'] == ['TA03']
+              assert route['transferReadyTime'] == generated['transferReadyTime']
+              assert route['connectionDeparture'] == generated['connectionDeparture']
+              assert route['connectionTerminal'] == '東名古屋港'
+              assert route['minimumTransferLeadMinutes'] == generated['minimumTransferLeadMinutes']
+              assert route['transferMarginMinutes'] == generated['transferMarginMinutes']
+              assert route['transfers'] == 1
+              assert route['status'] == 'verified'
+              assert route['sourceIds'] == ['meitetsu-chikko-official-transfer-timetable']
+
+          print('Meitetsu Chikko CH01 production vs official source: OK')
+          PY
+
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meitetsu-chikko-production-verification
+          if-no-files-found: warn
+          path: |
+            /tmp/meitetsu-chikko-*.html
+            /tmp/meitetsu-chikko-transfer-poc.json
