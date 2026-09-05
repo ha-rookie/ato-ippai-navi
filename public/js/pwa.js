@@ -2,7 +2,6 @@ import { track } from "./analytics.js";
 
 const OFFLINE_PENDING_KEY = "ato-ippai-offline-fallback-pending";
 let deferredInstallPrompt = null;
-let installButton = null;
 
 export function isStandaloneMode() {
   if (typeof window === "undefined") return false;
@@ -54,31 +53,33 @@ function ensurePwaStyles() {
   const style = document.createElement("style");
   style.id = "pwaRuntimeStyles";
   style.textContent = `
-    .pwa-network-notice,
-    .pwa-install-panel {
+    .pwa-network-notice {
       margin: 0 0 12px;
       padding: 10px 12px;
       border-radius: 12px;
       font-size: 0.88rem;
       line-height: 1.5;
-    }
-    .pwa-network-notice {
       background: rgba(255, 191, 71, 0.12);
       border: 1px solid rgba(255, 191, 71, 0.32);
     }
     .pwa-install-panel {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 12px 0 0;
+      font-size: 0.84rem;
+      line-height: 1.5;
     }
     .pwa-install-button {
-      margin-top: 8px;
-      border: 0;
+      min-height: 44px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 10px;
-      padding: 9px 12px;
+      padding: 9px 14px;
+      background: rgba(255, 255, 255, 0.08);
+      color: inherit;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
     }
+    .pwa-install-button:disabled { opacity: 0.55; cursor: default; }
+    .pwa-install-help { margin: 0; opacity: 0.82; }
     .pwa-hidden { display: none !important; }
   `;
   document.head.appendChild(style);
@@ -165,55 +166,90 @@ function guardOfflineActions(event) {
 function ensureInstallPanel() {
   let panel = document.getElementById("pwaInstallPanel");
   if (panel) return panel;
-  const shell = getShell();
-  if (!shell) return null;
 
-  panel = document.createElement("section");
+  const hero = document.querySelector("header.hero");
+  if (!hero) return null;
+
+  panel = document.createElement("div");
   panel.id = "pwaInstallPanel";
   panel.className = "pwa-install-panel pwa-hidden";
   panel.setAttribute("aria-label", "ホーム画面への追加");
-  shell.appendChild(panel);
+  panel.innerHTML = `
+    <button id="pwaInstallButton" class="pwa-install-button" type="button" hidden>ホーム画面に追加</button>
+    <p id="pwaHelp" class="pwa-install-help" hidden></p>
+  `;
+  hero.appendChild(panel);
   return panel;
 }
 
-function showChromiumInstallUi() {
-  if (isStandaloneMode()) return;
-  const panel = ensureInstallPanel();
-  if (!panel) return;
-
-  panel.innerHTML = `
-    <strong>ホーム画面から1タップで開けます</strong><br>
-    <span>あと一杯ナビをアプリのように追加できます。</span><br>
-    <button id="pwaInstallButton" class="pwa-install-button" type="button">ホーム画面に追加</button>
-  `;
-  panel.classList.remove("pwa-hidden");
-  installButton = document.getElementById("pwaInstallButton");
-
-  installButton?.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-    track("install_prompt_clicked");
-    const prompt = deferredInstallPrompt;
-    deferredInstallPrompt = null;
-    await prompt.prompt();
-    try {
-      await prompt.userChoice;
-    } catch {
-      // Browser controls the final install result.
-    }
-    panel.classList.add("pwa-hidden");
-  });
+function hideInstallUi() {
+  const panel = document.getElementById("pwaInstallPanel");
+  const button = document.getElementById("pwaInstallButton");
+  const help = document.getElementById("pwaHelp");
+  if (button) {
+    button.hidden = true;
+    button.disabled = false;
+  }
+  if (help) help.hidden = true;
+  panel?.classList.add("pwa-hidden");
 }
 
 function showIosInstallHint() {
   if (!isIosDevice() || isStandaloneMode()) return;
   const panel = ensureInstallPanel();
-  if (!panel) return;
+  const button = document.getElementById("pwaInstallButton");
+  const help = document.getElementById("pwaHelp");
+  if (!panel || !help) return;
 
-  panel.innerHTML = `
-    <strong>ホーム画面に追加できます</strong><br>
-    <span>Safariの共有メニューから「ホーム画面に追加」を選んでください。</span>
-  `;
+  if (button) button.hidden = true;
+  help.textContent =
+    "iPhone / iPadでは、Safariの共有メニューから「ホーム画面に追加」を選べます。";
+  help.hidden = false;
   panel.classList.remove("pwa-hidden");
+}
+
+function setupInstallUi() {
+  const panel = ensureInstallPanel();
+  const button = document.getElementById("pwaInstallButton");
+  const help = document.getElementById("pwaHelp");
+  if (!panel || !button || !help) return;
+
+  if (isStandaloneMode()) {
+    hideInstallUi();
+    track("standalone_open");
+    return;
+  }
+
+  showIosInstallHint();
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    button.hidden = false;
+    help.hidden = true;
+    panel.classList.remove("pwa-hidden");
+    track("install_prompt_shown");
+  });
+
+  button.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+
+    button.disabled = true;
+    track("install_prompt_clicked");
+    try {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+    } finally {
+      deferredInstallPrompt = null;
+      hideInstallUi();
+    }
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    hideInstallUi();
+    track("app_installed");
+  });
 }
 
 async function registerServiceWorker() {
@@ -234,27 +270,9 @@ export function setupPwa() {
   ensureHeadMetadata();
   ensurePwaStyles();
   applyNetworkState();
+  setupInstallUi();
   registerServiceWorker();
   document.addEventListener("click", guardOfflineActions, true);
-
-  if (isStandaloneMode()) {
-    track("standalone_open");
-  } else {
-    showIosInstallHint();
-  }
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    track("install_prompt_shown");
-    showChromiumInstallUi();
-  });
-
-  window.addEventListener("appinstalled", () => {
-    deferredInstallPrompt = null;
-    document.getElementById("pwaInstallPanel")?.classList.add("pwa-hidden");
-    track("app_installed");
-  });
 
   window.addEventListener("offline", applyNetworkState);
   window.addEventListener("online", applyNetworkState);
