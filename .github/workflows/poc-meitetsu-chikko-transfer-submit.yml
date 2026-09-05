@@ -18,7 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Probe official TransferSearch result contract
+      - name: Probe official TransferSearch canonical query contract
         shell: bash
         run: |
           set -euo pipefail
@@ -27,12 +27,11 @@ jobs:
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 
           request() {
-            local label="$1"
-            shift
+            local label="$1" day="$2" hour="$3" minute="$4" basis="$5"
             local output="/tmp/${label}.html"
             local headers="/tmp/${label}.headers"
-            set +e
-            status=$(curl --silent --show-error --location --compressed \
+
+            status=$(curl --fail --silent --show-error --location --compressed \
               --user-agent "$UA" \
               --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
               --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
@@ -45,38 +44,38 @@ jobs:
               --data-urlencode 'goal=00006856' \
               --data-urlencode 'orvName=名鉄名古屋' \
               --data-urlencode 'dnvName=東名古屋港(CH01)' \
-              "$@" \
+              --data-urlencode "day=$day" \
+              --data-urlencode "hour=$hour" \
+              --data-urlencode "minute=$minute" \
+              --data-urlencode "basis=$basis" \
+              --data-urlencode 'sort=2' \
+              --data-urlencode 'method=0' \
+              --data-urlencode 'wspeed=standard' \
+              --data-urlencode 'utrexprs=' \
+              --data-urlencode 'useRomancecar=false' \
+              --data-urlencode 'unuse=' \
+              --data-urlencode 'from=research' \
+              --data-urlencode 'research=1' \
               --output "$output" \
               --write-out '%{http_code}')
-            rc=$?
-            set -e
-            echo "$label curl_rc=$rc http=$status bytes=$(wc -c < "$output" 2>/dev/null || echo 0)"
 
+            echo "$label http=$status bytes=$(wc -c < "$output")"
             LABEL="$label" OUTPUT="$output" python3 - <<'PY'
           import html, os, re
           from pathlib import Path
           p=Path(os.environ['OUTPUT'])
-          if not p.exists():
-              print(os.environ['LABEL'], 'no body')
-              raise SystemExit(0)
-          raw=p.read_bytes()
-          text=None
-          for enc in ('utf-8','cp932','shift_jis'):
-              try:
-                  text=raw.decode(enc); break
-              except UnicodeDecodeError: pass
-          if text is None:
-              text=raw.decode('utf-8','replace')
+          text=p.read_text(encoding='utf-8', errors='replace')
           plain=re.sub(r'<script.*?</script>|<style.*?</style>', ' ', text, flags=re.I|re.S)
           plain=re.sub(r'<[^>]+>', ' ', plain)
           plain=re.sub(r'\s+', ' ', html.unescape(plain)).strip()
           date_line=re.search(r'20\d{2}年\d{1,2}月\d{1,2}日\s*\d{1,2}時\d{1,2}分\s*(?:出発|到着)', plain)
-          routes=re.findall(r'(\d{1,2}:\d{2})\s*発\s*⇒\s*(\d{1,2}:\d{2})\s*着.*?乗換[:：]\s*(\d+)回', plain)
+          summaries=re.findall(r'(\d{1,2}:\d{2})\s*発\s*⇒\s*(\d{1,2}:\d{2})\s*着\s*.*?乗換\s*([0-9]+)\s*回', plain)
+          hidden={name: value for name, value in re.findall(r'<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"', text, flags=re.I)}
           print('dateLine=', date_line.group(0) if date_line else None)
+          print('hiddenDayBasis=', {k: hidden.get(k) for k in ('day','hour','minute','basis','method')})
           print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain, '大江': '大江' in plain})
-          print('routes=', routes[:6])
-          print('contains築港線=', '築港線' in plain, 'contains19:25=', '19:25' in plain, 'contains19:44=', '19:44' in plain, 'contains16:55=', '16:55' in plain, 'contains17:20=', '17:20' in plain)
-          print('title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
+          print('summaries=', summaries[:8])
+          print('targets=', {t: t in plain for t in ('19:25','19:36','19:44','19:47','16:55','17:06','17:20','17:23')})
           PY
           }
 
@@ -88,23 +87,9 @@ jobs:
             --cookie "$COOKIE" --cookie-jar "$COOKIE" \
             "$BASE/map/Top?window=transfer" -o /tmp/top.html
 
-          request minimal
-
-          for spec in 'weekday 2026/9 07 19 47' 'holiday 2026/9 05 17 23'; do
-            read -r day_label month day hour minute <<< "$spec"
-            for basis in 0 1 2 3 4; do
-              request "solver-${day_label}-basis${basis}" \
-                --data-urlencode "month=$month" \
-                --data-urlencode "day=$day" \
-                --data-urlencode "hour=$hour" \
-                --data-urlencode "minute=$minute" \
-                --data-urlencode "basis=$basis" \
-                --data-urlencode 'sort=2' \
-                --data-urlencode 'method=1' \
-                --data-urlencode 'utrexprs=' \
-                --data-urlencode 'wspeed=standard' \
-                --data-urlencode 'retFlg=on'
-            done
+          for basis in 0 1 2 3 4; do
+            request "weekday-basis${basis}" 20260907 19 47 "$basis"
+            request "holiday-basis${basis}" 20260905 17 23 "$basis"
           done
 
       - name: Upload submit diagnostics
@@ -113,7 +98,7 @@ jobs:
         with:
           name: meitetsu-chikko-transfer-submit
           path: |
-            /tmp/minimal.html
-            /tmp/minimal.headers
-            /tmp/solver-*.html
-            /tmp/solver-*.headers
+            /tmp/weekday-*.html
+            /tmp/weekday-*.headers
+            /tmp/holiday-*.html
+            /tmp/holiday-*.headers
