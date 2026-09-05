@@ -133,6 +133,7 @@ jobs:
 
           python3 - <<'PY'
           import json
+          import re
 
           with open("/tmp/tsurumai-last-trains.json", encoding="utf-8") as f:
               generated = json.load(f)
@@ -140,7 +141,11 @@ jobs:
           with open("src/data/last-trains-nagoya.json", encoding="utf-8") as f:
               production = json.load(f)
 
-          assert len([c for c in production["destinations"] if c.startswith("T")]) == 20
+          tsurumai_codes = [
+              code for code in production["destinations"]
+              if re.fullmatch(r"T\d{2}", code)
+          ]
+          assert len(tsurumai_codes) == 20, tsurumai_codes
 
           for code, destination in generated["destinations"].items():
               prod = production["destinations"][code]
