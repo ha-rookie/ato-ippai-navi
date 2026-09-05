@@ -2,5 +2,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ato-ippai",
   "pages_build_output_dir": "./public",
-  "compatibility_date": "2026-09-01"
+  "compatibility_date": "2026-09-01",
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "ato_ippai_navi_events"
+    }
+  ]
 }
