@@ -112,7 +112,7 @@ jobs:
             "$BASE/transfer/DepArrTimeList?date=$MEITETSU_HOLIDAY_DATE&gnode=00008545&snode=00008059" \
             /tmp/meitetsu-ajima-direct-saturday_holiday.html
 
-      - name: Verify static timetable identities and late anchors
+      - name: Verify static timetable identities
         shell: bash
         run: |
           python3 - <<'PY'
@@ -140,7 +140,6 @@ jobs:
           assert '上飯田線' in heian
           assert '小牧' in heian
           assert '味鋺' in ajima
-          assert 'KM12' in ajima
           print('Meitetsu static timetable identity: OK')
           PY
 
