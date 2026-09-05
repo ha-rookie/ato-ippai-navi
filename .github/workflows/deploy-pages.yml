@@ -1,0 +1,188 @@
+name: Deploy Pages to Cloudflare
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'functions/**'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-pages.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check functions/[[path]].js
+          node --check public/app.js
+          node --check public/js/last-train-page.js
+          node --check public/js/last-train-link.js
+          node --check public/js/sleep.js
+          node --check public/js/settings.js
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Write Pages build marker
+        shell: bash
+        run: |
+          printf '{"buildSha":"%s"}\n' "$GITHUB_SHA" > public/build.json
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: latest
+          preCommands: npx wrangler pages project create ato-ippai --production-branch main || true
+          command: pages deploy public --project-name=ato-ippai --branch=main --commit-dirty=true
+
+      - name: Pages production smoke
+        env:
+          BASE_URL: https://ato-ippai.pages.dev
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ready=0
+          for attempt in $(seq 1 30); do
+            echo "Pages readiness attempt $attempt/30"
+            if curl -fsS "$BASE_URL/build.json" -o /tmp/pages-build.json; then
+              if EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          with open('/tmp/pages-build.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          if data.get('buildSha') != os.environ['EXPECTED_BUILD_SHA']:
+              print(
+                  'Pages build SHA not visible yet: '
+                  f"expected={os.environ['EXPECTED_BUILD_SHA']}, "
+                  f"actual={data.get('buildSha')}"
+              )
+              sys.exit(1)
+          print('Pages build SHA smoke test: OK')
+          PY
+              then
+                ready=1
+                break
+              fi
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo 'Expected Pages build SHA was not visible within 60 seconds.'
+            exit 1
+          fi
+
+          curl -fsS "$BASE_URL/" -o /tmp/index.html
+          grep -q '<title>あと一杯ナビ</title>' /tmp/index.html
+          grep -q '現在地から判定する' /tmp/index.html
+
+          curl -fsS "$BASE_URL/last-train" -o /tmp/last-train.html
+          grep -q '<title>あと一杯ナビ</title>' /tmp/last-train.html
+          grep -q '<script type="module" src="/app.js"></script>' /tmp/last-train.html
+          echo 'Pages static + SPA smoke test: OK'
+
+          curl -fsS "$BASE_URL/health" -o /tmp/health.json
+          cat /tmp/health.json
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/health.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          assert data.get('ok') is True, data
+          assert data.get('service') == 'ato-ippai-api-poc', data
+          assert data.get('googleApiKeyConfigured') is True, data
+          print('Pages -> Worker health proxy smoke test: OK')
+          PY
+
+          curl -fsS "$BASE_URL/ops/last-train-boundaries.csv" -o /tmp/last-train-boundaries.csv
+          python3 - <<'PY'
+          import csv
+
+          with open('/tmp/last-train-boundaries.csv', encoding='utf-8', newline='') as f:
+              rows = list(csv.DictReader(f))
+
+          assert len(rows) > 100, len(rows)
+          assert any(row['目的駅コード'] == 'H22' and row['status'] == 'verified' for row in rows)
+          print(f'Pages -> Worker ops CSV proxy smoke test: OK ({len(rows)} rows)')
+          PY
+
+          for path in walk drive taxi-estimate; do
+            status=$(curl -sS \
+              -o "/tmp/removed-${path}.json" \
+              -w '%{http_code}' \
+              -H 'content-type: application/json' \
+              --data '{}' \
+              "$BASE_URL/api/$path")
+            echo "Removed endpoint /api/$path through Pages -> HTTP $status"
+            test "$status" = '404'
+          done
+          echo 'Pages facade removed-endpoint smoke test: OK'
+
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timedelta, time
+          from zoneinfo import ZoneInfo
+
+          jst = ZoneInfo('Asia/Tokyo')
+          now = datetime.now(jst)
+          target = datetime.combine(now.date(), time(23, 20), tzinfo=jst)
+          if target <= now:
+              target += timedelta(days=1)
+
+          day_type = 'weekday' if target.weekday() < 5 else 'saturday_holiday'
+          request = {
+              'origin': {'latitude': 35.1715, 'longitude': 136.9057},
+              'departureTime': target.isoformat(timespec='seconds'),
+              'dayType': day_type,
+              'destinationCode': 'H22',
+              'offsetMinutes': [0, 15, 30, 60],
+              'stationBufferMinutes': 3,
+              'minimumBoardingLeadMinutes': 1,
+          }
+          with open('/tmp/pages-boundary-request.json', 'w', encoding='utf-8') as f:
+              json.dump(request, f, ensure_ascii=False)
+          PY
+
+          curl -fsS \
+            -H 'content-type: application/json' \
+            --data @/tmp/pages-boundary-request.json \
+            "$BASE_URL/api/last-train-boundary" \
+            -o /tmp/pages-boundary.json
+
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/pages-boundary.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          assert data['routeFound'] is True, data
+          assert data['dataSource'] == 'internal_last_train_json', data
+          assert data['destination']['code'] == 'H22', data
+          assert len(data['scenarios']) == 4, data['scenarios']
+          print('Pages -> Worker last-train boundary smoke test: OK')
+          PY

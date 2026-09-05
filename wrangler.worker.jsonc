@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ato-ippai",
-  "pages_build_output_dir": "./public",
+  "name": "ato-ippai-api-poc",
+  "main": "src/index.js",
   "compatibility_date": "2026-09-01"
 }

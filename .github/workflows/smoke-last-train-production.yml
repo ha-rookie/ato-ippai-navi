@@ -2,7 +2,7 @@ name: Smoke Last Train Production
 
 on:
   workflow_run:
-    workflows: ["Deploy Worker to Cloudflare"]
+    workflows: ["Deploy Pages to Cloudflare"]
     types: [completed]
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 5
 
     env:
-      BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+      BASE_URL: https://ato-ippai.pages.dev
 
     steps:
       - name: Verify last-train page and assets
@@ -44,4 +44,7 @@ jobs:
           curl -fsS "$BASE_URL/last-train-link.css" -o /tmp/last-train-link.css
           grep -q '.last-train-quick-link' /tmp/last-train-link.css
 
-          echo 'Last-train page production smoke test: OK'
+          curl -fsS "$BASE_URL/health" -o /tmp/health.json
+          grep -q 'ato-ippai-api-poc' /tmp/health.json
+
+          echo 'Last-train Pages production smoke test: OK'
