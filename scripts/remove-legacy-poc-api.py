@@ -28,51 +28,38 @@ def update_index() -> None:
 
     text = remove_once(
         text,
-        r'function allSteps\(route\) \{.*?\n\}\n\nasync function googleRoutes',
+        r'function allSteps\(route\) \{.*?\n\}\n\n(?=async function googleRoutes)',
         "legacy transit normalization helpers",
         re.S,
     )
-    text = text.replace(
-        "async function googleRoutes",
-        "async function googleRoutes",
-        1,
-    )
 
     text = remove_once(
         text,
-        r'async function transit\(env, input\) \{.*?\n\}\n\nasync function walk',
+        r'async function transit\(env, input\) \{.*?\n\}\n\n(?=async function walk)',
         "legacy transit function",
         re.S,
     )
-    text = text.replace("async function walk", "async function walk", 1)
 
     text = remove_once(
         text,
-        r'function addMinutes\(iso, minutes\) \{.*?\n\}\n\nasync function lastTrainBoundaryFromCurrentLocation',
+        r'function addMinutes\(iso, minutes\) \{.*?\n\}\n\n(?=async function lastTrainBoundaryFromCurrentLocation)',
         "legacy addMinutes helper",
         re.S,
     )
-    text = text.replace(
-        "async function lastTrainBoundaryFromCurrentLocation",
-        "async function lastTrainBoundaryFromCurrentLocation",
-        1,
-    )
 
     text = remove_once(
         text,
-        r'async function decisionFromCurrentLocation\(env, input\) \{.*?\n\}\n\nasync function tonightDecision',
+        r'async function decisionFromCurrentLocation\(env, input\) \{.*?\n\}\n\n(?=async function tonightDecision)',
         "legacy Fujigaoka current-location decision",
         re.S,
     )
-    text = text.replace("async function tonightDecision", "async function tonightDecision", 1)
 
     text = remove_once(
         text,
-        r'async function evaluate\(env, input\) \{.*?\n\}\n\nexport default',
+        r'async function evaluate\(env, input\) \{.*?\n\}\n\n(?=export default)',
         "legacy evaluate function",
         re.S,
     )
-    text = text.replace("export default", "export default", 1)
 
     route_blocks = [
         (
@@ -109,6 +96,12 @@ def update_index() -> None:
             raise RuntimeError(f"legacy token remains in src/index.js: {token}")
 
     required = [
+        "async function googleRoutes",
+        "async function walk",
+        "async function drive",
+        "async function lastTrainBoundaryFromCurrentLocation",
+        "async function tonightDecision",
+        "export default",
         'url.pathname === "/api/walk"',
         'url.pathname === "/api/drive"',
         'url.pathname === "/api/last-train-boundary"',
@@ -117,7 +110,7 @@ def update_index() -> None:
     ]
     for token in required:
         if token not in text:
-            raise RuntimeError(f"required production route missing: {token}")
+            raise RuntimeError(f"required production token missing: {token}")
 
     INDEX.write_text(text, encoding="utf-8")
 
