@@ -1,0 +1,162 @@
+.last-train-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+
+.last-train-hero {
+  padding-bottom: 12px;
+}
+
+.last-train-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.last-train-back {
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.last-train-destination {
+  margin-top: 16px;
+}
+
+.last-train-primary {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.last-train-primary.warning {
+  border-color: rgba(255, 198, 92, 0.65);
+}
+
+.last-train-primary.ended {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.last-train-kicker {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  opacity: 0.72;
+}
+
+.last-train-deadline {
+  margin: 0;
+  font-size: clamp(1.55rem, 7vw, 2.35rem);
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.last-train-deadline strong {
+  white-space: nowrap;
+}
+
+.last-train-countdown {
+  margin-top: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.last-train-route {
+  margin-top: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.last-train-route-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.last-train-route-row strong {
+  font-size: 1.15rem;
+}
+
+.last-train-route-summary {
+  margin-top: 12px;
+  opacity: 0.9;
+}
+
+.last-train-details {
+  margin-top: 14px;
+}
+
+.last-train-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.last-train-details-body {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  opacity: 0.9;
+}
+
+.last-train-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.last-train-action-link,
+.last-train-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  font: inherit;
+}
+
+.last-train-action-link {
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+}
+
+.last-train-action-button {
+  border: 0;
+  cursor: pointer;
+}
+
+.last-train-status {
+  min-height: 1.5em;
+  margin-top: 12px;
+  opacity: 0.82;
+}
+
+.last-train-note {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  opacity: 0.72;
+}
+
+.last-train-hidden {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  .last-train-route-row {
+    align-items: flex-start;
+  }
+
+  .last-train-actions > * {
+    flex: 1 1 100%;
+  }
+}
