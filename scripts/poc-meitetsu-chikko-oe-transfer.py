@@ -11,6 +11,33 @@ ORIGIN = {"code": "NH36", "name": "名鉄名古屋", "nodeId": "00004372"}
 TRANSFER = {"code": "TA03", "name": "大江", "nodeId": "00005590"}
 DESTINATION = {"code": "CH01", "name": "東名古屋港", "nodeId": "00006856"}
 DAY_TYPES = ("weekday", "saturday_holiday")
+MINIMUM_TRANSFER_LEAD_MINUTES = 3
+
+# Current 2026 timetable guard. A timetable change must fail closed and be reviewed.
+EXPECTED = {
+    "weekday": {
+        "feederDeparture": "19:25",
+        "feederArrival": "19:36",
+        "feederRoute": "名古屋本線(急行)",
+        "feederTerminal": "河和",
+        "shuttleDeparture": "19:44",
+        "shuttleArrival": "19:47",
+        "shuttleRoute": "築港線(普通)",
+        "shuttleTerminal": "東名古屋港",
+        "transferMarginMinutes": 8,
+    },
+    "saturday_holiday": {
+        "feederDeparture": "16:55",
+        "feederArrival": "17:06",
+        "feederRoute": "名古屋本線(急行)",
+        "feederTerminal": "河和",
+        "shuttleDeparture": "17:20",
+        "shuttleArrival": "17:23",
+        "shuttleRoute": "築港線(普通)",
+        "shuttleTerminal": "東名古屋港",
+        "transferMarginMinutes": 14,
+    },
+}
 
 
 def decode(path: Path) -> str:
@@ -28,11 +55,6 @@ def plain(fragment: str) -> str:
     fragment = re.sub(r"<style.*?</style>", " ", fragment, flags=re.I | re.S)
     fragment = re.sub(r"<[^>]+>", " ", fragment)
     return re.sub(r"\s+", " ", html.unescape(fragment)).strip()
-
-
-def attr(tag: str, name: str) -> str | None:
-    match = re.search(rf'\b{re.escape(name)}=["\']([^"\']*)["\']', tag, flags=re.I)
-    return html.unescape(match.group(1)) if match else None
 
 
 def extract_spans(block: str, class_name: str) -> list[str]:
@@ -146,75 +168,32 @@ def inspect_static_timetable(path: Path) -> dict[str, object]:
     }
 
 
-def inspect_forms(source: str) -> list[dict[str, object]]:
-    forms: list[dict[str, object]] = []
-    for match in re.finditer(r"(<form\b[^>]*>)(.*?)</form>", source, flags=re.I | re.S):
-        tag, body = match.groups()
-        inputs: list[dict[str, object]] = []
-        for input_tag in re.findall(r"<input\b[^>]*>", body, flags=re.I | re.S):
-            name = attr(input_tag, "name")
-            if not name:
-                continue
-            inputs.append(
-                {
-                    "name": name,
-                    "type": attr(input_tag, "type"),
-                    "value": attr(input_tag, "value"),
-                    "checked": bool(re.search(r"\bchecked\b", input_tag, flags=re.I)),
-                }
-            )
-
-        selects: list[dict[str, object]] = []
-        for select_match in re.finditer(
-            r"(<select\b[^>]*>)(.*?)</select>", body, flags=re.I | re.S
-        ):
-            select_tag, select_body = select_match.groups()
-            name = attr(select_tag, "name")
-            if not name:
-                continue
-            selected = None
-            for option_tag, option_body in re.findall(
-                r"(<option\b[^>]*>)(.*?)</option>", select_body, flags=re.I | re.S
-            ):
-                if re.search(r"\bselected\b", option_tag, flags=re.I):
-                    selected = attr(option_tag, "value") or plain(option_body)
-                    break
-            selects.append({"name": name, "selected": selected})
-
-        forms.append(
-            {
-                "action": attr(tag, "action"),
-                "method": attr(tag, "method"),
-                "inputs": inputs,
-                "selects": selects,
-                "plainText": plain(body)[:1500],
-            }
-        )
-    return forms
+def single_value(values: list[str], label: str) -> str:
+    if len(values) != 1:
+        raise AssertionError(f"expected exactly one {label}, got {values}")
+    return values[0]
 
 
-def inspect_solver(path: Path) -> dict[str, object]:
-    source = decode(path)
-    text = plain(source)
-    clocks = re.findall(r"(?<!\d)(\d{1,2}:\d{2})(?!\d)", text)
-    normalized: list[str] = []
-    for value in clocks:
-        value = value.zfill(5)
-        if value not in normalized:
-            normalized.append(value)
-    return {
-        "originPresent": ORIGIN["name"] in text,
-        "transferPresent": TRANSFER["name"] in text,
-        "destinationPresent": DESTINATION["name"] in text,
-        "routeFound": (
-            "までの乗換案内" in text
-            and "到達可能な経路が見つかりませんでした" not in text
-        ),
-        "transferOnePresent": "乗換:1回" in text or "乗換：1回" in text,
-        "clocks": normalized,
-        "forms": inspect_forms(source),
-        "plainHead": text[:2500],
+def assert_expected(day_type: str, boundary: dict[str, object]) -> None:
+    expected = EXPECTED[day_type]
+    feeder = boundary["feeder"]
+    shuttle = boundary["shuttle"]
+
+    actual = {
+        "feederDeparture": feeder["departure"],
+        "feederArrival": feeder["arrival"],
+        "feederRoute": single_value(feeder["routeNames"], "feeder route"),
+        "feederTerminal": single_value(feeder["terminals"], "feeder terminal"),
+        "shuttleDeparture": shuttle["departure"],
+        "shuttleArrival": shuttle["arrival"],
+        "shuttleRoute": single_value(shuttle["routeNames"], "shuttle route"),
+        "shuttleTerminal": single_value(shuttle["terminals"], "shuttle terminal"),
+        "transferMarginMinutes": boundary["transferMarginMinutes"],
     }
+    if actual != expected:
+        raise AssertionError(
+            f"{day_type} boundary changed; expected={expected}, actual={actual}"
+        )
 
 
 def main() -> None:
@@ -222,6 +201,12 @@ def main() -> None:
         "origin": ORIGIN,
         "transfer": TRANSFER,
         "destination": DESTINATION,
+        "minimumTransferLeadMinutes": MINIMUM_TRANSFER_LEAD_MINUTES,
+        "verificationStrategy": (
+            "official destination-specific no-transfer timetables for each leg; "
+            "latest feeder that reaches Oe at least the conservative transfer lead "
+            "before the final official Chikko shuttle"
+        ),
         "days": {},
         "staticTimetable": inspect_static_timetable(Path("/tmp/meitetsu-chikko-oe-timetable.html")),
     }
@@ -232,6 +217,11 @@ def main() -> None:
         feeder_path = Path(f"/tmp/meitetsu-chikko-feeder-{day_type}.html")
 
         through = parse_rows(through_path, ORIGIN["name"], DESTINATION["name"])
+        if through["parsedRowCount"] != 0:
+            raise AssertionError(
+                f"NH36 -> CH01 unexpectedly has a no-transfer service: {day_type}"
+            )
+
         shuttles = direct_services(
             shuttle_path, TRANSFER["name"], DESTINATION["name"], "築港線("
         )
@@ -243,46 +233,67 @@ def main() -> None:
 
         last_shuttle = shuttles[-1]
         shuttle_departure_minutes = service_minutes(str(last_shuttle["departure"]))
-        feeder_candidates: list[dict[str, object]] = []
+        compatible: list[dict[str, object]] = []
+        too_tight: list[dict[str, object]] = []
+
         for feeder in feeders:
             margin = shuttle_departure_minutes - service_minutes(str(feeder["arrival"]))
-            if margin < 0:
-                continue
-            feeder_candidates.append({**feeder, "rawTransferMarginMinutes": margin})
-        feeder_candidates.sort(key=lambda row: service_minutes(str(row["departure"])))
+            candidate = {**feeder, "transferMarginMinutes": margin}
+            if margin >= MINIMUM_TRANSFER_LEAD_MINUTES:
+                compatible.append(candidate)
+            elif margin >= 0:
+                too_tight.append(candidate)
 
-        solver_path = Path(f"/tmp/meitetsu-chikko-solver-{day_type}.html")
-        solver = inspect_solver(solver_path) if solver_path.exists() else None
+        compatible.sort(key=lambda row: service_minutes(str(row["departure"])))
+        too_tight.sort(key=lambda row: service_minutes(str(row["departure"])))
+        if not compatible:
+            raise AssertionError(
+                f"no feeder reaches Oe with >= {MINIMUM_TRANSFER_LEAD_MINUTES} min lead: {day_type}"
+            )
+
+        feeder = compatible[-1]
+        boundary = {
+            "lastDeparture": feeder["departure"],
+            "lastArrival": last_shuttle["arrival"],
+            "transferAt": TRANSFER["name"],
+            "transferReadyTime": feeder["arrival"],
+            "connectionDeparture": last_shuttle["departure"],
+            "transferMarginMinutes": feeder["transferMarginMinutes"],
+            "minimumTransferLeadMinutes": MINIMUM_TRANSFER_LEAD_MINUTES,
+            "feeder": feeder,
+            "shuttle": last_shuttle,
+        }
+        assert_expected(day_type, boundary)
 
         result["days"][day_type] = {
-            "throughSearch": through,
+            "throughSearch": {
+                "identity": through["identity"],
+                "timeDetailBlockCount": through["timeDetailBlockCount"],
+                "parsedRowCount": through["parsedRowCount"],
+            },
             "shuttleServiceCount": len(shuttles),
-            "lastShuttle": last_shuttle,
-            "shuttleServices": shuttles,
             "feederServiceCount": len(feeders),
-            "lastFeederBeforeShuttle": feeder_candidates[-1] if feeder_candidates else None,
-            "feederCandidates": feeder_candidates[-5:],
-            "solver": solver,
+            "compatibleFeederCount": len(compatible),
+            "tooTightFeederCount": len(too_tight),
+            "boundary": boundary,
+            "lastFiveCompatibleFeeders": compatible[-5:],
+            "tooTightFeeders": too_tight,
         }
 
     Path("/tmp/meitetsu-chikko-transfer-poc.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
-    print("Meitetsu Chikko CH01 transfer structure PoC: OK")
+    print("Meitetsu Chikko CH01 transfer boundary PoC: OK")
     for day_type in DAY_TYPES:
-        day = result["days"][day_type]
-        last = day["lastShuttle"]
+        boundary = result["days"][day_type]["boundary"]
         print(
-            f"{day_type}: Oe shuttle last {last['departure']}->{last['arrival']} "
-            f"routes={last['routeNames']}"
+            f"{day_type}: {boundary['lastDeparture']} Nagoya -> "
+            f"{boundary['transferReadyTime']} Oe / "
+            f"{boundary['connectionDeparture']} Oe -> "
+            f"{boundary['lastArrival']} Higashi-Nagoyako / "
+            f"margin={boundary['transferMarginMinutes']} min"
         )
-        print(
-            f"{day_type}: latest feeder candidate={day['lastFeederBeforeShuttle']}"
-        )
-        if day["solver"]:
-            print(f"{day_type}: solver forms={json.dumps(day['solver']['forms'], ensure_ascii=False)}")
-            print(f"{day_type}: solver routeFound={day['solver']['routeFound']} clocks={day['solver']['clocks']}")
 
 
 if __name__ == "__main__":
