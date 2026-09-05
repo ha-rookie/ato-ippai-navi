@@ -21,9 +21,15 @@ jobs:
         run: |
           node --check src/index.js
           node --check src/last-train.js
+          node --check src/ops-csv.js
           node --check public/app.js
           node --check public/js/sleep.js
           node --check public/js/settings.js
+
+      - name: Validate operations scripts
+        run: |
+          python3 -m py_compile scripts/dispatch-workflow-and-wait.py
+          python3 -m json.tool ops/weekly-verifiers.json > /dev/null
 
       - name: Run unit tests
         run: npm test
