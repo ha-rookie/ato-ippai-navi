@@ -8,6 +8,7 @@ import {
   saveDestinationStation,
   saveSleepSettings
 } from "/js/settings.js";
+import { autoDayType } from "/js/service-day.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -44,13 +45,6 @@ function yen(value) {
     currency: "JPY",
     maximumFractionDigits: 0
   }).format(Number(value));
-}
-
-function autoDayType() {
-  const day = new Date().getDay();
-  return day === 0 || day === 6
-    ? "saturday_holiday"
-    : "weekday";
 }
 
 function updateClock() {
@@ -352,7 +346,11 @@ els.clearSettingsButton.addEventListener("click", () => {
   els.settingsStatus.textContent = "端末の設定を削除しました";
 });
 
-els.dayType.value = autoDayType();
+try {
+  els.dayType.value = autoDayType();
+} catch {
+  // 祝日カレンダー未登録年はHTMLの選択値を残し、手動指定を許可する。
+}
 populateDestinationStation();
 populateSettings();
 updateClock();
