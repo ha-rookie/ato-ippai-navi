@@ -128,6 +128,12 @@
       "publisher": "名古屋鉄道",
       "checkedAt": "2026-09-05",
       "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
+    },
+    {
+      "id": "meitetsu-komaki-official-direct-timetable",
+      "publisher": "名古屋鉄道",
+      "checkedAt": "2026-09-05",
+      "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
     }
   ],
   "origins": {
@@ -6984,6 +6990,65 @@
             "status": "verified",
             "sourceIds": [
               "meitetsu-chikko-official-transfer-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "KM12": {
+      "operator": "meitetsu",
+      "line": "komaki",
+      "officialStationCode": "KM12",
+      "name": "味鋺",
+      "city": "名古屋市",
+      "stationCodes": [
+        "KM12"
+      ],
+      "enabled": true,
+      "routes": {
+        "sakae": {
+          "weekday": {
+            "lastDeparture": "23:42",
+            "lastArrival": "00:10",
+            "routeSummary": "名城線 → 平安通乗換 → 上飯田線・名鉄小牧線直通",
+            "trainTerminal": "小牧",
+            "transferAt": "平安通",
+            "transferStationCodes": [
+              "M11",
+              "K02"
+            ],
+            "transferReadyTime": "23:54",
+            "connectionDeparture": "00:06",
+            "connectionTerminal": "小牧",
+            "minimumTransferLeadMinutes": 3,
+            "transferMarginMinutes": 12,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "meitetsu-komaki-official-direct-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "23:42",
+            "lastArrival": "00:10",
+            "routeSummary": "名城線 → 平安通乗換 → 上飯田線・名鉄小牧線直通",
+            "trainTerminal": "小牧",
+            "transferAt": "平安通",
+            "transferStationCodes": [
+              "M11",
+              "K02"
+            ],
+            "transferReadyTime": "23:54",
+            "connectionDeparture": "00:06",
+            "connectionTerminal": "小牧",
+            "minimumTransferLeadMinutes": 3,
+            "transferMarginMinutes": 12,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "nagoya-subway-pocket-timetable-meijo",
+              "meitetsu-komaki-official-direct-timetable"
             ]
           }
         }

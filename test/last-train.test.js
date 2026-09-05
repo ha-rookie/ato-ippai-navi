@@ -1081,3 +1081,63 @@ test("Meitetsu Chikko CH01 exposes transfer metadata in boundary API model", () 
 
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+
+test("Meitetsu Komaki KM12 keeps Heian-dori transfer boundary", () => {
+  const destination = dataset.destinations.KM12;
+  assert.equal(destination.operator, "meitetsu");
+  assert.equal(destination.line, "komaki");
+  assert.equal(destination.officialStationCode, "KM12");
+  assert.equal(destination.name, "味鋺");
+  assert.deepEqual(eligibleOriginIds(dataset, "KM12"), ["sakae"]);
+
+  for (const dayType of ["weekday", "saturday_holiday"]) {
+    const route = destination.routes.sakae[dayType];
+    assert.equal(route.lastDeparture, "23:42", dayType);
+    assert.equal(route.lastArrival, "00:10", dayType);
+    assert.equal(route.routeSummary, "名城線 → 平安通乗換 → 上飯田線・名鉄小牧線直通", dayType);
+    assert.equal(route.trainTerminal, "小牧", dayType);
+    assert.equal(route.transferAt, "平安通", dayType);
+    assert.deepEqual(route.transferStationCodes, ["M11", "K02"], dayType);
+    assert.equal(route.transferReadyTime, "23:54", dayType);
+    assert.equal(route.connectionDeparture, "00:06", dayType);
+    assert.equal(route.connectionTerminal, "小牧", dayType);
+    assert.equal(route.minimumTransferLeadMinutes, 3, dayType);
+    assert.equal(route.transferMarginMinutes, 12, dayType);
+    assert.equal(route.transfers, 1, dayType);
+    assert.equal(route.status, "verified", dayType);
+    assert.deepEqual(route.sourceIds, [
+      "nagoya-subway-pocket-timetable-meijo",
+      "meitetsu-komaki-official-direct-timetable"
+    ], dayType);
+  }
+});
+
+test("Meitetsu Komaki KM12 exposes transfer metadata in boundary API model", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T23:20:00+09:00",
+    dayType: "weekday",
+    destinationCode: "KM12",
+    offsetMinutes: [0, 20],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: { sakae: { walkMinutes: 8 } }
+  });
+
+  const before = result.scenarios[0];
+  assert.equal(before.canReachDestination, true);
+  assert.equal(before.recommendedOriginId, "sakae");
+  assert.equal(before.lastDeparture, "23:42");
+  assert.equal(before.lastArrival, "00:10");
+  assert.equal(before.transfers, 1);
+  assert.equal(before.transferAt, "平安通");
+  assert.deepEqual(before.transferStationCodes, ["M11", "K02"]);
+  assert.equal(before.transferReadyTime, "23:54");
+  assert.equal(before.connectionDeparture, "00:06");
+  assert.equal(before.connectionTerminal, "小牧");
+  assert.equal(before.minimumTransferLeadMinutes, 3);
+  assert.equal(before.transferMarginMinutes, 12);
+
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});
