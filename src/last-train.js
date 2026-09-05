@@ -172,6 +172,14 @@ function evaluateHub({
       lastArrivalDate ? localClock(lastArrivalDate) : null,
     routeSummary: context.route.routeSummary,
     transfers: context.route.transfers,
+    transferAt: context.route.transferAt ?? null,
+    transferStationCodes: context.route.transferStationCodes ?? [],
+    transferReadyTime: context.route.transferReadyTime ?? null,
+    connectionDeparture: context.route.connectionDeparture ?? null,
+    connectionTerminal: context.route.connectionTerminal ?? null,
+    minimumTransferLeadMinutes:
+      context.route.minimumTransferLeadMinutes ?? null,
+    transferMarginMinutes: context.route.transferMarginMinutes ?? null,
     minutesUntilLastDeparture:
       lastDepartureServiceMinutes - readyServiceMinutes,
     usableMarginMinutes:
@@ -268,6 +276,14 @@ export function evaluateLastTrainBoundary(dataset, input) {
       arrivalEstimateQuality: "last_train_boundary_only",
       routeSummary: recommended?.routeSummary ?? null,
       transfers: recommended?.transfers ?? null,
+      transferAt: recommended?.transferAt ?? null,
+      transferStationCodes: recommended?.transferStationCodes ?? [],
+      transferReadyTime: recommended?.transferReadyTime ?? null,
+      connectionDeparture: recommended?.connectionDeparture ?? null,
+      connectionTerminal: recommended?.connectionTerminal ?? null,
+      minimumTransferLeadMinutes:
+        recommended?.minimumTransferLeadMinutes ?? null,
+      transferMarginMinutes: recommended?.transferMarginMinutes ?? null,
       options
     };
   });
