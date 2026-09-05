@@ -1,10 +1,11 @@
-name: PoC Meitetsu Chikko Oe Transfer
+name: Verify Meitetsu Chikko Production
 
 on:
   workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
+      - 'src/data/last-trains-nagoya.json'
       - 'scripts/poc-meitetsu-chikko-oe-transfer.py'
       - '.github/workflows/poc-meitetsu-chikko-oe-transfer.yml'
 
@@ -12,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -91,63 +92,93 @@ jobs:
               "/tmp/meitetsu-chikko-feeder-${day_type}.html"
           done
 
-      - name: Generate and validate transfer boundary
+      - name: Generate official CH01 transfer boundary
         run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
 
-      - name: Validate station identity and conservative connection
+      - name: Compare official boundary with production JSON
         shell: bash
         run: |
           python3 - <<'PY'
           import json
 
           with open('/tmp/meitetsu-chikko-transfer-poc.json', encoding='utf-8') as f:
-              data = json.load(f)
+              official = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
 
-          assert data['origin'] == {
+          assert official['origin'] == {
               'code': 'NH36', 'name': '名鉄名古屋', 'nodeId': '00004372'
           }
-          assert data['transfer'] == {
+          assert official['transfer'] == {
               'code': 'TA03', 'name': '大江', 'nodeId': '00005590'
           }
-          assert data['destination'] == {
+          assert official['destination'] == {
               'code': 'CH01', 'name': '東名古屋港', 'nodeId': '00006856'
           }
-          assert data['minimumTransferLeadMinutes'] == 3
-          assert data['staticTimetable']['identityOk'] is True
-          assert data['staticTimetable']['containsIrregularNotice'] is True
-          assert data['staticTimetable']['containsOperationDateNotice'] is True
+          assert official['minimumTransferLeadMinutes'] == 3
+          assert official['staticTimetable']['identityOk'] is True
+          assert official['staticTimetable']['containsIrregularNotice'] is True
+          assert official['staticTimetable']['containsOperationDateNotice'] is True
+
+          source_ids = {item['id'] for item in production['sources']}
+          assert 'meitetsu-chikko-official-transfer-timetable' in source_ids
+
+          stored = production['destinations']['CH01']
+          assert stored['operator'] == 'meitetsu'
+          assert stored['line'] == 'chikko'
+          assert stored['officialStationCode'] == 'CH01'
+          assert stored['name'] == '東名古屋港'
+          assert stored['stationCodes'] == ['CH01']
+          assert set(stored['routes']) == {'nagoya'}
 
           expected = {
-              'weekday': ('19:25', '19:36', '19:44', '19:47', 8),
-              'saturday_holiday': ('16:55', '17:06', '17:20', '17:23', 14),
+              'weekday': ('19:25', '19:47', '19:36', '19:44', 8),
+              'saturday_holiday': ('16:55', '17:23', '17:06', '17:20', 14),
           }
 
           for day_type, values in expected.items():
-              day = data['days'][day_type]
-              boundary = day['boundary']
-              dep, ready, connection, arrival, margin = values
+              day = official['days'][day_type]
+              generated = day['boundary']
+              route = stored['routes']['nagoya'][day_type]
+              dep, arrival, ready, connection, margin = values
 
               assert day['throughSearch']['identity']['originPresent'] is True
               assert day['throughSearch']['identity']['destinationPresent'] is True
               assert day['throughSearch']['parsedRowCount'] == 0
               assert day['shuttleServiceCount'] >= 1
               assert day['feederServiceCount'] >= 1
-              assert boundary['lastDeparture'] == dep
-              assert boundary['transferReadyTime'] == ready
-              assert boundary['connectionDeparture'] == connection
-              assert boundary['lastArrival'] == arrival
-              assert boundary['transferMarginMinutes'] == margin
-              assert boundary['minimumTransferLeadMinutes'] == 3
-              assert margin >= boundary['minimumTransferLeadMinutes']
-              assert boundary['feeder']['routeNames'] == ['名古屋本線(急行)']
-              assert boundary['feeder']['terminals'] == ['河和']
-              assert boundary['shuttle']['routeNames'] == ['築港線(普通)']
-              assert boundary['shuttle']['terminals'] == ['東名古屋港']
 
-          print('Meitetsu Chikko CH01 conservative transfer validation: OK')
+              assert generated['lastDeparture'] == dep
+              assert generated['lastArrival'] == arrival
+              assert generated['transferReadyTime'] == ready
+              assert generated['connectionDeparture'] == connection
+              assert generated['transferMarginMinutes'] == margin
+              assert generated['minimumTransferLeadMinutes'] == 3
+              assert margin >= generated['minimumTransferLeadMinutes']
+              assert generated['feeder']['routeNames'] == ['名古屋本線(急行)']
+              assert generated['feeder']['terminals'] == ['河和']
+              assert generated['shuttle']['routeNames'] == ['築港線(普通)']
+              assert generated['shuttle']['terminals'] == ['東名古屋港']
+
+              assert route['lastDeparture'] == generated['lastDeparture']
+              assert route['lastArrival'] == generated['lastArrival']
+              assert route['routeSummary'] == '名鉄名古屋本線 → 大江乗換 → 築港線'
+              assert route['trainTerminal'] == '東名古屋港'
+              assert route['transferAt'] == '大江'
+              assert route['transferStationCodes'] == ['TA03']
+              assert route['transferReadyTime'] == generated['transferReadyTime']
+              assert route['connectionDeparture'] == generated['connectionDeparture']
+              assert route['connectionTerminal'] == '東名古屋港'
+              assert route['minimumTransferLeadMinutes'] == generated['minimumTransferLeadMinutes']
+              assert route['transferMarginMinutes'] == generated['transferMarginMinutes']
+              assert route['transfers'] == 1
+              assert route['status'] == 'verified'
+              assert route['sourceIds'] == ['meitetsu-chikko-official-transfer-timetable']
+
+          print('Meitetsu Chikko CH01 production vs official source: OK')
           PY
 
-      - name: Show PoC JSON summary
+      - name: Show verification JSON summary
         if: always()
         shell: bash
         run: |
@@ -177,11 +208,11 @@ jobs:
           PY
           fi
 
-      - name: Upload PoC artifacts
+      - name: Upload verification artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: meitetsu-chikko-oe-transfer-poc
+          name: meitetsu-chikko-production-verification
           if-no-files-found: warn
           path: |
             /tmp/meitetsu-chikko-*.html
