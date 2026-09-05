@@ -18,21 +18,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Submit resolved official transfer form
+      - name: Probe resolved form request variants
         shell: bash
         run: |
           set -euo pipefail
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 
+          analyze() {
+            local label="$1" file="$2"
+            LABEL="$label" RESULT="$file" python3 - <<'PY'
+          import html, os, re
+          from pathlib import Path
+          p=Path(os.environ['RESULT'])
+          text=p.read_text(encoding='utf-8', errors='replace') if p.exists() else ''
+          plain=re.sub(r'<script.*?</script>|<style.*?</style>', ' ', text, flags=re.I|re.S)
+          plain=re.sub(r'<[^>]+>', ' ', plain)
+          plain=re.sub(r'\s+', ' ', html.unescape(plain)).strip()
+          print(os.environ['LABEL'], 'bytes=', len(text))
+          print(' title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
+          print(' identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain, '大江': '大江' in plain})
+          print(' dateLines=', re.findall(r'20\d{2}年\d{1,2}月\d{1,2}日\s*\d{1,2}時\d{1,2}分\s*(?:出発|到着)', plain)[:3])
+          print(' targets=', {t: t in plain for t in ('19:25','19:36','19:44','19:47','16:55','17:06','17:20','17:23')})
+          print(' transfer1=', bool(re.search(r'乗換\s*1\s*回', plain)))
+          PY
+          }
+
           probe() {
             local label="$1" month="$2" day="$3" hour="$4" minute="$5" basis="$6"
             local cookie="/tmp/${label}.cookies"
             local select="/tmp/${label}-select.html"
-            local result="/tmp/${label}-result.html"
-            local headers="/tmp/${label}-result.headers"
 
-            # Step 1: resolve human station names to official opaque node IDs.
+            # Resolve station names first, exactly as the official two-step UI does.
             curl --fail --silent --show-error --location --compressed \
               --user-agent "$UA" \
               --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
@@ -53,52 +70,70 @@ jobs:
               --data-urlencode 'utrexprs=' \
               --data-urlencode 'wspeed=standard' \
               -o "$select"
-
             grep -q '00004372.名鉄名古屋(NH36)' "$select"
             grep -q '00006856.東名古屋港(CH01)' "$select"
 
-            # Step 2: submit exactly the resolved form state. The form has no method,
-            # therefore browser semantics are GET to TransferSearchSelect itself.
-            status=$(curl --fail --silent --show-error --location --compressed \
-              --user-agent "$UA" \
-              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-              --referer "$BASE/transfer/TransferSearchSelect?orvName=%E5%90%8D%E9%89%84%E5%90%8D%E5%8F%A4%E5%B1%8B&dnvName=%E6%9D%B1%E5%90%8D%E5%8F%A4%E5%B1%8B%E6%B8%AF%28CH01%29" \
-              --cookie "$cookie" --cookie-jar "$cookie" \
-              --dump-header "$headers" \
-              --get "$BASE/transfer/TransferSearchSelect" \
-              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)' \
-              --data-urlencode 'orvName=' \
-              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)' \
-              --data-urlencode 'dnvName=' \
+            common=(
+              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)'
+              --data-urlencode 'orvName='
+              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)'
+              --data-urlencode 'dnvName='
+              --data-urlencode "month=$month"
+              --data-urlencode "day=$day"
+              --data-urlencode "hour=$hour"
+              --data-urlencode "minute=$minute"
+              --data-urlencode "basis=$basis"
+              --data-urlencode 'sort=2'
+              --data-urlencode 'unuse='
+              --data-urlencode 'wspeed=standard'
+              --data-urlencode 'method=1'
+            )
+
+            # Variant A: browser-default GET to SearchSelect (known baseline).
+            curl --silent --show-error --location --compressed \
+              --user-agent "$UA" --cookie "$cookie" --cookie-jar "$cookie" \
+              --referer "$BASE/transfer/TransferSearchSelect" \
+              --get "$BASE/transfer/TransferSearchSelect" "${common[@]}" \
+              -D "/tmp/${label}-get-select.headers" -o "/tmp/${label}-get-select.html"
+            analyze "$label GET-SearchSelect" "/tmp/${label}-get-select.html"
+
+            # Variant B: POST the same resolved controls to SearchSelect.
+            curl --silent --show-error --location --compressed \
+              --user-agent "$UA" --cookie "$cookie" --cookie-jar "$cookie" \
+              --referer "$BASE/transfer/TransferSearchSelect" \
+              -X POST "$BASE/transfer/TransferSearchSelect" "${common[@]}" \
+              -D "/tmp/${label}-post-select.headers" -o "/tmp/${label}-post-select.html"
+            analyze "$label POST-SearchSelect" "/tmp/${label}-post-select.html"
+
+            # Variant C: submit resolved controls directly to the result endpoint.
+            curl --silent --show-error --location --compressed \
+              --user-agent "$UA" --cookie "$cookie" --cookie-jar "$cookie" \
+              --referer "$BASE/transfer/TransferSearchSelect" \
+              --get "$BASE/transfer/TransferSearch" "${common[@]}" \
+              -D "/tmp/${label}-get-result.headers" -o "/tmp/${label}-get-result.html"
+            analyze "$label GET-TransferSearch" "/tmp/${label}-get-result.html"
+
+            # Variant D: result endpoint with its known start/goal contract plus date controls.
+            curl --silent --show-error --location --compressed \
+              --user-agent "$UA" --cookie "$cookie" --cookie-jar "$cookie" \
+              --referer "$BASE/transfer/TransferSearchSelect" \
+              --get "$BASE/transfer/TransferSearch" \
+              --data-urlencode 'defaultCondition=0' \
+              --data-urlencode 'start=00004372' \
+              --data-urlencode 'goal=00006856' \
+              --data-urlencode 'orvName=名鉄名古屋' \
+              --data-urlencode 'dnvName=東名古屋港(CH01)' \
               --data-urlencode "month=$month" \
               --data-urlencode "day=$day" \
               --data-urlencode "hour=$hour" \
               --data-urlencode "minute=$minute" \
               --data-urlencode "basis=$basis" \
               --data-urlencode 'sort=2' \
+              --data-urlencode 'method=1' \
               --data-urlencode 'unuse=' \
               --data-urlencode 'wspeed=standard' \
-              --data-urlencode 'method=1' \
-              --output "$result" \
-              --write-out '%{http_code}')
-
-            echo "$label http=$status bytes=$(wc -c < "$result")"
-            LABEL="$label" RESULT="$result" python3 - <<'PY'
-          import html, os, re
-          from pathlib import Path
-          text=Path(os.environ['RESULT']).read_text(encoding='utf-8', errors='replace')
-          plain=re.sub(r'<script.*?</script>|<style.*?</style>', ' ', text, flags=re.I|re.S)
-          plain=re.sub(r'<[^>]+>', ' ', plain)
-          plain=re.sub(r'\s+', ' ', html.unescape(plain)).strip()
-          print('label=', os.environ['LABEL'])
-          print('title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
-          print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain, '大江': '大江' in plain})
-          print('dateLines=', re.findall(r'20\d{2}年\d{1,2}月\d{1,2}日\s*\d{1,2}時\d{1,2}分\s*(?:出発|到着)', plain)[:4])
-          print('targets=', {t: t in plain for t in ('19:25','19:36','19:44','19:47','16:55','17:06','17:20','17:23')})
-          print('transferCount1=', bool(re.search(r'乗換\s*1\s*回', plain)))
-          print('tail=', plain[-1800:])
-          PY
+              -D "/tmp/${label}-get-result-known.headers" -o "/tmp/${label}-get-result-known.html"
+            analyze "$label GET-known-TransferSearch" "/tmp/${label}-get-result-known.html"
           }
 
           probe weekday 2026/9 07 19 47 0
