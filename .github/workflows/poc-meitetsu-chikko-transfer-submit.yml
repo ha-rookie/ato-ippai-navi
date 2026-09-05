@@ -18,13 +18,67 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Submit exact official transfer-search form
+      - name: Probe official TransferSearch result contract
         shell: bash
         run: |
           set -euo pipefail
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
           COOKIE=/tmp/meitetsu-chikko-submit-cookies.txt
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
+
+          request() {
+            local label="$1"
+            shift
+            local output="/tmp/${label}.html"
+            local headers="/tmp/${label}.headers"
+            set +e
+            status=$(curl --silent --show-error --location --compressed \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer "$BASE/map/Top?window=transfer" \
+              --cookie "$COOKIE" --cookie-jar "$COOKIE" \
+              --dump-header "$headers" \
+              --get "$BASE/transfer/TransferSearch" \
+              --data-urlencode 'defaultCondition=0' \
+              --data-urlencode 'start=00004372' \
+              --data-urlencode 'goal=00006856' \
+              --data-urlencode 'orvName=名鉄名古屋' \
+              --data-urlencode 'dnvName=東名古屋港(CH01)' \
+              "$@" \
+              --output "$output" \
+              --write-out '%{http_code}')
+            rc=$?
+            set -e
+            echo "$label curl_rc=$rc http=$status bytes=$(wc -c < "$output" 2>/dev/null || echo 0)"
+
+            LABEL="$label" OUTPUT="$output" python3 - <<'PY'
+          import html, os, re
+          from pathlib import Path
+          p=Path(os.environ['OUTPUT'])
+          if not p.exists():
+              print(os.environ['LABEL'], 'no body')
+              raise SystemExit(0)
+          raw=p.read_bytes()
+          text=None
+          for enc in ('utf-8','cp932','shift_jis'):
+              try:
+                  text=raw.decode(enc); break
+              except UnicodeDecodeError: pass
+          if text is None:
+              text=raw.decode('utf-8','replace')
+          plain=re.sub(r'<script.*?</script>|<style.*?</style>', ' ', text, flags=re.I|re.S)
+          plain=re.sub(r'<[^>]+>', ' ', plain)
+          plain=re.sub(r'\s+', ' ', html.unescape(plain)).strip()
+          date_line=re.search(r'20\d{2}年\d{1,2}月\d{1,2}日\s*\d{1,2}時\d{1,2}分\s*(?:出発|到着)', plain)
+          routes=re.findall(r'(\d{1,2}:\d{2})\s*発\s*⇒\s*(\d{1,2}:\d{2})\s*着.*?乗換[:：]\s*(\d+)回', plain)
+          print('dateLine=', date_line.group(0) if date_line else None)
+          print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain, '大江': '大江' in plain})
+          print('routes=', routes[:6])
+          print('contains築港線=', '築港線' in plain, 'contains19:25=', '19:25' in plain, 'contains19:44=', '19:44' in plain, 'contains16:55=', '16:55' in plain, 'contains17:20=', '17:20' in plain)
+          print('title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
+          PY
+          }
 
           curl --fail --silent --show-error --location --compressed \
             --user-agent "$UA" \
@@ -34,66 +88,23 @@ jobs:
             --cookie "$COOKIE" --cookie-jar "$COOKIE" \
             "$BASE/map/Top?window=transfer" -o /tmp/top.html
 
+          request minimal
+
           for spec in 'weekday 2026/9 07 19 47' 'holiday 2026/9 05 17 23'; do
-            read -r label month day hour minute <<< "$spec"
-            output="/tmp/solver-${label}.html"
-            headers="/tmp/solver-${label}.headers"
-
-            set +e
-            status=$(curl --silent --show-error --location --compressed \
-              --user-agent "$UA" \
-              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-              --referer "$BASE/transfer/TransferSearchSelect" \
-              --cookie "$COOKIE" --cookie-jar "$COOKIE" \
-              --dump-header "$headers" \
-              --get "$BASE/transfer/TransferSearchSelect?" \
-              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)' \
-              --data-urlencode 'orvName=' \
-              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)' \
-              --data-urlencode 'dnvName=' \
-              --data-urlencode "month=$month" \
-              --data-urlencode "day=$day" \
-              --data-urlencode "hour=$hour" \
-              --data-urlencode "minute=$minute" \
-              --data-urlencode 'basis=0' \
-              --data-urlencode 'sort=2' \
-              --data-urlencode 'unuse=' \
-              --data-urlencode 'wspeed=standard' \
-              --data-urlencode 'method=1' \
-              --output "$output" \
-              --write-out '%{http_code}')
-            rc=$?
-            set -e
-
-            echo "$label curl_rc=$rc http=$status"
-            echo '--- headers ---'
-            cat "$headers" || true
-            echo '--- body summary ---'
-            python3 - "$output" <<'PY'
-          import html, re, sys
-          from pathlib import Path
-          p=Path(sys.argv[1])
-          if not p.exists():
-              print('no body file')
-              raise SystemExit(0)
-          raw=p.read_bytes()
-          text=None
-          for enc in ('utf-8','cp932','shift_jis'):
-              try:
-                  text=raw.decode(enc); break
-              except UnicodeDecodeError: pass
-          if text is None: text=raw.decode('utf-8','replace')
-          plain=re.sub(r'<[^>]+>',' ',text)
-          plain=re.sub(r'\s+',' ',html.unescape(plain)).strip()
-          print(plain[:5000])
-          print('contains 名鉄名古屋', '名鉄名古屋' in plain)
-          print('contains 東名古屋港', '東名古屋港' in plain)
-          print('contains 大江', '大江' in plain)
-          print('contains 乗換:1回', '乗換:1回' in plain or '乗換：1回' in plain)
-          print('contains 到着', '到着' in plain)
-          print('title', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:3])
-          PY
+            read -r day_label month day hour minute <<< "$spec"
+            for basis in 0 1 2 3 4; do
+              request "solver-${day_label}-basis${basis}" \
+                --data-urlencode "month=$month" \
+                --data-urlencode "day=$day" \
+                --data-urlencode "hour=$hour" \
+                --data-urlencode "minute=$minute" \
+                --data-urlencode "basis=$basis" \
+                --data-urlencode 'sort=2' \
+                --data-urlencode 'method=1' \
+                --data-urlencode 'utrexprs=' \
+                --data-urlencode 'wspeed=standard' \
+                --data-urlencode 'retFlg=on'
+            done
           done
 
       - name: Upload submit diagnostics
@@ -102,5 +113,7 @@ jobs:
         with:
           name: meitetsu-chikko-transfer-submit
           path: |
+            /tmp/minimal.html
+            /tmp/minimal.headers
             /tmp/solver-*.html
             /tmp/solver-*.headers
