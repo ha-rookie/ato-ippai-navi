@@ -1,3 +1,7 @@
+import { setupAnalytics } from "/js/analytics.js";
+
+setupAnalytics();
+
 const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
 
 if (normalizedPath === "/last-train") {
