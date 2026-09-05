@@ -102,6 +102,19 @@ jobs:
           grep -q '現在地から判定する' /tmp/index.html
           echo 'Web MVP smoke test: OK'
 
+          for path in walk drive taxi-estimate; do
+            status=$(curl -sS \
+              -o "/tmp/removed-${path}.json" \
+              -w '%{http_code}' \
+              -H 'content-type: application/json' \
+              --data '{}' \
+              "$BASE_URL/api/$path")
+            echo "Removed endpoint /api/$path -> HTTP $status"
+            cat "/tmp/removed-${path}.json"
+            test "$status" = '404'
+          done
+          echo 'Removed public Google Routes proxy endpoints smoke test: OK'
+
           python3 - <<'PY'
           import json
           from datetime import datetime, timedelta, time
@@ -128,23 +141,21 @@ jobs:
               'stationBufferMinutes': 3,
               'minimumBoardingLeadMinutes': 1,
           }
-          taxi = {
-              'origin': {
-                  'latitude': 35.1715,
-                  'longitude': 136.9057,
-              },
-              'destination': {
-                  'latitude': 35.1822,
-                  'longitude': 137.0216,
-              },
-              'departureTime': departure_time,
+          tonight = {
+              **boundary,
               'includeDispatchFee': True,
+          }
+          override = {
+              **tonight,
+              'taxiDestination': '東京駅',
           }
 
           with open('/tmp/core-boundary-request.json', 'w', encoding='utf-8') as f:
               json.dump(boundary, f, ensure_ascii=False)
-          with open('/tmp/taxi-request.json', 'w', encoding='utf-8') as f:
-              json.dump(taxi, f, ensure_ascii=False)
+          with open('/tmp/tonight-request.json', 'w', encoding='utf-8') as f:
+              json.dump(tonight, f, ensure_ascii=False)
+          with open('/tmp/override-request.json', 'w', encoding='utf-8') as f:
+              json.dump(override, f, ensure_ascii=False)
 
           print(
               f'Runtime smoke service time: {departure_time} '
@@ -181,22 +192,48 @@ jobs:
 
           curl -fsS \
             -H 'content-type: application/json' \
-            --data @/tmp/taxi-request.json \
-            "$BASE_URL/api/taxi-estimate" \
-            -o /tmp/taxi.json
+            --data @/tmp/tonight-request.json \
+            "$BASE_URL/api/tonight-decision" \
+            -o /tmp/tonight.json
 
-          cat /tmp/taxi.json
+          cat /tmp/tonight.json
 
           python3 - <<'PY'
           import json
 
-          with open('/tmp/taxi.json', encoding='utf-8') as f:
+          with open('/tmp/tonight.json', encoding='utf-8') as f:
               data = json.load(f)
 
-          assert data['routeFound'] is True, data
-          assert data['distanceMeters'] > 10000, data
-          assert data['nightSurcharge'] is True, data
-          assert data['estimatedTotalYen'] > 5000, data
-          assert data['method'] == 'distance_only_approximation', data
-          print('Dynamic future-time taxi smoke test: OK')
+          assert data['destinationCode'] == 'H22', data
+          assert data['destinationName'] == '藤が丘', data
+          assert data['taxiDestination'] == '藤が丘駅 愛知県名古屋市', data
+
+          train = data['train']
+          assert train['routeFound'] is True, train
+          assert train['destination']['code'] == 'H22', train
+
+          taxi = data['taxi']
+          assert taxi['routeFound'] is True, taxi
+          assert taxi['distanceMeters'] > 10000, taxi
+          assert taxi['nightSurcharge'] is True, taxi
+          assert taxi['estimatedTotalYen'] > 5000, taxi
+          assert taxi['method'] == 'distance_only_approximation', taxi
+
+          scenarios = data['scenarios']
+          assert len(scenarios) == 4, scenarios
+          assert scenarios[0]['canReachDestination'] is True, scenarios
+          assert scenarios[-1]['canReachDestination'] is False, scenarios
+          assert scenarios[-1]['recommendedMode'] == 'taxi', scenarios
+          print('Tonight decision train + fixed-destination taxi smoke test: OK')
           PY
+
+          override_status=$(curl -sS \
+            -o /tmp/override.json \
+            -w '%{http_code}' \
+            -H 'content-type: application/json' \
+            --data @/tmp/override-request.json \
+            "$BASE_URL/api/tonight-decision")
+          cat /tmp/override.json
+          test "$override_status" = '400'
+          grep -q 'taxiDestination override is not allowed' /tmp/override.json
+          echo 'taxiDestination override rejection smoke test: OK'

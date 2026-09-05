@@ -20,22 +20,25 @@
   │   └─ 起床時刻
   │
   └─ Cloudflare Worker
-       ├─ Google Routes API / WALK
-       │    └─ 現在地→destinationに必要な徒歩hub
-       │
-       ├─ 内部 終電境界JSON
-       │    ├─ destination
-       │    ├─ eligible hub
-       │    ├─ weekday / saturday_holiday
-       │    ├─ lastDeparture / lastArrival
-       │    └─ 乗換metadata
-       │
-       ├─ 終電境界判定
-       │    └─ 今 / +15 / +30 / +60
-       │
-       └─ Google Routes API / DRIVE
-            └─ 終電後のタクシー概算
+       └─ POST /api/tonight-decision
+            ├─ 内部 Google Routes API / WALK helper
+            │    └─ 現在地→destinationに必要な徒歩hub
+            │
+            ├─ 内部 終電境界JSON
+            │    ├─ destination
+            │    ├─ eligible hub
+            │    ├─ weekday / saturday_holiday
+            │    ├─ lastDeparture / lastArrival
+            │    └─ 乗換metadata
+            │
+            ├─ 終電境界判定
+            │    └─ 今 / +15 / +30 / +60
+            │
+            └─ 内部 Google Routes API / DRIVE helper
+                 └─ verified destination駅へのタクシー概算
 ```
+
+Google RoutesのWALK/DRIVE helperはWorker内部実装であり、任意origin/destinationを受ける公開APIにはしません。
 
 ## 公共交通の基本方針
 
@@ -43,9 +46,9 @@
 
 代わりに、次を組み合わせます。
 
-1. 現在地→出発hubはGoogle WALK
+1. 現在地→出発hubはWorker内部のGoogle WALK
 2. hub→目的駅は内部のverified終電境界JSON
-3. 終電後はGoogle DRIVEによるタクシー概算
+3. 終電後はWorker内部のGoogle DRIVEによるタクシー概算
 
 これにより、Google TRANSITの可用性に依存せず「あと何分残れるか」を判定します。
 
@@ -187,9 +190,9 @@ MVPではデータベースを使用しません。
 
 標準の帰宅先は「自宅最寄り駅」です。
 
-## APIキー
+## Google Routes APIキーと公開面
 
-Google Routes APIキーはGitHubに保存しません。
+Google Routes APIキーはGitHubやブラウザへ保存・公開しません。
 
 Cloudflare Worker Secret:
 
@@ -199,23 +202,50 @@ GOOGLE_MAPS_API_KEY
 
 から参照します。
 
-## 主要API
+キーの秘匿だけではWorker経由のGoogle API乱用を防げないため、次の原則を採用します。
+
+- WALK/DRIVE/taxi-estimateの任意プロキシAPIを公開しない
+- 本番画面は統合API `/api/tonight-decision` のみを利用する
+- タクシー目的地はverified destination駅からWorker側で生成する
+- クライアントからの `taxiDestination` 上書きを拒否する
+- `Access-Control-Allow-Origin: *` を付けない
+- Cloudflare Rate LimitingとGoogle API restrictionはインフラ側の追加防御として別途管理する
+
+## 公開API
+
+### `POST /api/tonight-decision`
+
+本番画面が利用する統合API。
+
+- destinationから利用可能hubを決定
+- 内部Google WALKで現在地→hubの所要時間を取得
+- 内部JSONで今 / +15 / +30 / +60分の到達可否を判定
+- 直通・乗換metadataを返す
+- verified destination駅へのタクシー概算を内部Google DRIVEで取得
 
 ### `POST /api/last-train-boundary`
 
-- destinationから利用可能hubを決定
-- Google WALKで現在地→hubの所要時間を取得
-- 内部JSONで今 / +15 / +30 / +60分の到達可否を判定
-- 直通・乗換metadataを返す
+路線別production smoke・詳細検証用。
 
-### `POST /api/taxi-estimate`
+- 終電境界とwalkOptionsを返す
+- 本番画面は直接利用しない
 
-- Google DRIVEを利用
-- 終電後のタクシー概算を返す
+将来、路線別smokeを統合APIへ移行できれば、このエンドポイントの非公開化も検討する。
 
 ### `GET /health`
 
 - Workerの稼働状態を確認する
+- build SHAをproduction smokeで確認する
+
+## 非公開helper
+
+次はWorker内部関数としてのみ使用する。
+
+- WALK
+- DRIVE
+- taxi estimate
+
+外部URL `/api/walk`、`/api/drive`、`/api/taxi-estimate` は提供しない。
 
 ## 運用上の正本
 
