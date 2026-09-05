@@ -13,6 +13,7 @@ DESTINATION = {"code": "KM12", "name": "味鋺", "nodeId": "00008545"}
 DIRECT_ORIGIN = {"code": "M11", "name": "平安通", "nodeId": "00008059"}
 DAY_TYPES = ("weekday", "saturday_holiday")
 MINIMUM_TRANSFER_LEAD_MINUTES = 3
+MEIJO_SAKAE_TO_HEIANDORI_MINUTES = 12
 
 
 def decode(path: Path) -> str:
@@ -106,16 +107,20 @@ def match_sakae_to_heiandori(sakae_path: Path, heiandori_path: Path, day_type: s
     pairs: list[dict[str, object]] = []
 
     for departure in sakae["schedules"][day_type]:
+        expected_arrival = departure["serviceMinutes"] + MEIJO_SAKAE_TO_HEIANDORI_MINUTES
         candidates = [
             item
             for item in heiandori["schedules"][day_type]
             if item["destination"] == departure["destination"]
-            and item["serviceMinutes"] > departure["serviceMinutes"]
-            and item["serviceMinutes"] <= departure["serviceMinutes"] + 20
+            and item["serviceMinutes"] == expected_arrival
         ]
         if not candidates:
             continue
-        arrival = min(candidates, key=lambda item: item["serviceMinutes"])
+        if len(candidates) != 1:
+            raise AssertionError(
+                f"{day_type}: ambiguous Sakae -> Heian-dori train at {departure['time']}: {candidates}"
+            )
+        arrival = candidates[0]
         pairs.append({
             "sakaeDeparture": departure["time"],
             "sakaeServiceMinutes": departure["serviceMinutes"],
@@ -134,9 +139,11 @@ def main() -> None:
         "directOrigin": DIRECT_ORIGIN,
         "destination": DESTINATION,
         "minimumTransferLeadMinutes": MINIMUM_TRANSFER_LEAD_MINUTES,
+        "meijoSakaeToHeiandoriMinutes": MEIJO_SAKAE_TO_HEIANDORI_MINUTES,
         "verificationStrategy": (
-            "Nagoya City official open-data for Sakae -> Heian-dori plus Meitetsu "
-            "official destination-specific no-transfer timetable for Heian-dori -> Ajima"
+            "Nagoya City official open-data for Sakae -> Heian-dori, matched only when the "
+            "published 12-minute travel time is preserved, plus Meitetsu official destination-specific "
+            "no-transfer timetable for Heian-dori -> Ajima"
         ),
         "days": {},
     }
@@ -144,12 +151,21 @@ def main() -> None:
     for day_type in DAY_TYPES:
         direct = parse_direct_services(Path(f"/tmp/meitetsu-ajima-direct-{day_type}.html"))
         last_direct = direct["services"][-1]
-        # Current official station timetable says the last Ajima-capable service is 00:06 Komaki-bound;
-        # a later 00:28 service terminates at Kamiida and must not be treated as Ajima-capable.
+        # The official destination-specific direct result proves that the later
+        # 00:28 Kamiida terminator is not Ajima-capable. The last direct Ajima
+        # service is currently the 00:06 Komaki-bound train.
         if last_direct["departure"] != "00:06":
             raise AssertionError(
                 f"{day_type}: expected current last direct Heian-dori -> Ajima departure 00:06, "
                 f"got {last_direct['departure']}"
+            )
+        if last_direct["arrival"] != "00:10":
+            raise AssertionError(
+                f"{day_type}: expected current Ajima arrival 00:10, got {last_direct['arrival']}"
+            )
+        if "小牧" not in last_direct["terminals"]:
+            raise AssertionError(
+                f"{day_type}: expected final direct train terminal Komaki, got {last_direct['terminals']}"
             )
 
         connection_minutes = service_minutes(str(last_direct["departure"]))
@@ -169,6 +185,8 @@ def main() -> None:
                 f"{day_type}: no Sakae feeder reaches Heian-dori >= {MINIMUM_TRANSFER_LEAD_MINUTES} min before 00:06"
             )
         feeder = max(feasible, key=lambda pair: int(pair["sakaeServiceMinutes"]))
+        if feeder["travelMinutes"] != MEIJO_SAKAE_TO_HEIANDORI_MINUTES:
+            raise AssertionError(f"{day_type}: invalid feeder travel time: {feeder}")
         margin = connection_minutes - int(feeder["heiandoriServiceMinutes"])
 
         result["days"][day_type] = {
