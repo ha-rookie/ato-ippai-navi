@@ -21,6 +21,8 @@
 - GitHub Actions + WranglerでCloudflare Workerへデプロイ
 - 公式ソースとのgenerated-vs-production CI
 - Core production smoke / 路線別production smoke
+- Google Routes APIキーをCloudflare Worker Secretで保持
+- 本番画面からのGoogle Routes利用は統合API経由に限定し、任意WALK/DRIVEプロキシを公開しない
 
 ## 対応範囲
 
@@ -60,15 +62,26 @@
 - GitHubをコード・設計・CI/CDの正本とする
 - 全時刻表や自前の汎用乗換検索エンジンは持たない
 - 公式ソースで検証できた「最後に到達できる経路」だけを本番判定に使う
+- Google RoutesのWALK/DRIVE helperはWorker内部実装とし、任意origin/destinationを受ける公開APIにはしない
+- タクシー目的地はverified destination駅からサーバ側で生成し、クライアントによる任意上書きを許可しない
 
 ## 主要API
 
+- `POST /api/tonight-decision`
+  - 本番画面が利用する統合API
+  - 現在地→必要hubのWALK、内部終電境界、終電後のタクシー概算をまとめて返す
+  - タクシー目的地は選択済みのverified destination駅からWorker側で決定する
 - `POST /api/last-train-boundary`
-  - 現在地から必要hubまでのWALK時間と内部終電境界を組み合わせて到達可否を返す
-- `POST /api/taxi-estimate`
-  - Google DRIVEを使って終電後のタクシー概算を返す
+  - 終電境界の詳細検証・路線別production smokeで使用する
+  - 本番画面は直接利用しない
 - `GET /health`
-  - Workerの稼働状態を確認する
+  - Workerの稼働状態とbuild SHAを確認する
+
+次の低レベルAPIは外部公開しません。
+
+- `/api/walk`
+- `/api/drive`
+- `/api/taxi-estimate`
 
 ## デプロイ
 
@@ -80,7 +93,7 @@ Production Worker:
 ato-ippai-api-poc.edward-se-pg.workers.dev
 ```
 
-デプロイ後はCore production smokeに加え、必要な路線別smokeを自動実行します。
+デプロイ後はCore production smokeに加え、必要な路線別smokeを自動実行します。Core smokeでは、非公開化した低レベルAPIが404であることも確認します。
 
 ## ドキュメント
 
@@ -98,3 +111,4 @@ ato-ippai-api-poc.edward-se-pg.workers.dev
 - 公式ページやデータ構造が変わり、検証できなくなった場合はfail-closedでCIを失敗させる
 - Cloudflare DashboardでWorkerコードを直接編集しない
 - APIキーやSecret値をリポジトリへコミットしない
+- Google Routes APIの公開面は最小化し、Worker経由の任意プロキシを作らない
