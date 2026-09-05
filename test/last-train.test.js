@@ -1018,3 +1018,66 @@ test("Meitetsu Inuyama IY03 keeps the 23:59 Shin-Unuma express boundary", () => 
   assert.equal(result.scenarios[0].routeSummary, "名鉄名古屋本線→犬山線 急行 直通");
   assert.equal(result.scenarios[1].canReachDestination, false);
 });
+
+
+
+test("Meitetsu Chikko CH01 keeps Oe transfer boundaries", () => {
+  const destination = dataset.destinations.CH01;
+  assert.equal(destination.operator, "meitetsu");
+  assert.equal(destination.line, "chikko");
+  assert.equal(destination.officialStationCode, "CH01");
+  assert.equal(destination.name, "東名古屋港");
+  assert.deepEqual(eligibleOriginIds(dataset, "CH01"), ["nagoya"]);
+
+  const expected = {
+    weekday: ["19:25", "19:47", "19:36", "19:44", 8],
+    saturday_holiday: ["16:55", "17:23", "17:06", "17:20", 14]
+  };
+
+  for (const [dayType, values] of Object.entries(expected)) {
+    const [departure, arrival, ready, connection, margin] = values;
+    const route = destination.routes.nagoya[dayType];
+    assert.equal(route.lastDeparture, departure, dayType);
+    assert.equal(route.lastArrival, arrival, dayType);
+    assert.equal(route.routeSummary, "名鉄名古屋本線 → 大江乗換 → 築港線", dayType);
+    assert.equal(route.trainTerminal, "東名古屋港", dayType);
+    assert.equal(route.transferAt, "大江", dayType);
+    assert.deepEqual(route.transferStationCodes, ["TA03"], dayType);
+    assert.equal(route.transferReadyTime, ready, dayType);
+    assert.equal(route.connectionDeparture, connection, dayType);
+    assert.equal(route.connectionTerminal, "東名古屋港", dayType);
+    assert.equal(route.minimumTransferLeadMinutes, 3, dayType);
+    assert.equal(route.transferMarginMinutes, margin, dayType);
+    assert.equal(route.transfers, 1, dayType);
+    assert.equal(route.status, "verified", dayType);
+    assert.deepEqual(route.sourceIds, ["meitetsu-chikko-official-transfer-timetable"], dayType);
+  }
+});
+
+test("Meitetsu Chikko CH01 exposes transfer metadata in boundary API model", () => {
+  const result = evaluateLastTrainBoundary(dataset, {
+    departureTime: "2026-09-04T18:55:00+09:00",
+    dayType: "weekday",
+    destinationCode: "CH01",
+    offsetMinutes: [0, 20],
+    stationBufferMinutes: 3,
+    minimumBoardingLeadMinutes: 1,
+    hubAccess: { nagoya: { walkMinutes: 8 } }
+  });
+
+  const before = result.scenarios[0];
+  assert.equal(before.canReachDestination, true);
+  assert.equal(before.recommendedOriginId, "nagoya");
+  assert.equal(before.lastDeparture, "19:25");
+  assert.equal(before.lastArrival, "19:47");
+  assert.equal(before.transfers, 1);
+  assert.equal(before.transferAt, "大江");
+  assert.deepEqual(before.transferStationCodes, ["TA03"]);
+  assert.equal(before.transferReadyTime, "19:36");
+  assert.equal(before.connectionDeparture, "19:44");
+  assert.equal(before.connectionTerminal, "東名古屋港");
+  assert.equal(before.minimumTransferLeadMinutes, 3);
+  assert.equal(before.transferMarginMinutes, 8);
+
+  assert.equal(result.scenarios[1].canReachDestination, false);
+});

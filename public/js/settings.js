@@ -48,7 +48,7 @@ export const DESTINATION_STATION_STORAGE_KEY =
 
 const DESTINATION_STATION_ERROR =
   "destination station must be H01-H22, T01-T20, M01-M28, E01-E07, " +
-  "S01-S21, K01, ST01-ST12, NH24-NH38, TA01-TA05, IY02-IY03, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68";
+  "S01-S21, K01, ST01-ST12, NH24-NH38, TA01-TA05, IY02-IY03, CH01, AN01-AN11, KT-E01-KT-E07, JR-CJ00-JR-CJ02, JR-CF01-JR-CF06, or JR-CA62-JR-CA68";
 
 export function normalizeDestinationStation(value) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -100,6 +100,16 @@ export function normalizeDestinationStation(value) {
       throw new Error(DESTINATION_STATION_ERROR);
     }
     return `IY${String(number).padStart(2, "0")}`;
+  }
+
+  const meitetsuChikkoMatch = /^CH(\d{1,2})$/.exec(code);
+
+  if (meitetsuChikkoMatch) {
+    const number = Number(meitetsuChikkoMatch[1]);
+    if (number !== 1) {
+      throw new Error(DESTINATION_STATION_ERROR);
+    }
+    return `CH${String(number).padStart(2, "0")}`;
   }
 
   const operatorMatch = /^(KT)-E(\d{1,2})$/.exec(code);

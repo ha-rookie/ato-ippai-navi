@@ -122,6 +122,12 @@
       "publisher": "名古屋鉄道",
       "checkedAt": "2026-09-05",
       "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
+    },
+    {
+      "id": "meitetsu-chikko-official-transfer-timetable",
+      "publisher": "名古屋鉄道",
+      "checkedAt": "2026-09-05",
+      "url": "https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc/transfer/DepArrTimeList"
     }
   ],
   "origins": {
@@ -6923,6 +6929,61 @@
             "status": "verified",
             "sourceIds": [
               "meitetsu-inuyama-official-direct-timetable"
+            ]
+          }
+        }
+      }
+    },
+    "CH01": {
+      "operator": "meitetsu",
+      "line": "chikko",
+      "officialStationCode": "CH01",
+      "name": "東名古屋港",
+      "city": "名古屋市",
+      "stationCodes": [
+        "CH01"
+      ],
+      "enabled": true,
+      "routes": {
+        "nagoya": {
+          "weekday": {
+            "lastDeparture": "19:25",
+            "lastArrival": "19:47",
+            "routeSummary": "名鉄名古屋本線 → 大江乗換 → 築港線",
+            "trainTerminal": "東名古屋港",
+            "transferAt": "大江",
+            "transferStationCodes": [
+              "TA03"
+            ],
+            "transferReadyTime": "19:36",
+            "connectionDeparture": "19:44",
+            "connectionTerminal": "東名古屋港",
+            "minimumTransferLeadMinutes": 3,
+            "transferMarginMinutes": 8,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-chikko-official-transfer-timetable"
+            ]
+          },
+          "saturday_holiday": {
+            "lastDeparture": "16:55",
+            "lastArrival": "17:23",
+            "routeSummary": "名鉄名古屋本線 → 大江乗換 → 築港線",
+            "trainTerminal": "東名古屋港",
+            "transferAt": "大江",
+            "transferStationCodes": [
+              "TA03"
+            ],
+            "transferReadyTime": "17:06",
+            "connectionDeparture": "17:20",
+            "connectionTerminal": "東名古屋港",
+            "minimumTransferLeadMinutes": 3,
+            "transferMarginMinutes": 14,
+            "transfers": 1,
+            "status": "verified",
+            "sourceIds": [
+              "meitetsu-chikko-official-transfer-timetable"
             ]
           }
         }
