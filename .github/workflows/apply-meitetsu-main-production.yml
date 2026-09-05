@@ -29,6 +29,8 @@ jobs:
       - name: Apply deterministic migration
         run: python3 scripts/apply-meitetsu-main-production.py
 
+      # The GitHub App cannot push workflow-file changes without workflows permission.
+      # Keep deploy-worker.yml unchanged here; production smoke is handled separately.
       - name: Keep workflow changes out of bot commit
         run: git checkout -- .github/workflows/deploy-worker.yml
 
