@@ -6,6 +6,11 @@ const EVENTS = new Set([
   "last_train_link_click",
   "tonight_decision_check",
   "last_train_check",
+  "install_prompt_shown",
+  "install_prompt_clicked",
+  "app_installed",
+  "standalone_open",
+  "offline_fallback",
   "deployment_smoke_test"
 ]);
 
