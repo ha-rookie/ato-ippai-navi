@@ -1,20 +1,19 @@
-name: PoC Meitetsu Komaki Ajima
+name: Verify Meitetsu Komaki Ajima Production
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - poc/meitetsu-komaki-ajima
+  pull_request:
+    branches: [main]
     paths:
-      - '.github/workflows/poc-meitetsu-komaki-ajima.yml'
+      - 'src/data/last-trains-nagoya.json'
       - 'scripts/poc-meitetsu-komaki-ajima.py'
-      - 'scripts/extract-nagoya-subway.py'
+      - '.github/workflows/poc-meitetsu-komaki-ajima.yml'
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -76,15 +75,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
-          COOKIE_JAR=/tmp/meitetsu-komaki-cookies.txt
+          COOKIE_JAR=/tmp/meitetsu-komaki-prod-cookies.txt
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 
           fetch() {
             local url="$1"
             local output="$2"
-            echo "GET $url"
             curl --fail --silent --show-error --location --compressed \
               --retry 2 --retry-delay 1 \
               --user-agent "$UA" \
@@ -104,22 +101,85 @@ jobs:
             "$BASE/transfer/DepArrTimeList?date=$MEITETSU_HOLIDAY_DATE&gnode=00008545&snode=00008059" \
             /tmp/meitetsu-ajima-direct-saturday_holiday.html
 
-      - name: Calculate KM12 boundary from official sources
+      - name: Generate official KM12 boundary
         run: python3 scripts/poc-meitetsu-komaki-ajima.py
 
-      - name: Show PoC result
-        if: always()
+      - name: Compare official boundary with production JSON
         shell: bash
         run: |
-          if [ -f /tmp/meitetsu-komaki-ajima-poc.json ]; then
-            cat /tmp/meitetsu-komaki-ajima-poc.json
-          fi
+          python3 - <<'PY'
+          import json
 
-      - name: Upload PoC artifacts
+          with open('/tmp/meitetsu-komaki-ajima-poc.json', encoding='utf-8') as f:
+              official = json.load(f)
+          with open('src/data/last-trains-nagoya.json', encoding='utf-8') as f:
+              production = json.load(f)
+
+          assert official['destination'] == {
+              'code': 'KM12', 'name': '味鋺', 'nodeId': '00008545'
+          }
+          assert official['directOrigin'] == {
+              'code': 'M11', 'name': '平安通', 'nodeId': '00008059'
+          }
+          assert official['minimumTransferLeadMinutes'] == 3
+          assert official['meijoSakaeToHeiandoriMinutes'] == 12
+
+          source_ids = {item['id'] for item in production['sources']}
+          assert 'nagoya-subway-pocket-timetable-meijo' in source_ids
+          assert 'meitetsu-komaki-official-direct-timetable' in source_ids
+
+          stored = production['destinations']['KM12']
+          assert stored['operator'] == 'meitetsu'
+          assert stored['line'] == 'komaki'
+          assert stored['officialStationCode'] == 'KM12'
+          assert stored['name'] == '味鋺'
+          assert stored['stationCodes'] == ['KM12']
+          assert set(stored['routes']) == {'sakae'}
+
+          for day_type in ('weekday', 'saturday_holiday'):
+              day = official['days'][day_type]
+              generated = day['boundary']
+              route = stored['routes']['sakae'][day_type]
+
+              assert day['directIdentity']['originPresent'] is True
+              assert day['directIdentity']['destinationPresent'] is True
+              assert day['directIdentity']['directTimetableMarkerPresent'] is True
+
+              assert generated['lastDeparture'] == '23:42'
+              assert generated['transferReadyTime'] == '23:54'
+              assert generated['connectionDeparture'] == '00:06'
+              assert generated['lastArrival'] == '00:10'
+              assert generated['transferMarginMinutes'] == 12
+              assert generated['minimumTransferLeadMinutes'] == 3
+              assert generated['feeder']['travelMinutes'] == 12
+              assert generated['direct']['terminals'] == ['小牧']
+
+              assert route['lastDeparture'] == generated['lastDeparture']
+              assert route['lastArrival'] == generated['lastArrival']
+              assert route['routeSummary'] == '名城線 → 平安通乗換 → 上飯田線・名鉄小牧線直通'
+              assert route['trainTerminal'] == '小牧'
+              assert route['transferAt'] == '平安通'
+              assert route['transferStationCodes'] == ['M11', 'K02']
+              assert route['transferReadyTime'] == generated['transferReadyTime']
+              assert route['connectionDeparture'] == generated['connectionDeparture']
+              assert route['connectionTerminal'] == '小牧'
+              assert route['minimumTransferLeadMinutes'] == 3
+              assert route['transferMarginMinutes'] == 12
+              assert route['transfers'] == 1
+              assert route['status'] == 'verified'
+              assert route['sourceIds'] == [
+                  'nagoya-subway-pocket-timetable-meijo',
+                  'meitetsu-komaki-official-direct-timetable'
+              ]
+
+          print('Meitetsu Komaki KM12 production vs official source: OK')
+          PY
+
+      - name: Upload verification artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: meitetsu-komaki-ajima-poc
+          name: meitetsu-komaki-ajima-production-verification
           if-no-files-found: warn
           path: |
             /tmp/meitetsu-komaki-*.html
