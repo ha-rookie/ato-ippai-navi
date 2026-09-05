@@ -1,11 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ato-ippai-api-poc",
-  "main": "src/index.js",
-  "compatibility_date": "2026-09-01",
-  "assets": {
-    "directory": "./public",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/ops/*", "/health"]
-  }
+  "name": "ato-ippai",
+  "pages_build_output_dir": "./public",
+  "compatibility_date": "2026-09-01"
 }
