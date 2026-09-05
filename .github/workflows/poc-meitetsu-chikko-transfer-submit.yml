@@ -18,83 +18,74 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Probe official research-form contract
+      - name: Inspect official TransferSearchSelect form
         shell: bash
         run: |
           set -euo pipefail
-          ROOT='https://trainbus.meitetsu.co.jp/meitetsu-transfer'
-          PC="$ROOT/pc"
-          SMART="$ROOT/smart"
+          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
+          COOKIE=/tmp/select.cookies
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 
-          probe() {
-            local label="$1" day="$2" hour="$3" minute="$4" basis="$5"
-            local cookie="/tmp/${label}.cookies"
-            local seed="/tmp/${label}-seed.html"
-            local output="/tmp/${label}.html"
-            local headers="/tmp/${label}.headers"
+          curl --fail --silent --show-error --location --compressed \
+            --user-agent "$UA" \
+            --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+            --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+            --referer 'https://www.meitetsu.co.jp/' \
+            --cookie "$COOKIE" --cookie-jar "$COOKIE" \
+            "$BASE/map/Top?window=transfer" -o /tmp/top.html
 
+          fetch_select() {
+            local label="$1" month="$2" day="$3" hour="$4" minute="$5" basis="$6"
             curl --fail --silent --show-error --location --compressed \
               --user-agent "$UA" \
               --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
               --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-              --referer 'https://www.meitetsu.co.jp/' \
-              --cookie "$cookie" --cookie-jar "$cookie" \
-              "$PC/map/Top?window=transfer" -o "$seed"
-
-            status=$(curl --fail --silent --show-error --location --compressed \
-              --user-agent "$UA" \
-              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-              --referer "$PC/transfer/TransferSearch?defaultCondition=0&start=00004372&goal=00006856" \
-              --cookie "$cookie" --cookie-jar "$cookie" \
-              --dump-header "$headers" \
-              --get "$SMART/top/Top" \
+              --referer "$BASE/map/Top?window=transfer" \
+              --cookie "$COOKIE" --cookie-jar "$COOKIE" \
+              --get "$BASE/transfer/TransferSearchSelect" \
               --data-urlencode 'orvName=名鉄名古屋' \
               --data-urlencode 'dnvName=東名古屋港(CH01)' \
-              --data-urlencode 'orvCode=' \
-              --data-urlencode 'dnvCode=' \
+              --data-urlencode "month=$month" \
               --data-urlencode "day=$day" \
               --data-urlencode "hour=$hour" \
               --data-urlencode "minute=$minute" \
-              --data-urlencode 'sort=2' \
               --data-urlencode "basis=$basis" \
+              --data-urlencode 'sort=2' \
               --data-urlencode 'method=0' \
-              --data-urlencode 'wspeed=standard' \
+              --data-urlencode 'retFlg=on' \
               --data-urlencode 'utrexprs=' \
-              --data-urlencode 'useRomancecar=false' \
-              --data-urlencode 'unuse=' \
-              --data-urlencode 'from=research' \
-              --data-urlencode 'research=1' \
-              --output "$output" \
-              --write-out '%{http_code}')
+              --data-urlencode 'wspeed=standard' \
+              -o "/tmp/${label}.html"
 
-            echo "$label http=$status bytes=$(wc -c < "$output")"
-            LABEL="$label" OUTPUT="$output" python3 - <<'PY'
+            LABEL="$label" python3 - <<'PY'
           import html, os, re
           from pathlib import Path
-          text=Path(os.environ['OUTPUT']).read_text(encoding='utf-8', errors='replace')
+          label=os.environ['LABEL']
+          text=Path(f'/tmp/{label}.html').read_text(encoding='utf-8', errors='replace')
           plain=re.sub(r'<script.*?</script>|<style.*?</style>', ' ', text, flags=re.I|re.S)
           plain=re.sub(r'<[^>]+>', ' ', plain)
           plain=re.sub(r'\s+', ' ', html.unescape(plain)).strip()
-          date_line=re.search(r'20\d{2}年\d{1,2}月\d{1,2}日\s*\d{1,2}時\d{1,2}分\s*(?:出発|到着)', plain)
-          summaries=re.findall(r'(\d{1,2}:\d{2})\s*発\s*⇒\s*(\d{1,2}:\d{2})\s*着.*?乗換\s*([0-9]+)\s*回', plain)
-          hidden={name: value for name, value in re.findall(r'<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"', text, flags=re.I)}
-          print('dateLine=', date_line.group(0) if date_line else None)
-          print('hidden=', {k: hidden.get(k) for k in ('day','hour','minute','basis','method','orvName','dnvName')})
-          print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain, '大江': '大江' in plain})
-          print('summaries=', summaries[:8])
-          print('targets=', {t: t in plain for t in ('19:25','19:36','19:44','19:47','16:55','17:06','17:20','17:23')})
-          print('title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
+          print(label, 'bytes=', len(text), 'title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
+          print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain})
+          for i, form in enumerate(re.findall(r'<form\b.*?</form>', text, flags=re.I|re.S)):
+              tag=re.search(r'<form\b[^>]*>', form, flags=re.I)
+              print('FORM', i, tag.group(0) if tag else None)
+              for name,value in re.findall(r'<input[^>]+name="([^"]+)"[^>]*value="([^"]*)"', form, flags=re.I):
+                  if name in {'orvNode','dnvNode','orvName','dnvName','month','day','hour','minute','basis','sort','method','retFlg','wspeed','utrexprs','start','goal'}:
+                      print(' INPUT', name, html.unescape(value))
+              for name,body in re.findall(r'<select[^>]+name="([^"]+)"[^>]*>(.*?)</select>', form, flags=re.I|re.S):
+                  if name in {'orvNode','dnvNode','month','day','hour','minute'}:
+                      opts=[]
+                      for value,label_text in re.findall(r'<option[^>]*value="([^"]*)"[^>]*>(.*?)</option>', body, flags=re.I|re.S):
+                          cleaned=re.sub(r'<[^>]+>',' ',html.unescape(label_text)); cleaned=re.sub(r'\s+',' ',cleaned).strip()
+                          if '名鉄名古屋' in cleaned or '東名古屋港' in cleaned or 'NH36' in cleaned or 'CH01' in cleaned:
+                              opts.append((html.unescape(value), cleaned))
+                      if opts: print(' SELECT', name, opts)
           PY
           }
 
-          # The result page's own `research` form posts conditions to smart/top/Top.
-          # Probe both arrival/departure basis values; each case uses a fresh session.
-          probe weekday-basis0 20260907 19 47 0
-          probe weekday-basis1 20260907 19 47 1
-          probe holiday-basis0 20260905 17 23 0
-          probe holiday-basis1 20260905 17 23 1
+          fetch_select weekday-arrive 2026/09 07 19 47 0
+          fetch_select weekday-depart 2026/09 07 19 47 1
 
       - name: Upload submit diagnostics
         if: always()
@@ -103,6 +94,3 @@ jobs:
           name: meitetsu-chikko-transfer-submit
           path: |
             /tmp/weekday-*.html
-            /tmp/weekday-*.headers
-            /tmp/holiday-*.html
-            /tmp/holiday-*.headers
