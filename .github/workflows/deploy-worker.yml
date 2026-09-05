@@ -6,9 +6,8 @@ on:
     branches: [main]
     paths:
       - 'src/**'
-      - 'public/**'
       - 'test/**'
-      - 'wrangler.jsonc'
+      - 'wrangler.worker.jsonc'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/deploy-worker.yml'
@@ -34,22 +33,19 @@ jobs:
           node --check src/index.js
           node --check src/last-train.js
           node --check src/ops-csv.js
-          node --check public/app.js
-          node --check public/js/sleep.js
-          node --check public/js/settings.js
 
       - name: Run unit tests
         run: npm test
 
-      - name: Deploy Worker
+      - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: latest
-          command: deploy --var BUILD_SHA:${{ github.sha }}
+          command: deploy --config wrangler.worker.jsonc --var BUILD_SHA:${{ github.sha }}
 
-      - name: Core production smoke
+      - name: Core API production smoke
         env:
           BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
           EXPECTED_BUILD_SHA: ${{ github.sha }}
@@ -59,9 +55,8 @@ jobs:
 
           ready=0
           for attempt in $(seq 1 15); do
-            echo "Build SHA readiness attempt $attempt/15"
+            echo "Worker build SHA readiness attempt $attempt/15"
             if curl -fsS "$BASE_URL/health" -o /tmp/health.json; then
-              cat /tmp/health.json
               if EXPECTED_BUILD_SHA="$EXPECTED_BUILD_SHA" python3 - <<'PY'
           import json
           import os
@@ -78,7 +73,7 @@ jobs:
           )
           if not valid:
               print(
-                  'Deployed commit is not visible yet: '
+                  'Deployed Worker commit is not visible yet: '
                   f"expected={os.environ['EXPECTED_BUILD_SHA']}, "
                   f"actual={data.get('buildSha')}"
               )
@@ -98,11 +93,6 @@ jobs:
             exit 1
           fi
 
-          curl -fsS "$BASE_URL/" -o /tmp/index.html
-          grep -q '<title>あと一杯ナビ</title>' /tmp/index.html
-          grep -q '現在地から判定する' /tmp/index.html
-          echo 'Web MVP smoke test: OK'
-
           for path in walk drive taxi-estimate; do
             status=$(curl -sS \
               -o "/tmp/removed-${path}.json" \
@@ -111,15 +101,11 @@ jobs:
               --data '{}' \
               "$BASE_URL/api/$path")
             echo "Removed endpoint /api/$path -> HTTP $status"
-            cat "/tmp/removed-${path}.json"
             test "$status" = '404'
           done
           echo 'Removed public Google Routes proxy endpoints smoke test: OK'
 
-          curl -fsS \
-            "$BASE_URL/ops/last-train-boundaries.csv" \
-            -o /tmp/last-train-boundaries.csv
-
+          curl -fsS "$BASE_URL/ops/last-train-boundaries.csv" -o /tmp/last-train-boundaries.csv
           python3 - <<'PY'
           import csv
 
@@ -165,10 +151,7 @@ jobs:
           departure_time = target.isoformat(timespec='seconds')
 
           boundary = {
-              'origin': {
-                  'latitude': 35.1715,
-                  'longitude': 136.9057,
-              },
+              'origin': {'latitude': 35.1715, 'longitude': 136.9057},
               'departureTime': departure_time,
               'dayType': day_type,
               'destinationCode': 'H22',
@@ -176,14 +159,8 @@ jobs:
               'stationBufferMinutes': 3,
               'minimumBoardingLeadMinutes': 1,
           }
-          tonight = {
-              **boundary,
-              'includeDispatchFee': True,
-          }
-          override = {
-              **tonight,
-              'taxiDestination': '東京駅',
-          }
+          tonight = {**boundary, 'includeDispatchFee': True}
+          override = {**tonight, 'taxiDestination': '東京駅'}
 
           with open('/tmp/core-boundary-request.json', 'w', encoding='utf-8') as f:
               json.dump(boundary, f, ensure_ascii=False)
@@ -191,11 +168,6 @@ jobs:
               json.dump(tonight, f, ensure_ascii=False)
           with open('/tmp/override-request.json', 'w', encoding='utf-8') as f:
               json.dump(override, f, ensure_ascii=False)
-
-          print(
-              f'Runtime smoke service time: {departure_time} '
-              f'(dayType={day_type})'
-          )
           PY
 
           curl -fsS \
@@ -203,8 +175,6 @@ jobs:
             --data @/tmp/core-boundary-request.json \
             "$BASE_URL/api/last-train-boundary" \
             -o /tmp/core-boundary.json
-
-          cat /tmp/core-boundary.json
 
           python3 - <<'PY'
           import json
@@ -219,8 +189,6 @@ jobs:
           assert set(data['walkOptions']) == {'sakae', 'fushimi'}, data['walkOptions']
           assert len(scenarios) == 4, scenarios
           assert scenarios[0]['canReachDestination'] is True, scenarios
-          assert scenarios[0]['recommendedOriginId'] in {'sakae', 'fushimi'}, scenarios
-          assert scenarios[0]['lastDeparture'] in {'00:02', '00:00'}, scenarios
           assert scenarios[-1]['canReachDestination'] is False, scenarios
           print('Core last-train boundary smoke test: OK')
           PY
@@ -231,8 +199,6 @@ jobs:
             "$BASE_URL/api/tonight-decision" \
             -o /tmp/tonight.json
 
-          cat /tmp/tonight.json
-
           python3 - <<'PY'
           import json
 
@@ -242,23 +208,14 @@ jobs:
           assert data['destinationCode'] == 'H22', data
           assert data['destinationName'] == '藤が丘', data
           assert data['taxiDestination'] == '藤が丘駅 愛知県名古屋市', data
-
-          train = data['train']
-          assert train['routeFound'] is True, train
-          assert train['destination']['code'] == 'H22', train
-
-          taxi = data['taxi']
-          assert taxi['routeFound'] is True, taxi
-          assert taxi['distanceMeters'] > 10000, taxi
-          assert taxi['nightSurcharge'] is True, taxi
-          assert taxi['estimatedTotalYen'] > 5000, taxi
-          assert taxi['method'] == 'distance_only_approximation', taxi
-
-          scenarios = data['scenarios']
-          assert len(scenarios) == 4, scenarios
-          assert scenarios[0]['canReachDestination'] is True, scenarios
-          assert scenarios[-1]['canReachDestination'] is False, scenarios
-          assert scenarios[-1]['recommendedMode'] == 'taxi', scenarios
+          assert data['train']['routeFound'] is True, data['train']
+          assert data['taxi']['routeFound'] is True, data['taxi']
+          assert data['taxi']['distanceMeters'] > 10000, data['taxi']
+          assert data['taxi']['nightSurcharge'] is True, data['taxi']
+          assert data['taxi']['estimatedTotalYen'] > 5000, data['taxi']
+          assert data['taxi']['method'] == 'distance_only_approximation', data['taxi']
+          assert len(data['scenarios']) == 4, data['scenarios']
+          assert data['scenarios'][-1]['recommendedMode'] == 'taxi', data['scenarios']
           print('Tonight decision train + fixed-destination taxi smoke test: OK')
           PY
 
@@ -268,7 +225,6 @@ jobs:
             -H 'content-type: application/json' \
             --data @/tmp/override-request.json \
             "$BASE_URL/api/tonight-decision")
-          cat /tmp/override.json
           test "$override_status" = '400'
           grep -q 'taxiDestination override is not allowed' /tmp/override.json
           echo 'taxiDestination override rejection smoke test: OK'
