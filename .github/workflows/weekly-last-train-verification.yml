@@ -2,6 +2,12 @@ name: Weekly Last Train Verification
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/weekly-last-train-verification.yml'
+      - 'ops/weekly-verifiers.json'
+      - 'scripts/dispatch-workflow-and-wait.py'
   schedule:
     - cron: '17 11 * * 3'
       timezone: 'Asia/Tokyo'
