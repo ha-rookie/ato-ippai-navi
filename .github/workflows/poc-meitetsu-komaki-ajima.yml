@@ -98,12 +98,11 @@ jobs:
 
           fetch "$BASE/map/Top?window=transfer" /tmp/meitetsu-komaki-top.html
 
+          # Static timetable is only a direction/terminal guard. Ajima identity is
+          # checked on the destination-specific direct result below.
           fetch \
             "$BASE/diagram/TrainDiagram?direction=down&linkId=00001002&startId=00008059" \
             /tmp/meitetsu-heiandori-kamiida-timetable.html
-          fetch \
-            "$BASE/diagram/TrainDiagram?direction=down&linkId=00000869&startId=00008545" \
-            /tmp/meitetsu-ajima-station-timetable.html
 
           fetch \
             "$BASE/transfer/DepArrTimeList?date=$MEITETSU_WEEKDAY_DATE&gnode=00008545&snode=00008059" \
@@ -112,7 +111,7 @@ jobs:
             "$BASE/transfer/DepArrTimeList?date=$MEITETSU_HOLIDAY_DATE&gnode=00008545&snode=00008059" \
             /tmp/meitetsu-ajima-direct-saturday_holiday.html
 
-      - name: Verify static timetable identities
+      - name: Verify Heian-dori static timetable identity
         shell: bash
         run: |
           python3 - <<'PY'
@@ -120,27 +119,22 @@ jobs:
           import re
           from pathlib import Path
 
-          def text(path):
-              raw = Path(path).read_bytes()
-              for enc in ('utf-8', 'cp932', 'shift_jis'):
-                  try:
-                      source = raw.decode(enc)
-                      break
-                  except UnicodeDecodeError:
-                      continue
-              else:
-                  raise AssertionError(path)
-              source = re.sub(r'<[^>]+>', ' ', source)
-              return re.sub(r'\s+', ' ', html.unescape(source))
+          raw = Path('/tmp/meitetsu-heiandori-kamiida-timetable.html').read_bytes()
+          for enc in ('utf-8', 'cp932', 'shift_jis'):
+              try:
+                  source = raw.decode(enc)
+                  break
+              except UnicodeDecodeError:
+                  continue
+          else:
+              raise AssertionError('unable to decode Heian-dori timetable')
+          source = re.sub(r'<[^>]+>', ' ', source)
+          text = re.sub(r'\s+', ' ', html.unescape(source))
 
-          heian = text('/tmp/meitetsu-heiandori-kamiida-timetable.html')
-          ajima = text('/tmp/meitetsu-ajima-station-timetable.html')
-
-          assert '平安通' in heian
-          assert '上飯田線' in heian
-          assert '小牧' in heian
-          assert '味鋺' in ajima
-          print('Meitetsu static timetable identity: OK')
+          assert '平安通' in text
+          assert '上飯田線' in text
+          assert '小牧' in text
+          print('Meitetsu Heian-dori static timetable identity: OK')
           PY
 
       - name: Calculate KM12 boundary from official sources
