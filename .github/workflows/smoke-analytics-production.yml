@@ -1,0 +1,53 @@
+name: Smoke Analytics Production
+
+on:
+  workflow_run:
+    workflows: ["Deploy Pages to Cloudflare"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      BASE_URL: https://ato-ippai.pages.dev
+
+    steps:
+      - name: Verify Analytics Engine production write
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          status="$(
+            curl -sS \
+              -o /tmp/analytics-smoke-body.txt \
+              -w '%{http_code}' \
+              -X POST "$BASE_URL/api/event" \
+              -H "Origin: $BASE_URL" \
+              -H 'Content-Type: application/json' \
+              --data '{"event":"deployment_smoke_test","display_mode":"browser","network_state":"online"}'
+          )"
+
+          if [ "$status" != "204" ]; then
+            cat /tmp/analytics-smoke-body.txt || true
+            echo "Expected HTTP 204 from Analytics Engine endpoint, got $status"
+            exit 1
+          fi
+
+          foreign_status="$(
+            curl -sS \
+              -o /tmp/analytics-foreign-body.txt \
+              -w '%{http_code}' \
+              -X POST "$BASE_URL/api/event" \
+              -H 'Origin: https://example.com' \
+              -H 'Content-Type: application/json' \
+              --data '{"event":"deployment_smoke_test"}'
+          )"
+          test "$foreign_status" = '403'
+
+          echo 'Analytics Engine production smoke test: OK'
