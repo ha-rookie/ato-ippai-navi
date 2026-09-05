@@ -2,6 +2,7 @@ import { estimateNagoyaTaxiFare } from "./taxi.js";
 import { composeTonightDecision } from "./tonight.js";
 import { composeWalkHomeDecision } from "./walk-home.js";
 import { eligibleOriginIds, evaluateLastTrainBoundary } from "./last-train.js";
+import { lastTrainBoundariesCsv } from "./ops-csv.js";
 import LAST_TRAINS_NAGOYA from "./data/last-trains-nagoya.json" with { type: "json" };
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -11,6 +12,16 @@ const json = (data, status = 200) =>
     status,
     headers: {
       "content-type": "application/json; charset=utf-8"
+    }
+  });
+
+const csv = (data) =>
+  new Response(data, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "cache-control": "public, max-age=300, s-maxage=300",
+      "x-content-type-options": "nosniff"
     }
   });
 
@@ -331,6 +342,13 @@ export default {
         buildSha: env.BUILD_SHA || null,
         googleApiKeyConfigured: Boolean(env.GOOGLE_MAPS_API_KEY)
       });
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/ops/last-train-boundaries.csv"
+    ) {
+      return csv(lastTrainBoundariesCsv(LAST_TRAINS_NAGOYA));
     }
 
     if (request.method !== "POST") {
