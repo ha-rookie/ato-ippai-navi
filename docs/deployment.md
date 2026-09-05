@@ -85,6 +85,30 @@ Wrangler deploy時にGitHub commit SHAをWorkerへ渡します。
 
 これにより、Cloudflare側の反映待ちや旧バージョンを誤ってgreen判定することを防ぎます。
 
+## 公開API面
+
+本番画面が利用するGoogle Routes処理の入口は、原則として統合APIに限定します。
+
+公開:
+
+- `GET /health`
+- `POST /api/tonight-decision`
+- `POST /api/last-train-boundary` — 路線別production smoke・詳細検証用
+
+非公開:
+
+- `/api/walk`
+- `/api/drive`
+- `/api/taxi-estimate`
+
+WALK / DRIVE / taxi estimateの関数はWorker内部helperとしてのみ使用します。
+
+`/api/tonight-decision` のタクシー目的地は、選択されたverified destination駅からWorker側で生成します。リクエストの `taxiDestination` による任意上書きは拒否します。
+
+また、同一オリジンのWebアプリから利用する構成のため、Workerレスポンスに `Access-Control-Allow-Origin: *` は付与しません。
+
+CORSはブラウザ制御でありAPI乱用そのものを止める仕組みではないため、Cloudflare Rate Limitingなどのインフラ防御とは役割を分けます。
+
 ## Core production smoke
 
 deploy workflow内で次を確認します。
@@ -106,7 +130,17 @@ deploy workflow内で次を確認します。
 - `<title>あと一杯ナビ</title>`
 - `現在地から判定する`
 
-### 3. Core last-train boundary
+### 3. 非公開化した低レベルAPI
+
+次のエンドポイントへPOSTし、すべてHTTP 404になることを確認します。
+
+- `/api/walk`
+- `/api/drive`
+- `/api/taxi-estimate`
+
+これにより、コード上でGoogle Routes helperが残っていても、外部から任意origin/destinationを与える公開プロキシとして露出していないことをデプロイごとに検証します。
+
+### 4. Core last-train boundary
 
 代表destinationとして H22 藤が丘を使い、`POST /api/last-train-boundary` を本番Workerへ送ります。
 
@@ -120,15 +154,38 @@ deploy workflow内で次を確認します。
 - 現在シナリオは到達可能
 - 最後のシナリオは到達不可
 
-### 4. Taxi estimate
+### 5. 統合APIの終電 + タクシー
 
-`POST /api/taxi-estimate` を本番Workerへ送り、代表的な深夜タクシー概算を確認します。
+`POST /api/tonight-decision` をH22藤が丘で実行します。
 
-- route found
-- 距離が妥当な正値
-- 深夜割増あり
-- 概算金額が正値
+確認項目:
+
+- destination H22 / 藤が丘
+- `taxiDestination` がWorker側で `藤が丘駅 愛知県名古屋市` に固定される
+- train判定が正常
+- 終電後シナリオではタクシーフォールバックになる
+- taxi routeが取得できる
+- 距離・深夜割増・概算金額が妥当な正値
 - `method=distance_only_approximation`
+
+従来の `/api/taxi-estimate` 単独smokeは使用しません。
+
+### 6. 任意タクシー目的地の拒否
+
+同じ `/api/tonight-decision` に、例えば次を追加して送ります。
+
+```json
+{
+  "taxiDestination": "東京駅"
+}
+```
+
+期待結果:
+
+- HTTP 400
+- `taxiDestination override is not allowed`
+
+これにより、統合API経由でもGoogle DRIVEを任意目的地へ使えないことを確認します。
 
 ## 路線別 production smoke
 
@@ -155,6 +212,10 @@ KM12では次を本番APIで確認します。
 - 味鋺 00:10着
 - transfer metadata
 - 20分後シナリオでは到達不可
+
+現在の路線別smokeは `/api/last-train-boundary` を使用します。そのため、このエンドポイントは現時点では公開ルーティングを維持します。
+
+将来、路線別smokeを `/api/tonight-decision` へ移行できれば、`/api/last-train-boundary` の外部公開をさらに縮小できるか再評価します。
 
 ## 公式ソース検証CIとの役割分担
 
@@ -195,6 +256,21 @@ GOOGLE_MAPS_API_KEY
 Secret値は `wrangler.jsonc` に記載しません。
 Workerコードは `env.GOOGLE_MAPS_API_KEY` から参照します。
 
+旧Google TRANSIT PoC用の `MAX_LATE_TRANSIT_WAIT_MINUTES` は、TRANSIT処理削除後は不要なため `wrangler.jsonc` から除去します。
+
+## Rate Limiting / Google API restriction
+
+公開面をコードで縮小する対策と、インフラ側の流量制御は分けて管理します。
+
+Phase 2候補:
+
+- Cloudflare Workers Rate Limiting binding
+- Google API keyをRoutes APIのみにAPI restriction
+- credential別Metricsの確認
+- quota / budget alertの検討
+
+Cloudflare Rate Limiting bindingの `namespace_id` はアカウント内で一意に管理する必要があるため、既存設定を確認せずリポジトリ側で番号を決めません。
+
 ## Compatibility date
 
 Cloudflareは `compatibility_date` に未来日を指定できません。
@@ -215,11 +291,20 @@ GitHub Actions runnerはUTCで実行されるため、日本時間では日付�
 - Core production smoke success
 - 対象に専用smokeがある場合はそのproduction smoke success
 
+API公開面を変更した場合は追加で:
+
+- 非公開化したendpointが404
+- 統合APIが正常
+- 不正な任意destination上書きが拒否される
+
+ことをCore production smokeで確認します。
+
 ## 運用原則
 
 - GitHubをコード・設計・ワークフローの正本とする
 - 本番変更は原則PRでレビューしてからmainへ反映する
 - Cloudflare DashboardでWorkerコードを直接編集しない
 - APIキー・Secret値をGitHubへコミットしない
+- Google Routes helperを任意origin/destinationの公開プロキシにしない
 - 時刻表変更はproduction JSONを直接推測更新せず、公式ソース検証を通す
 - verification不能時はfail-closedとする
