@@ -16,6 +16,15 @@ const state = {
   checking: false
 };
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function ensureStyles() {
   if (document.querySelector('link[href="/last-train.css"]')) return;
   const link = document.createElement("link");
@@ -180,7 +189,7 @@ function detailsHtml(scenario) {
   return lines.map((line) => `<div>${line}</div>`).join("");
 }
 
-function renderAvailable(result, data, scenario, destinationName) {
+function renderAvailable(result, scenario, destinationName) {
   const deadline = deadlineForScenario(scenario);
   const margin = Math.max(0, Number(scenario.usableMarginMinutes || 0));
   const warning = margin <= 10;
@@ -212,8 +221,6 @@ function renderAvailable(result, data, scenario, destinationName) {
       <a class="last-train-action-link" href="/">あと一杯判定へ</a>
     </div>
   `;
-
-  return data;
 }
 
 function renderEnded(result, scenario) {
@@ -266,7 +273,10 @@ export function mountLastTrainPage() {
         <summary>帰宅先：<strong id="lastTrainDestinationName">最寄り駅</strong>（変更）</summary>
         <label class="field last-train-destination">
           <span>帰宅先の最寄り駅</span>
-          <select id="lastTrainDestinationCode">${stationOptions}</select>
+          <select id="lastTrainDestinationCode">
+            <option value="" disabled>選択してください</option>
+            ${stationOptions}
+          </select>
         </label>
         <label class="field">
           <span>ダイヤ区分</span>
@@ -301,9 +311,7 @@ export function mountLastTrainPage() {
   const status = document.getElementById("lastTrainStatus");
   const clockEl = document.getElementById("lastTrainClock");
 
-  if (storedDestination) {
-    destinationCode.value = storedDestination;
-  }
+  destinationCode.value = storedDestination || "";
 
   function updateDestinationName() {
     destinationName.textContent =
@@ -315,6 +323,12 @@ export function mountLastTrainPage() {
   }
 
   async function runCheck({ refreshLocation = false } = {}) {
+    if (!destinationCode.value) {
+      destinationSettings.open = true;
+      status.textContent = "帰宅先の最寄り駅を選択してください";
+      return;
+    }
+
     if (state.checking) return;
     state.checking = true;
     checkButton.disabled = true;
@@ -341,7 +355,7 @@ export function mountLastTrainPage() {
 
       const name = data.destination?.name || destinationName.textContent;
       if (scenario.canReachDestination) {
-        renderAvailable(result, data, scenario, name);
+        renderAvailable(result, scenario, name);
       } else {
         renderEnded(result, scenario);
       }
@@ -351,11 +365,12 @@ export function mountLastTrainPage() {
 
       status.textContent = `${clock(new Date())} 時点で確認`;
     } catch (error) {
+      const message = escapeHtml(error?.message || "現在地を取得できませんでした");
       result.className = "last-train-primary";
       result.innerHTML = `
         <p class="last-train-kicker">LOCATION REQUIRED</p>
         <p class="last-train-deadline">正確な終電期限を表示できません</p>
-        <div class="last-train-route-summary">${error?.message || "現在地を取得できませんでした"}</div>
+        <div class="last-train-route-summary">${message}</div>
       `;
       status.textContent = "位置情報を確認して、もう一度お試しください";
     } finally {
