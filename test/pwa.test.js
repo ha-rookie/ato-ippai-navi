@@ -19,6 +19,10 @@ const headers = fs.readFileSync(
   new URL("../public/_headers", import.meta.url),
   "utf8"
 );
+const pwaRuntime = fs.readFileSync(
+  new URL("../public/js/pwa.js", import.meta.url),
+  "utf8"
+);
 
 function pngDimensions(buffer) {
   assert.deepEqual(
@@ -58,6 +62,18 @@ test("service worker never caches API or operations responses", () => {
 test("PWA control files are not served with stale-cache policy", () => {
   assert.match(headers, /\/sw\.js[\s\S]*no-cache, no-store, must-revalidate/);
   assert.match(headers, /\/manifest\.webmanifest[\s\S]*no-cache/);
+});
+
+test("install CTA is mounted in the hero and follows browser install events", () => {
+  assert.match(pwaRuntime, /document\.querySelector\("header\.hero"\)/);
+  assert.match(pwaRuntime, /id="pwaInstallButton"/);
+  assert.match(pwaRuntime, />ホーム画面に追加<\/button>/);
+  assert.match(pwaRuntime, /id="pwaHelp"/);
+  assert.match(pwaRuntime, /hero\.appendChild\(panel\)/);
+  assert.match(pwaRuntime, /beforeinstallprompt/);
+  assert.match(pwaRuntime, /button\.hidden = false/);
+  assert.match(pwaRuntime, /Safariの共有メニューから「ホーム画面に追加」/);
+  assert.doesNotMatch(pwaRuntime, /shell\.appendChild\(panel\)/);
 });
 
 test("temporary icon generator creates required PNG dimensions", () => {
