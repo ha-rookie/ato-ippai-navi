@@ -21,6 +21,34 @@ export function isIosDevice() {
   return classicIos || ipadDesktopMode;
 }
 
+function ensureHeadLink(rel, href, attributes = {}) {
+  let link = document.head.querySelector(`link[rel="${rel}"][href="${href}"]`);
+  if (link) return link;
+  link = document.createElement("link");
+  link.rel = rel;
+  link.href = href;
+  for (const [key, value] of Object.entries(attributes)) {
+    link.setAttribute(key, value);
+  }
+  document.head.appendChild(link);
+  return link;
+}
+
+function ensureHeadMetadata() {
+  ensureHeadLink("manifest", "/manifest.webmanifest");
+  ensureHeadLink("icon", "/favicon.svg", { type: "image/svg+xml" });
+  ensureHeadLink("apple-touch-icon", "/apple-touch-icon.png", {
+    sizes: "180x180"
+  });
+
+  if (!document.head.querySelector('meta[name="mobile-web-app-capable"]')) {
+    const meta = document.createElement("meta");
+    meta.name = "mobile-web-app-capable";
+    meta.content = "yes";
+    document.head.appendChild(meta);
+  }
+}
+
 function ensurePwaStyles() {
   if (document.getElementById("pwaRuntimeStyles")) return;
   const style = document.createElement("style");
@@ -108,6 +136,32 @@ function applyNetworkState() {
   }
 }
 
+function setOfflineActionMessage(target) {
+  const message = "現在地からの判定には通信が必要です";
+  if (target?.closest?.("#lastTrainCheckButton")) {
+    const status = document.getElementById("lastTrainStatus");
+    if (status) status.textContent = message;
+    return;
+  }
+  if (target?.closest?.("#checkButton")) {
+    const status = document.getElementById("status");
+    if (status) status.textContent = message;
+  }
+}
+
+function guardOfflineActions(event) {
+  if (navigator.onLine !== false) return;
+  const blocked =
+    event.target?.closest?.("#checkButton") ||
+    event.target?.closest?.("#lastTrainCheckButton");
+  if (!blocked) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  markOfflineFallbackPending();
+  setOfflineActionMessage(event.target);
+}
+
 function ensureInstallPanel() {
   let panel = document.getElementById("pwaInstallPanel");
   if (panel) return panel;
@@ -177,9 +231,11 @@ async function registerServiceWorker() {
 export function setupPwa() {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
+  ensureHeadMetadata();
   ensurePwaStyles();
   applyNetworkState();
   registerServiceWorker();
+  document.addEventListener("click", guardOfflineActions, true);
 
   if (isStandaloneMode()) {
     track("standalone_open");
