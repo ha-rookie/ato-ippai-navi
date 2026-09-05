@@ -12,6 +12,8 @@ if (normalizedPath === "/last-train") {
   mountLastTrainPage();
   clarifyLastTrainInformation();
 } else {
+  const { prepareDestinationSelect } = await import("/js/destination-bootstrap.js");
+  prepareDestinationSelect();
   await import("/js/main-page.js");
   const { mountLastTrainQuickLink } = await import("/js/last-train-link.js");
   const { clarifyMainPageInformation } = await import("/js/information-architecture.js");
