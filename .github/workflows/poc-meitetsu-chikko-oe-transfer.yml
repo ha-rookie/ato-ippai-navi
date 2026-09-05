@@ -62,7 +62,8 @@ jobs:
 
           fetch "$BASE/map/Top?window=transfer" /tmp/meitetsu-chikko-top.html
 
-          # Static Oe -> Higashi-Nagoyako timetable. Used only to detect irregular-service notices.
+          # Static station timetable is diagnostic only because the official page
+          # marks Chikko services with irregular/operation-date notices.
           fetch \
             "$BASE/diagram/TrainDiagram?direction=down&linkId=00000875&startId=00005590" \
             /tmp/meitetsu-chikko-oe-timetable.html
@@ -73,89 +74,27 @@ jobs:
           )
 
           for day_type in weekday saturday_holiday; do
-            # DepArrTimeList is a no-transfer timetable and is kept as a diagnostic for NH36 -> CH01.
+            # No-transfer query proves NH36 -> CH01 is not a direct service.
             fetch \
               "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00006856&snode=00004372" \
               "/tmp/meitetsu-chikko-through-${day_type}.html"
 
-            # Transfer leg: Oe -> Higashi-Nagoyako.
+            # Each concrete leg is read from the official destination-specific
+            # no-transfer timetable. This avoids reverse-engineering undocumented
+            # date controls in the transfer solver.
             fetch \
               "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00006856&snode=00005590" \
               "/tmp/meitetsu-chikko-shuttle-${day_type}.html"
 
-            # Feeder leg: Meitetsu Nagoya -> Oe.
             fetch \
               "$BASE/transfer/DepArrTimeList?date=${DATES[$day_type]}&gnode=00005590&snode=00004372" \
               "/tmp/meitetsu-chikko-feeder-${day_type}.html"
           done
 
-      - name: Inspect timetable legs and candidate connections
+      - name: Generate and validate transfer boundary
         run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
 
-      - name: Query official transfer solver for arrival by last shuttle
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
-          COOKIE_JAR=/tmp/meitetsu-chikko-cookies.txt
-          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
-
-          for day_type in weekday saturday_holiday; do
-            if [ "$day_type" = weekday ]; then
-              service_date="$MEITETSU_WEEKDAY_DATE"
-            else
-              service_date="$MEITETSU_HOLIDAY_DATE"
-            fi
-
-            read -r hour minute < <(DAY_TYPE="$day_type" python3 - <<'PY'
-          import json, os
-          with open('/tmp/meitetsu-chikko-transfer-poc.json', encoding='utf-8') as f:
-              data = json.load(f)
-          arrival = data['days'][os.environ['DAY_TYPE']]['lastShuttle']['arrival']
-          hour, minute = arrival.split(':')
-          print(hour, minute)
-          PY
-            )
-
-            year="${service_date:0:4}"
-            month_num=$((10#${service_date:5:2}))
-            month="${year}/${month_num}"
-            day="${service_date:8:2}"
-            output="/tmp/meitetsu-chikko-solver-${day_type}.html"
-
-            # Mirror the actual TransferSearchSelect form contract discovered from official HTML:
-            # node-valued selects + basis=0 (arrival), sort=2, method=1 (train only).
-            echo "TransferSearchSelect result date=$service_date arrive-by=$hour:$minute"
-            curl --fail --silent --show-error --location --compressed \
-              --retry 2 --retry-delay 1 \
-              --user-agent "$UA" \
-              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-              --referer "$BASE/transfer/TransferSearchSelect" \
-              --cookie "$COOKIE_JAR" --cookie-jar "$COOKIE_JAR" \
-              --get "$BASE/transfer/TransferSearchSelect" \
-              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)' \
-              --data-urlencode 'orvName=' \
-              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)' \
-              --data-urlencode 'dnvName=' \
-              --data-urlencode "month=$month" \
-              --data-urlencode "day=$day" \
-              --data-urlencode "hour=$hour" \
-              --data-urlencode "minute=$minute" \
-              --data-urlencode 'basis=0' \
-              --data-urlencode 'sort=2' \
-              --data-urlencode 'unuse=' \
-              --data-urlencode 'wspeed=standard' \
-              --data-urlencode 'method=1' \
-              -o "$output"
-            test -s "$output"
-          done
-
-      - name: Re-inspect with transfer solver results
-        run: python3 scripts/poc-meitetsu-chikko-oe-transfer.py
-
-      - name: Validate station identity and source shape
+      - name: Validate station identity and conservative connection
         shell: bash
         run: |
           python3 - <<'PY'
@@ -173,24 +112,39 @@ jobs:
           assert data['destination'] == {
               'code': 'CH01', 'name': '東名古屋港', 'nodeId': '00006856'
           }
+          assert data['minimumTransferLeadMinutes'] == 3
           assert data['staticTimetable']['identityOk'] is True
           assert data['staticTimetable']['containsIrregularNotice'] is True
           assert data['staticTimetable']['containsOperationDateNotice'] is True
 
-          for day_type in ('weekday', 'saturday_holiday'):
+          expected = {
+              'weekday': ('19:25', '19:36', '19:44', '19:47', 8),
+              'saturday_holiday': ('16:55', '17:06', '17:20', '17:23', 14),
+          }
+
+          for day_type, values in expected.items():
               day = data['days'][day_type]
-              assert day['shuttleServiceCount'] >= 1, day_type
-              assert day['feederServiceCount'] >= 1, day_type
-              last = day['lastShuttle']
-              assert last['departure'], day_type
-              assert last['arrival'], day_type
-              assert any(name.startswith('築港線(') for name in last['routeNames']), (day_type, last)
-              assert day['lastFeederBeforeShuttle'] is not None, day_type
+              boundary = day['boundary']
+              dep, ready, connection, arrival, margin = values
+
               assert day['throughSearch']['identity']['originPresent'] is True
               assert day['throughSearch']['identity']['destinationPresent'] is True
-              assert day['solver'] is not None, day_type
+              assert day['throughSearch']['parsedRowCount'] == 0
+              assert day['shuttleServiceCount'] >= 1
+              assert day['feederServiceCount'] >= 1
+              assert boundary['lastDeparture'] == dep
+              assert boundary['transferReadyTime'] == ready
+              assert boundary['connectionDeparture'] == connection
+              assert boundary['lastArrival'] == arrival
+              assert boundary['transferMarginMinutes'] == margin
+              assert boundary['minimumTransferLeadMinutes'] == 3
+              assert margin >= boundary['minimumTransferLeadMinutes']
+              assert boundary['feeder']['routeNames'] == ['名古屋本線(急行)']
+              assert boundary['feeder']['terminals'] == ['河和']
+              assert boundary['shuttle']['routeNames'] == ['築港線(普通)']
+              assert boundary['shuttle']['terminals'] == ['東名古屋港']
 
-          print('Meitetsu Chikko CH01 source-shape validation: OK')
+          print('Meitetsu Chikko CH01 conservative transfer validation: OK')
           PY
 
       - name: Show PoC JSON summary
@@ -203,6 +157,8 @@ jobs:
           with open('/tmp/meitetsu-chikko-transfer-poc.json', encoding='utf-8') as f:
               data = json.load(f)
           print(json.dumps({
+              'minimumTransferLeadMinutes': data['minimumTransferLeadMinutes'],
+              'verificationStrategy': data['verificationStrategy'],
               'staticTimetable': {
                   'identityOk': data['staticTimetable']['identityOk'],
                   'containsIrregularNotice': data['staticTimetable']['containsIrregularNotice'],
@@ -210,15 +166,10 @@ jobs:
               },
               'days': {
                   day_type: {
-                      'lastShuttle': day['lastShuttle'],
-                      'lastFeederBeforeShuttle': day['lastFeederBeforeShuttle'],
-                      'feederCandidates': day['feederCandidates'],
-                      'throughSearch': {
-                          'identity': day['throughSearch']['identity'],
-                          'timeDetailBlockCount': day['throughSearch']['timeDetailBlockCount'],
-                          'parsedRowCount': day['throughSearch']['parsedRowCount'],
-                      },
-                      'solver': day['solver'],
+                      'boundary': day['boundary'],
+                      'compatibleFeederCount': day['compatibleFeederCount'],
+                      'tooTightFeederCount': day['tooTightFeederCount'],
+                      'throughSearch': day['throughSearch'],
                   }
                   for day_type, day in data['days'].items()
               }
