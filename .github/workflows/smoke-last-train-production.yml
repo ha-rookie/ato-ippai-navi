@@ -1,0 +1,47 @@
+name: Smoke Last Train Production
+
+on:
+  workflow_run:
+    workflows: ["Deploy Worker to Cloudflare"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+
+    steps:
+      - name: Verify last-train page and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl -fsS "$BASE_URL/last-train" -o /tmp/last-train.html
+          grep -q '<title>あと一杯ナビ</title>' /tmp/last-train.html
+          grep -q '<script type="module" src="/app.js"></script>' /tmp/last-train.html
+
+          curl -fsS "$BASE_URL/app.js" -o /tmp/app.js
+          grep -q 'normalizedPath === "/last-train"' /tmp/app.js
+          grep -q 'last-train-link.js' /tmp/app.js
+
+          curl -fsS "$BASE_URL/js/last-train-page.js" -o /tmp/last-train-page.js
+          grep -q '今日の終電' /tmp/last-train-page.js
+          grep -q '/api/last-train-boundary' /tmp/last-train-page.js
+
+          curl -fsS "$BASE_URL/last-train.css" -o /tmp/last-train.css
+          grep -q '.last-train-primary' /tmp/last-train.css
+
+          curl -fsS "$BASE_URL/js/last-train-link.js" -o /tmp/last-train-link.js
+          grep -q 'href="/last-train"' /tmp/last-train-link.js
+
+          curl -fsS "$BASE_URL/last-train-link.css" -o /tmp/last-train-link.css
+          grep -q '.last-train-quick-link' /tmp/last-train-link.css
+
+          echo 'Last-train page production smoke test: OK'

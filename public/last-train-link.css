@@ -1,0 +1,49 @@
+.last-train-quick-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 68px;
+  margin: -4px 0 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  text-decoration: none;
+}
+
+.last-train-quick-link:hover,
+.last-train-quick-link:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.last-train-quick-icon {
+  flex: 0 0 auto;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.last-train-quick-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.last-train-quick-title {
+  display: block;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.last-train-quick-subtitle {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  opacity: 0.76;
+}
+
+.last-train-quick-arrow {
+  flex: 0 0 auto;
+  font-weight: 700;
+  opacity: 0.8;
+}

@@ -5,4 +5,6 @@ if (normalizedPath === "/last-train") {
   mountLastTrainPage();
 } else {
   await import("/js/main-page.js");
+  const { mountLastTrainQuickLink } = await import("/js/last-train-link.js");
+  mountLastTrainQuickLink();
 }
