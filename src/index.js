@@ -10,10 +10,7 @@ const json = (data, status = 200) =>
   new Response(JSON.stringify(data, null, 2), {
     status,
     headers: {
-      "content-type": "application/json; charset=utf-8",
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "POST,OPTIONS"
+      "content-type": "application/json; charset=utf-8"
     }
   });
 
@@ -209,6 +206,9 @@ async function lastTrainBoundaryFromCurrentLocation(env, input) {
 async function tonightDecision(env, input) {
   if (!input.origin) throw new Error("origin is required");
   if (!input.departureTime) throw new Error("departureTime is required");
+  if (Object.prototype.hasOwnProperty.call(input, "taxiDestination")) {
+    throw new Error("taxiDestination override is not allowed");
+  }
 
   const destinationCode = input.destinationCode || "H22";
   const destination = LAST_TRAINS_NAGOYA.destinations[destinationCode];
@@ -217,9 +217,7 @@ async function tonightDecision(env, input) {
     throw new Error(`destination is not enabled: ${destinationCode}`);
   }
 
-  const taxiDestination =
-    input.taxiDestination ||
-    `${destination.name}駅 愛知県名古屋市`;
+  const taxiDestination = `${destination.name}駅 愛知県名古屋市`;
 
   const homeHubEntry = Object.entries(LAST_TRAINS_NAGOYA.origins)
     .find(([, hub]) =>
@@ -342,20 +340,8 @@ export default {
     try {
       const input = await request.json();
 
-      if (url.pathname === "/api/drive") {
-        return json(await drive(env, input));
-      }
-
-      if (url.pathname === "/api/walk") {
-        return json(await walk(env, input));
-      }
-
       if (url.pathname === "/api/last-train-boundary") {
         return json(await lastTrainBoundaryFromCurrentLocation(env, input));
-      }
-
-      if (url.pathname === "/api/taxi-estimate") {
-        return json(await taxiEstimate(env, input));
       }
 
       if (url.pathname === "/api/tonight-decision") {
