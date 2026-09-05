@@ -1,0 +1,21 @@
+{
+  "include": [
+    { "label": "地下鉄 東山線", "workflow": "poc-nagoya-open-data.yml" },
+    { "label": "地下鉄 鶴舞線", "workflow": "poc-tsurumai-open-data.yml" },
+    { "label": "地下鉄 名城線・名港線", "workflow": "poc-meijo-meiko-open-data.yml" },
+    { "label": "地下鉄 名港線 金山乗換", "workflow": "poc-meiko-kanayama-transfer.yml" },
+    { "label": "地下鉄 桜通線", "workflow": "poc-sakuradori-walk-hubs.yml" },
+    { "label": "地下鉄 上飯田線", "workflow": "poc-kamiida-heiandori-transfer.yml" },
+    { "label": "名鉄 瀬戸線", "workflow": "poc-meitetsu-seto-sakaemachi.yml" },
+    { "label": "名鉄 名古屋本線", "workflow": "poc-meitetsu-main-nagoya.yml" },
+    { "label": "名鉄 常滑線", "workflow": "poc-meitetsu-tokoname-nagoya.yml" },
+    { "label": "名鉄 犬山線", "workflow": "verify-meitetsu-inuyama-production.yml" },
+    { "label": "名鉄 築港線 CH01", "workflow": "poc-meitetsu-chikko-oe-transfer.yml" },
+    { "label": "名鉄 小牧線 KM12", "workflow": "poc-meitetsu-komaki-ajima.yml" },
+    { "label": "あおなみ線", "workflow": "poc-aonami-nagoya.yml" },
+    { "label": "近鉄 名古屋線", "workflow": "poc-kintetsu-nagoya.yml" },
+    { "label": "JR 関西本線", "workflow": "poc-jr-kansai-nagoya.yml" },
+    { "label": "JR 中央本線", "workflow": "poc-jr-chuo-nagoya.yml" },
+    { "label": "JR 東海道本線", "workflow": "poc-jr-tokaido-nagoya.yml" }
+  ]
+}

@@ -55,12 +55,18 @@ Google Sheets「あと一杯ナビ 終電データ運用台帳」は、人間が
 ```text
 GitHub JSON
     ↓
-Google Sheets
+Workerの読み取り専用CSV
+    ↓
+Google Sheets IMPORTDATA
 ```
 
 一方向のみとする。
 
-将来Apps Script等で同期する場合も、GitHub公開JSONを読み取り専用で取得し、Sheetへ展開する。
+`GET /ops/last-train-boundaries.csv` は `last-trains-nagoya.json` をリクエスト時に平坦化した派生ビューであり、別のデータ正本ではない。
+
+このendpointはGoogle Routes APIを呼ばず、APIキーやGoogle Sheets認証情報も使用しない。公開repo内の終電境界を人間向けに変換して返すだけとする。
+
+Google Sheets側からGitHub・Workerへ書き戻す経路は作らない。
 
 ---
 
@@ -70,7 +76,7 @@ Google Sheets
 
 路線単位の保守状態を確認するメイン画面。
 
-推奨列:
+列:
 
 - 事業者
 - 路線
@@ -87,11 +93,13 @@ Google Sheets
 
 このタブでは全駅の終電時刻を編集しない。
 
+現時点では最終定期検証日時・結果の正本はGitHub Actions実行履歴とし、Sheetへの自動反映は後続Phaseとする。
+
 ### 3.2 `終電境界一覧`
 
 `last-trains-nagoya.json` を人間向けに平坦化した読み取り専用ビュー。
 
-推奨列:
+列:
 
 - 目的駅コード
 - 駅名
@@ -110,11 +118,19 @@ Google Sheets
 - status
 - sourceIds
 
+Google Sheetsでは `IMPORTDATA` で次を読み込む。
+
+```text
+https://ato-ippai-api-poc.edward-se-pg.workers.dev/ops/last-train-boundaries.csv
+```
+
+Sheet側の値を編集元にはしない。
+
 ### 3.3 `更新履歴`
 
 運用変更を時系列で記録する。
 
-推奨列:
+列:
 
 - 日付
 - 事業者 / 路線
@@ -126,6 +142,8 @@ Google Sheets
 - merge commit
 - production smoke
 - 備考
+
+production更新時の履歴はIssue / PR / merge commitを根拠に記録する。
 
 ---
 
@@ -140,7 +158,7 @@ JSONの `metadata.checkedAt` やsource単位の `checkedAt` は、**production�
 - 週次検証のたびに意味のないcommitを作らない
 - 「データを正式に確認した日」と「ジョブを最後に回した日」を混同しない
 
-定期検証の最終実行日時は、GitHub Actions実行履歴またはGoogle Sheets運用台帳側で管理する。
+定期検証の最終実行日時はGitHub Actions実行履歴で管理し、必要に応じてGoogle Sheets運用台帳へ表示する。
 
 ---
 
@@ -148,35 +166,64 @@ JSONの `metadata.checkedAt` やsource単位の `checkedAt` は、**production�
 
 ダイヤ改正監視は、JSON管理とは別の運用責務として扱う。
 
-### レベル1: 定期自動検証
+### 5.1 週次オーケストレーター
 
-原則週1回、既存のgenerator / parser / verification workflowを再実行する。
+実装:
 
-対象:
+```text
+.github/workflows/weekly-last-train-verification.yml
+ops/weekly-verifiers.json
+scripts/dispatch-workflow-and-wait.py
+```
+
+毎週水曜日 11:17（Asia/Tokyo）に実行する。
+
+時刻を毎時00分からずらし、GitHub Actionsの混雑時間帯を避ける。
+
+`ops/weekly-verifiers.json` に現在のMVPを検証する17 workflowを列挙する。
+
+親workflowは最大3並列で既存の `workflow_dispatch` verifierを起動する。GitHub APIの `return_run_details=true` で子run IDを取得し、各runが完了するまで監視する。
+
+1件でもfailure / cancelled / timeoutになれば親workflowもfailureとする。
+
+### 5.2 対象
 
 - 名古屋市交通局
+  - 東山線
+  - 鶴舞線
+  - 名城線・名港線
+  - 名港線 金山乗換
+  - 桜通線
+  - 上飯田線
 - 名古屋鉄道
+  - 瀬戸線
+  - 名古屋本線
+  - 常滑線
+  - 犬山線
+  - 築港線 CH01
+  - 小牧線 KM12
 - JR東海
-- 近畿日本鉄道
-- 名古屋臨海高速鉄道（あおなみ線）
+  - 関西本線
+  - 中央本線
+  - 東海道本線
+- 近畿日本鉄道 名古屋線
+- 名古屋臨海高速鉄道 あおなみ線
 
-公式ソースから再生成可能な範囲は、production JSONと比較する。
+公式ソースから再生成可能な範囲はproduction JSONと比較する。
 
 変更がなければproduction JSONを変更しない。
 
-### レベル2: 差分検知
+### 5.3 差分・障害検知
 
-公式ソースから再生成した境界がproduction JSONと一致しない場合は、検証をfailureにする。
+公式ソースから再生成した境界がproduction JSONと一致しない場合、または公式ソース取得・parser・検証が失敗した場合はverificationをfailureにする。
 
-差分検知時は次を行う。
+親workflow failure時はGitHub Issueを自動作成し、親run URL・commitを記録する。
 
-1. どの事業者・路線・駅・曜日区分が変わったかを特定
-2. 自動でproduction JSONを書き換えない
-3. GitHub Issueまたは既存Issueへ記録
-4. 公式情報を人間が確認
-5. 必要なPoC / generator修正を行う
+調査時はmatrix jobから対象事業者・路線を特定し、子workflowログから駅・曜日区分・公式ソース取得状況を確認する。
 
-### レベル3: 人間確認
+**failureが発生してもproduction JSONは自動変更しない。**
+
+### 5.4 人間確認
 
 公式ダイヤ改正の発表を確認した場合、週次ジョブ結果に関係なく対象路線を再検証する。
 
@@ -189,7 +236,7 @@ JSONの `metadata.checkedAt` やsource単位の `checkedAt` は、**production�
 ```text
 公式ソース変更 / 定期検証差分
         ↓
-GitHub Issue
+週次verification failure / GitHub Issue
         ↓
 公式一次情報確認
         ↓
@@ -209,7 +256,9 @@ Cloudflare deploy
         ↓
 production smoke
         ↓
-Google Sheets運用台帳更新
+Worker CSVも同じJSONから自動反映
+        ↓
+Google Sheets IMPORTDATAへ反映
 ```
 
 ### fail-closed
@@ -231,9 +280,10 @@ Google Sheets運用台帳更新
 
 ### 週次
 
-- verification workflow実行
-- failure / source取得失敗の確認
-- 差分があればIssue化
+- 水曜日11:17 JSTに親verification workflowを自動実行
+- 17 verifierを最大3並列で再実行
+- failure / source取得失敗 / production差分をfail-closed
+- 親workflow失敗時は調査Issueを自動作成
 
 ### 月次
 
@@ -258,33 +308,46 @@ Google Sheets運用台帳更新
 3. 境界生成・検証方式を設計
 4. `status=verified` をCIで保証
 5. production smokeを追加
-6. Google Sheets運用台帳へ対象を追加
+6. `ops/weekly-verifiers.json` の週次検証対象を必要に応じて更新
+7. Google Sheets運用台帳へ対象を追加
 
 ---
 
-## 9. 将来実装
+## 9. 実装ステータス
 
-運用方針確定後、以下を段階的に実装する。
-
-### Phase A
+### Phase A: 完了
 
 - Google Sheets「あと一杯ナビ 終電データ運用台帳」を作成
-- 現行JSONを `終電境界一覧` へ展開
 - 路線単位の `終電データ監視` を初期登録
+- `更新履歴` を作成
 
-### Phase B
+### Phase B: 実装済み
 
-- GitHub JSON → Google Sheets 一方向同期
-- 週次verification workflowの統合またはschedule化
+- GitHub JSON → 読み取り専用CSV → Google Sheetsの一方向同期
+- `終電境界一覧` の全件自動展開
+- 17 verifierを束ねる週次schedule
+- 週次failureのGitHub Issue自動作成
 
-### Phase C
+### Phase C: 後続
 
-- 差分検知時のIssue自動作成または通知
-- 運用台帳への最終検証日時・結果反映
+- `終電データ監視` への最終verification日時・結果の自動反映
+- 必要に応じたダイヤ改正告知の別系統監視
 
 ---
 
-## 10. 運用原則
+## 10. セキュリティ・障害分離
+
+`/ops/last-train-boundaries.csv` は読み取り専用で、Google Routes APIを呼ばない。
+
+Google Sheets同期のためにGoogle APIキー・サービスアカウント・GitHubへの書込み権限を追加しない。
+
+Google SheetsまたはIMPORTDATAが失敗しても、`/api/tonight-decision` とproduction終電判定には影響しない。
+
+週次verificationが失敗しても、自動でJSON・Cloudflare productionを変更しない。
+
+---
+
+## 11. 運用原則
 
 > 本番データの正本はGitHub。
 > Google Sheetsは終電データの可視化・監視・保守判断のための運用台帳とする。

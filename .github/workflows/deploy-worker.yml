@@ -33,6 +33,7 @@ jobs:
         run: |
           node --check src/index.js
           node --check src/last-train.js
+          node --check src/ops-csv.js
           node --check public/app.js
           node --check public/js/sleep.js
           node --check public/js/settings.js
@@ -114,6 +115,40 @@ jobs:
             test "$status" = '404'
           done
           echo 'Removed public Google Routes proxy endpoints smoke test: OK'
+
+          curl -fsS \
+            "$BASE_URL/ops/last-train-boundaries.csv" \
+            -o /tmp/last-train-boundaries.csv
+
+          python3 - <<'PY'
+          import csv
+
+          with open('/tmp/last-train-boundaries.csv', encoding='utf-8', newline='') as f:
+              rows = list(csv.DictReader(f))
+
+          expected_columns = [
+              '目的駅コード', '駅名', '事業者', '路線', 'hub', '曜日区分',
+              '最終出発', '最終到着', '経路概要', '列車行先', '乗換回数',
+              '乗換駅', '接続列車発車', '乗換余裕(分)', 'status', 'sourceIds'
+          ]
+          assert rows, 'ops CSV must contain production boundaries'
+          assert list(rows[0].keys()) == expected_columns, rows[0].keys()
+          assert len(rows) > 100, len(rows)
+          assert any(
+              row['目的駅コード'] == 'H22'
+              and row['駅名'] == '藤が丘'
+              and row['status'] == 'verified'
+              for row in rows
+          )
+          assert any(
+              row['目的駅コード'] == 'KM12'
+              and row['駅名'] == '味鋺'
+              and row['乗換駅'] == '平安通'
+              and row['status'] == 'verified'
+              for row in rows
+          )
+          print(f'Last-train operations CSV smoke test: OK ({len(rows)} rows)')
+          PY
 
           python3 - <<'PY'
           import json

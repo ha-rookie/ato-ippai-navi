@@ -1,0 +1,93 @@
+name: Weekly Last Train Verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 11 * * 3'
+      timezone: 'Asia/Tokyo'
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: weekly-last-train-verification
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare verifier matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Load verifier matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          MATRIX=$(python3 - <<'PY'
+          import json
+          with open('ops/weekly-verifiers.json', encoding='utf-8') as f:
+              data = json.load(f)
+          assert data.get('include'), data
+          print(json.dumps(data, ensure_ascii=False, separators=(',', ':')))
+          PY
+          )
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Verify ${{ matrix.label }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Dispatch existing verifier and wait for result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/dispatch-workflow-and-wait.py \
+            --workflow "${{ matrix.workflow }}" \
+            --ref main \
+            --timeout-minutes 20
+
+  report-failure:
+    name: Open operations alert
+    needs: [prepare, verify]
+    if: ${{ always() && needs.verify.result != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Issue for failed weekly verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          TITLE="Ops alert: 週次終電verification失敗 (run $GITHUB_RUN_ID)"
+          BODY=$(cat <<EOF
+          週次の終電JSON verification で1件以上の失敗・タイムアウトが発生しました。
+
+          - 親workflow: $RUN_URL
+          - ref: $GITHUB_REF_NAME
+          - commit: $GITHUB_SHA
+          - production JSONは自動変更していません
+
+          親workflowのmatrix jobから失敗した事業者・路線を特定し、子workflowのログで駅・曜日区分・公式ソース取得状況を確認してください。
+
+          運用原則どおり、公式一次情報を確認するまで `src/data/last-trains-nagoya.json` は変更しません。
+          EOF
+          )
+          gh issue create --title "$TITLE" --body "$BODY"
