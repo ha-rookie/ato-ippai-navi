@@ -18,30 +18,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Inspect official TransferSearchSelect form
+      - name: Submit resolved official transfer form
         shell: bash
         run: |
           set -euo pipefail
           BASE='https://trainbus.meitetsu.co.jp/meitetsu-transfer/pc'
-          COOKIE=/tmp/select.cookies
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 
-          curl --fail --silent --show-error --location --compressed \
-            --user-agent "$UA" \
-            --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-            --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
-            --referer 'https://www.meitetsu.co.jp/' \
-            --cookie "$COOKIE" --cookie-jar "$COOKIE" \
-            "$BASE/map/Top?window=transfer" -o /tmp/top.html
-
-          fetch_select() {
+          probe() {
             local label="$1" month="$2" day="$3" hour="$4" minute="$5" basis="$6"
+            local cookie="/tmp/${label}.cookies"
+            local select="/tmp/${label}-select.html"
+            local result="/tmp/${label}-result.html"
+            local headers="/tmp/${label}-result.headers"
+
+            # Step 1: resolve human station names to official opaque node IDs.
             curl --fail --silent --show-error --location --compressed \
               --user-agent "$UA" \
               --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
               --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
               --referer "$BASE/map/Top?window=transfer" \
-              --cookie "$COOKIE" --cookie-jar "$COOKIE" \
+              --cookie "$cookie" --cookie-jar "$cookie" \
               --get "$BASE/transfer/TransferSearchSelect" \
               --data-urlencode 'orvName=名鉄名古屋' \
               --data-urlencode 'dnvName=東名古屋港(CH01)' \
@@ -51,41 +48,61 @@ jobs:
               --data-urlencode "minute=$minute" \
               --data-urlencode "basis=$basis" \
               --data-urlencode 'sort=2' \
-              --data-urlencode 'method=0' \
+              --data-urlencode 'method=1' \
               --data-urlencode 'retFlg=on' \
               --data-urlencode 'utrexprs=' \
               --data-urlencode 'wspeed=standard' \
-              -o "/tmp/${label}.html"
+              -o "$select"
 
-            LABEL="$label" python3 - <<'PY'
+            grep -q '00004372.名鉄名古屋(NH36)' "$select"
+            grep -q '00006856.東名古屋港(CH01)' "$select"
+
+            # Step 2: submit exactly the resolved form state. The form has no method,
+            # therefore browser semantics are GET to TransferSearchSelect itself.
+            status=$(curl --fail --silent --show-error --location --compressed \
+              --user-agent "$UA" \
+              --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              --header 'Accept-Language: ja,en-US;q=0.7,en;q=0.3' \
+              --referer "$BASE/transfer/TransferSearchSelect?orvName=%E5%90%8D%E9%89%84%E5%90%8D%E5%8F%A4%E5%B1%8B&dnvName=%E6%9D%B1%E5%90%8D%E5%8F%A4%E5%B1%8B%E6%B8%AF%28CH01%29" \
+              --cookie "$cookie" --cookie-jar "$cookie" \
+              --dump-header "$headers" \
+              --get "$BASE/transfer/TransferSearchSelect" \
+              --data-urlencode 'orvNode=00004372.名鉄名古屋(NH36)' \
+              --data-urlencode 'orvName=' \
+              --data-urlencode 'dnvNode=00006856.東名古屋港(CH01)' \
+              --data-urlencode 'dnvName=' \
+              --data-urlencode "month=$month" \
+              --data-urlencode "day=$day" \
+              --data-urlencode "hour=$hour" \
+              --data-urlencode "minute=$minute" \
+              --data-urlencode "basis=$basis" \
+              --data-urlencode 'sort=2' \
+              --data-urlencode 'unuse=' \
+              --data-urlencode 'wspeed=standard' \
+              --data-urlencode 'method=1' \
+              --output "$result" \
+              --write-out '%{http_code}')
+
+            echo "$label http=$status bytes=$(wc -c < "$result")"
+            LABEL="$label" RESULT="$result" python3 - <<'PY'
           import html, os, re
           from pathlib import Path
-          label=os.environ['LABEL']
-          text=Path(f'/tmp/{label}.html').read_text(encoding='utf-8', errors='replace')
+          text=Path(os.environ['RESULT']).read_text(encoding='utf-8', errors='replace')
           plain=re.sub(r'<script.*?</script>|<style.*?</style>', ' ', text, flags=re.I|re.S)
           plain=re.sub(r'<[^>]+>', ' ', plain)
           plain=re.sub(r'\s+', ' ', html.unescape(plain)).strip()
-          print(label, 'bytes=', len(text), 'title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
-          print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain})
-          for i, form in enumerate(re.findall(r'<form\b.*?</form>', text, flags=re.I|re.S)):
-              tag=re.search(r'<form\b[^>]*>', form, flags=re.I)
-              print('FORM', i, tag.group(0) if tag else None)
-              for name,value in re.findall(r'<input[^>]+name="([^"]+)"[^>]*value="([^"]*)"', form, flags=re.I):
-                  if name in {'orvNode','dnvNode','orvName','dnvName','month','day','hour','minute','basis','sort','method','retFlg','wspeed','utrexprs','start','goal'}:
-                      print(' INPUT', name, html.unescape(value))
-              for name,body in re.findall(r'<select[^>]+name="([^"]+)"[^>]*>(.*?)</select>', form, flags=re.I|re.S):
-                  if name in {'orvNode','dnvNode','month','day','hour','minute'}:
-                      opts=[]
-                      for value,label_text in re.findall(r'<option[^>]*value="([^"]*)"[^>]*>(.*?)</option>', body, flags=re.I|re.S):
-                          cleaned=re.sub(r'<[^>]+>',' ',html.unescape(label_text)); cleaned=re.sub(r'\s+',' ',cleaned).strip()
-                          if '名鉄名古屋' in cleaned or '東名古屋港' in cleaned or 'NH36' in cleaned or 'CH01' in cleaned:
-                              opts.append((html.unescape(value), cleaned))
-                      if opts: print(' SELECT', name, opts)
+          print('label=', os.environ['LABEL'])
+          print('title=', re.findall(r'<title[^>]*>(.*?)</title>', text, flags=re.I|re.S)[:1])
+          print('identity=', {'名鉄名古屋': '名鉄名古屋' in plain, '東名古屋港': '東名古屋港' in plain, '大江': '大江' in plain})
+          print('dateLines=', re.findall(r'20\d{2}年\d{1,2}月\d{1,2}日\s*\d{1,2}時\d{1,2}分\s*(?:出発|到着)', plain)[:4])
+          print('targets=', {t: t in plain for t in ('19:25','19:36','19:44','19:47','16:55','17:06','17:20','17:23')})
+          print('transferCount1=', bool(re.search(r'乗換\s*1\s*回', plain)))
+          print('tail=', plain[-1800:])
           PY
           }
 
-          fetch_select weekday-arrive 2026/09 07 19 47 0
-          fetch_select weekday-depart 2026/09 07 19 47 1
+          probe weekday 2026/9 07 19 47 0
+          probe holiday 2026/9 05 17 23 0
 
       - name: Upload submit diagnostics
         if: always()
@@ -94,3 +111,6 @@ jobs:
           name: meitetsu-chikko-transfer-submit
           path: |
             /tmp/weekday-*.html
+            /tmp/weekday-*.headers
+            /tmp/holiday-*.html
+            /tmp/holiday-*.headers
