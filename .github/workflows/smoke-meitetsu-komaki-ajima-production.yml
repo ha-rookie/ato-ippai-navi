@@ -1,0 +1,105 @@
+name: Smoke Meitetsu Komaki Ajima Production
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Worker to Cloudflare"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify KM12 production transfer boundary
+        env:
+          BASE_URL: https://ato-ippai-api-poc.edward-se-pg.workers.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/km12-boundary-request.json <<'JSON'
+          {
+            "origin": {
+              "latitude": 35.1715,
+              "longitude": 136.9057
+            },
+            "departureTime": "2026-09-04T23:20:00+09:00",
+            "dayType": "weekday",
+            "destinationCode": "KM12",
+            "offsetMinutes": [0, 20],
+            "stationBufferMinutes": 3,
+            "minimumBoardingLeadMinutes": 1
+          }
+          JSON
+
+          ready=0
+          for attempt in $(seq 1 10); do
+            echo "KM12 production smoke attempt $attempt/10"
+            status=$(curl -sS \
+              -o /tmp/km12-boundary.json \
+              -w '%{http_code}' \
+              -H 'content-type: application/json' \
+              --data @/tmp/km12-boundary-request.json \
+              "$BASE_URL/api/last-train-boundary")
+
+            echo "HTTP status: $status"
+            cat /tmp/km12-boundary.json || true
+
+            if [ "$status" = "200" ]; then
+              if python3 - <<'PY'
+          import json
+          import sys
+
+          with open('/tmp/km12-boundary.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          scenarios = data.get('scenarios', [])
+          before = scenarios[0] if len(scenarios) > 0 else {}
+          after = scenarios[1] if len(scenarios) > 1 else {}
+          valid = (
+              data.get('routeFound') is True
+              and data.get('destination', {}).get('code') == 'KM12'
+              and data.get('destination', {}).get('name') == '味鋺'
+              and set(data.get('walkOptions', {})) == {'sakae'}
+              and len(scenarios) == 2
+              and before.get('canReachDestination') is True
+              and before.get('recommendedOriginId') == 'sakae'
+              and before.get('lastDeparture') == '23:42'
+              and before.get('lastArrival') == '00:10'
+              and before.get('transfers') == 1
+              and before.get('transferAt') == '平安通'
+              and before.get('transferStationCodes') == ['M11', 'K02']
+              and before.get('transferReadyTime') == '23:54'
+              and before.get('connectionDeparture') == '00:06'
+              and before.get('connectionTerminal') == '小牧'
+              and before.get('minimumTransferLeadMinutes') == 3
+              and before.get('transferMarginMinutes') == 12
+              and after.get('canReachDestination') is False
+          )
+          if not valid:
+              sys.exit(1)
+          PY
+              then
+                ready=1
+                break
+              fi
+            fi
+
+            sleep 3
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo 'KM12 production transfer boundary did not become ready.'
+            exit 1
+          fi
+
+          echo 'Meitetsu Komaki KM12 production smoke: OK'
