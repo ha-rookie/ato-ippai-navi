@@ -1,0 +1,38 @@
+{
+  "id": "./",
+  "name": "あと一杯ナビ",
+  "short_name": "あと一杯ナビ",
+  "description": "名古屋・栄・錦周辺で、あと何分飲めるか、今日の終電、帰宅後の睡眠時間をまとめて確認する深夜帰宅判断アプリ",
+  "lang": "ja-JP",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10192b",
+  "theme_color": "#10192b",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

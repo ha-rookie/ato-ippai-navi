@@ -24,8 +24,12 @@ jobs:
           node --check src/ops-csv.js
           node --check functions/[[path]].js
           node --check public/app.js
+          node --check public/js/analytics.js
+          node --check public/js/pwa.js
           node --check public/js/sleep.js
           node --check public/js/settings.js
+          node --check public/sw.js
+          node --check scripts/generate_pwa_icons.cjs
 
       - name: Validate operations scripts
         run: |

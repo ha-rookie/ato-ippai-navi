@@ -7,6 +7,7 @@ on:
     paths:
       - 'public/**'
       - 'functions/**'
+      - 'scripts/**'
       - 'wrangler.jsonc'
       - 'package.json'
       - 'package-lock.json'
@@ -32,13 +33,20 @@ jobs:
         run: |
           node --check functions/[[path]].js
           node --check public/app.js
+          node --check public/js/analytics.js
           node --check public/js/last-train-page.js
           node --check public/js/last-train-link.js
+          node --check public/js/pwa.js
           node --check public/js/sleep.js
           node --check public/js/settings.js
+          node --check public/sw.js
+          node --check scripts/generate_pwa_icons.cjs
 
       - name: Run unit tests
         run: npm test
+
+      - name: Generate PWA icons
+        run: node scripts/generate_pwa_icons.cjs
 
       - name: Write Pages build marker
         shell: bash
@@ -104,6 +112,62 @@ jobs:
           grep -q '<title>あと一杯ナビ</title>' /tmp/last-train.html
           grep -q '<script type="module" src="/app.js"></script>' /tmp/last-train.html
           echo 'Pages static + SPA smoke test: OK'
+
+          curl -fsS "$BASE_URL/manifest.webmanifest" -o /tmp/manifest.json
+          python3 - <<'PY'
+          import json
+
+          with open('/tmp/manifest.json', encoding='utf-8') as f:
+              data = json.load(f)
+
+          assert data['name'] == 'あと一杯ナビ', data
+          assert data['display'] == 'standalone', data
+          sizes = {(icon.get('sizes'), icon.get('purpose')) for icon in data['icons']}
+          assert ('192x192', 'any') in sizes, sizes
+          assert ('512x512', 'any') in sizes, sizes
+          assert ('512x512', 'maskable') in sizes, sizes
+          print('PWA manifest smoke test: OK')
+          PY
+
+          curl -fsS "$BASE_URL/sw.js" -o /tmp/sw.js
+          grep -q 'NETWORK_ONLY_PREFIXES' /tmp/sw.js
+          grep -q '"/api/", "/ops/"' /tmp/sw.js
+          grep -q '"/health", "/build.json"' /tmp/sw.js
+
+          curl -fsS "$BASE_URL/js/pwa.js" -o /tmp/pwa.js
+          grep -q 'serviceWorker.register("/sw.js"' /tmp/pwa.js
+          grep -q 'beforeinstallprompt' /tmp/pwa.js
+          echo 'PWA runtime smoke test: OK'
+
+          sw_cache=$(curl -fsSI "$BASE_URL/sw.js" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^cache-control:/{print $0}')
+          manifest_cache=$(curl -fsSI "$BASE_URL/manifest.webmanifest" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^cache-control:/{print $0}')
+          echo "$sw_cache"
+          echo "$manifest_cache"
+          echo "$sw_cache" | grep -qi 'no-cache'
+          echo "$sw_cache" | grep -qi 'no-store'
+          echo "$manifest_cache" | grep -qi 'no-cache'
+          echo 'PWA cache-control smoke test: OK'
+
+          for icon in icons/icon-192.png icons/icon-512.png icons/icon-maskable-512.png apple-touch-icon.png; do
+            curl -fsS "$BASE_URL/$icon" -o "/tmp/$(basename "$icon")"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+
+          expected = {
+              '/tmp/icon-192.png': 192,
+              '/tmp/icon-512.png': 512,
+              '/tmp/icon-maskable-512.png': 512,
+              '/tmp/apple-touch-icon.png': 180,
+          }
+          for file, size in expected.items():
+              data = Path(file).read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n', file
+              width = int.from_bytes(data[16:20], 'big')
+              height = int.from_bytes(data[20:24], 'big')
+              assert (width, height) == (size, size), (file, width, height)
+          print('PWA icon smoke test: OK')
+          PY
 
           curl -fsS "$BASE_URL/health" -o /tmp/health.json
           cat /tmp/health.json

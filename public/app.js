@@ -1,6 +1,8 @@
 import { setupAnalytics } from "/js/analytics.js";
+import { setupPwa } from "/js/pwa.js";
 
 setupAnalytics();
+setupPwa();
 
 const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
 
