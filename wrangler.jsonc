@@ -3,9 +3,6 @@
   "name": "ato-ippai-api-poc",
   "main": "src/index.js",
   "compatibility_date": "2026-09-01",
-  "vars": {
-    "MAX_LATE_TRANSIT_WAIT_MINUTES": "90"
-  },
   "assets": {
     "directory": "./public",
     "not_found_handling": "single-page-application",
