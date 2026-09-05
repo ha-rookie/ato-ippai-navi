@@ -83,7 +83,8 @@ jobs:
           set -euo pipefail
           RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           TITLE="Ops alert: 週次終電verification失敗 (run $GITHUB_RUN_ID)"
-          BODY=$(cat <<EOF
+          BODY_FILE=$(mktemp)
+          cat > "$BODY_FILE" <<EOF
           週次の終電JSON verification で1件以上の失敗・タイムアウトが発生しました。
 
           - 親workflow: $RUN_URL
@@ -93,7 +94,9 @@ jobs:
 
           親workflowのmatrix jobから失敗した事業者・路線を特定し、子workflowのログで駅・曜日区分・公式ソース取得状況を確認してください。
 
-          運用原則どおり、公式一次情報を確認するまで `src/data/last-trains-nagoya.json` は変更しません。
+          運用原則どおり、公式一次情報を確認するまで src/data/last-trains-nagoya.json は変更しません。
           EOF
-          )
-          gh issue create --title "$TITLE" --body "$BODY"
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TITLE" \
+            --body-file "$BODY_FILE"
